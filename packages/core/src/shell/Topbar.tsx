@@ -57,7 +57,7 @@ export function Topbar({
   };
 
   return (
-    <header className="ds-topbar">
+    <header className="ds-chrome ds-topbar">
       <button
         type="button"
         className="ds-btn ds-btn--ghost"

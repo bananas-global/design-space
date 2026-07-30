@@ -12,7 +12,12 @@
 
 import { scenarioUrl } from "../deploy/index.js";
 import { validateProduct, hasErrors, formatIssues } from "../registry/validate.js";
-import { assertContrastPairs } from "../a11y/contrast.js";
+import {
+  assertContrastPairs,
+  checkContrastPair,
+  checkContrastPairs,
+  contrastRatio,
+} from "../a11y/contrast.js";
 import type { ControlsState, ProductDefinition, Scenario, ScenarioStatus } from "../types/index.js";
 
 /**
@@ -85,5 +90,15 @@ export function assertValidProduct(product: ProductDefinition): void {
   }
 }
 
-export { assertContrastPairs, formatIssues, hasErrors, validateProduct };
+// Medição de contraste também é ferramenta de teste: o produto valida os
+// próprios tokens, e o motor só sabe medir.
+export {
+  assertContrastPairs,
+  checkContrastPair,
+  checkContrastPairs,
+  contrastRatio,
+  formatIssues,
+  hasErrors,
+  validateProduct,
+};
 export { scenarioUrl } from "../deploy/index.js";

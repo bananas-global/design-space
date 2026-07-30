@@ -1,0 +1,50 @@
+# Publicação do motor no npm (E13).
+#
+# Disparado por tag `core-v*`. A tag é criada à mão, de propósito: publicar é o
+# momento em que uma mudança passa a valer para todos os produtos, e esse momento
+# merece uma decisão humana em vez de um merge na main.
+#
+# Requer o secret `NPM_TOKEN` com permissão de publish em `@brucesantos`.
+name: Release do motor
+
+on:
+  push:
+    tags: ["core-v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # provenance no npm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verificar antes de publicar
+        run: pnpm check
+
+      - name: Conferir que a tag casa com a versão do pacote
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#core-v}"
+          PKG_VERSION=$(node -p "require('./packages/core/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag core-v$TAG_VERSION não casa com a versão $PKG_VERSION do pacote." >&2
+            exit 1
+          fi
+
+      - name: Publicar
+        run: pnpm -C packages/core publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

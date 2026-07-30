@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Testes do motor e do template
+        run: pnpm test
+
+  # A jornada do template roda contra o dev server, não contra um preview: este
+  # repositório publica um pacote, não um site. Serve para garantir que o motor
+  # funciona de ponta a ponta dentro de um produto antes de sair uma versão.
+  journey:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build do motor
+        run: pnpm -C packages/core build
+
+      - name: Instalar navegador
+        run: pnpm -C packages/template exec playwright install --with-deps chromium
+
+      - name: Jornada e axe no template
+        run: pnpm -C packages/template test:e2e
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: packages/template/playwright-report/
+          retention-days: 7

@@ -98,4 +98,22 @@ controle. **Sem merge automático** de versão incompatível.
 
 - [`packages/core/README.md`](packages/core/README.md) — API do motor.
 - [`AGENTS.md`](AGENTS.md) — instruções e guardrails para agentes de IA.
+- [`docs/setup.md`](docs/setup.md) — **os passos que exigem suas credenciais**:
+  publicar no npm, criar os projetos na Vercel e a decisão de contrato antes do
+  primeiro preview público.
 - [`docs/decisions/`](docs/decisions/) — decisões de arquitetura do motor.
+
+## Estado
+
+Fase 1 construída e verificada localmente. O piloto é
+[`bloomy-design-space`](../bloomy-design-space), com 24 cenários em Agenda,
+Pacientes e Financeiro.
+
+| Verificação | Estado |
+| --- | --- |
+| Motor: typecheck, build, 49 testes | ✅ |
+| Template: typecheck, build, 10 testes, 15 jornadas | ✅ |
+| Bloomy: typecheck, build, 45 testes, 75 jornadas com axe | ✅ |
+| Publicado no npm | ⏳ requer credencial — ver `docs/setup.md` |
+| Projeto na Vercel | ⏳ requer conta — ver `docs/setup.md` |
+| Cenários aprovados | ⏳ requer revisão com pessoa de negócio |

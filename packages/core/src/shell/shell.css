@@ -48,11 +48,6 @@
     "topbar topbar topbar"
     "sidebar stage inspector";
   background: var(--ds-bg);
-  color: var(--ds-fg);
-  font-family: var(--ds-font);
-  font-size: 13px;
-  line-height: 1.45;
-  -webkit-font-smoothing: antialiased;
 }
 
 .ds-root[data-inspector="closed"] {
@@ -68,13 +63,29 @@
   grid-template-areas: "stage";
 }
 
-.ds-root *,
-.ds-root *::before,
-.ds-root *::after {
+/* Tipografia, cor e box-sizing do chrome ficam nas regiões do chrome, nunca em
+   `.ds-root`.
+   Isto não é organização: é a fronteira. Quando `.ds-root` definia `color`, o
+   valor era herdado por qualquer elemento do produto que não declarasse cor
+   própria — e o axe passou a reprovar as tabelas do cliente por contraste de
+   1.21:1 contra um cinza-claro que o produto nunca escolheu. O palco precisa
+   herdar do `body`, não do motor. */
+.ds-chrome,
+.ds-chrome *,
+.ds-chrome *::before,
+.ds-chrome *::after {
   box-sizing: border-box;
 }
 
-.ds-root :focus-visible {
+.ds-chrome {
+  color: var(--ds-fg);
+  font-family: var(--ds-font);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ds-chrome :focus-visible {
   outline: 2px solid var(--ds-focus);
   outline-offset: 2px;
   border-radius: 3px;

@@ -1,0 +1,33 @@
+# Atualização do motor por PR, sem merge automático (E13).
+#
+# O documento de arquitetura é explícito: mudança estrutural exige comando
+# explícito e revisável, nunca merge silencioso. Por isso não há auto-merge aqui
+# nem para patch — um patch do motor ainda pode mudar comportamento de tela, e o
+# custo de revisar é um build de dois minutos.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # O motor separado das outras dependências: o PR dele é o que exige olhar a
+    # tela, não só o CI verde.
+    groups:
+      design-space-engine:
+        patterns:
+          - "@brucesantos/design-space"
+      dev-tooling:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@brucesantos/design-space"
+          - react
+          - react-dom
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependências
+    commit-message:
+      prefix: deps

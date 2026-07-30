@@ -26,7 +26,7 @@ export function Home({ registry, onOpenScenario }: HomeProps) {
   const total = product.scenarios.length;
 
   return (
-    <div className="ds-home">
+    <div className="ds-chrome ds-home">
       <header className="ds-home__header">
         <h1>{product.name}</h1>
         {product.tagline && <p className="ds-home__tagline">{product.tagline}</p>}

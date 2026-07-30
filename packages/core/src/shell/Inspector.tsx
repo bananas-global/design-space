@@ -35,7 +35,7 @@ export function Inspector({
   const errorCount = registry.issues.filter((issue) => issue.level === "error").length;
 
   return (
-    <aside className="ds-inspector" aria-label="Painel de contexto">
+    <aside className="ds-chrome ds-inspector" aria-label="Painel de contexto">
       <div className="ds-inspector__tabs" role="tablist">
         <TabButton id="scenario" current={tab} onSelect={setTab}>
           Cenário

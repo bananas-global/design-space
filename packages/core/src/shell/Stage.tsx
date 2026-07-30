@@ -56,7 +56,7 @@ export function TabOrderOverlay({ stops }: { stops: TabStop[] }) {
   if (stops.length === 0) return null;
 
   return (
-    <div className="ds-taborder" aria-hidden="true">
+    <div className="ds-chrome ds-taborder" aria-hidden="true">
       {stops.map((stop) => (
         <span
           key={`${stop.index}-${stop.rect.top}-${stop.rect.left}`}
@@ -74,7 +74,7 @@ export function TabOrderOverlay({ stops }: { stops: TabStop[] }) {
 /** Estado vazio do palco: sem cenário ativo, ou rota sem cenário declarado. */
 export function StageEmpty({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <div className="ds-stage-empty">
+    <div className="ds-chrome ds-stage-empty">
       <h2>{title}</h2>
       {children}
     </div>

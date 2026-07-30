@@ -48,7 +48,7 @@ export function Sidebar({ registry, activeScenario, onOpenScenario }: SidebarPro
   const total = nodes.reduce((sum, node) => sum + node.scenarios.length, 0) + orphans.length;
 
   return (
-    <nav className="ds-sidebar" aria-label="Cenários do produto">
+    <nav className="ds-chrome ds-sidebar" aria-label="Cenários do produto">
       <div className="ds-sidebar__search">
         <input
           className="ds-input ds-input--search"

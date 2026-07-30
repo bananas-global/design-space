@@ -25,7 +25,7 @@ export function Controls({ registry, controls, onChange }: ControlsProps) {
   const locales = product.theme?.locales ?? [];
 
   return (
-    <div className="ds-controls" role="group" aria-label="Controles do cenário">
+    <div className="ds-chrome ds-controls" role="group" aria-label="Controles do cenário">
       <div className="ds-field">
         <label htmlFor="ds-persona">Persona</label>
         <select

@@ -225,7 +225,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
       {!controls.chrome && (
         <button
           type="button"
-          className="ds-restore"
+          className="ds-chrome ds-restore"
           onClick={() => setControls({ chrome: true })}
         >
           Mostrar controles

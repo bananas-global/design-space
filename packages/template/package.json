@@ -1,0 +1,37 @@
+{
+  "name": "design-space-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Molde de novos Design Spaces. Inicia repositório novo e nunca atualiza projeto existente (D-07): o que evolui continuamente é distribuído pelo pacote do motor.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@brucesantos/design-space": "workspace:*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.0",
+    "@react-dev-inspector/babel-plugin": "^2.0.1",
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^5.0.0",
+    "axe-core": "^4.10.3",
+    "feedback-collector": "^0.1.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
+  }
+}

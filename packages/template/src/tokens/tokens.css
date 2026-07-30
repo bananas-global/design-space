@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* =====================================================================
+   Tokens do produto.
+   =====================================================================
+   Este arquivo é exclusivo do produto e nunca sobe para o motor (D-02).
+   Substitua os valores pela identidade real do cliente: o que o template
+   entrega é a estrutura, não a aparência.
+
+   Todo par de cores que vira texto sobre fundo precisa estar declarado em
+   `src/tokens/contrast.ts`. Contraste é propriedade de par, então validar
+   na definição resolve na origem, uma vez — e `tests/tokens.test.ts`
+   quebra o build quando um par cai abaixo do alvo.
+   ===================================================================== */
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #4f46e5;
+  --color-brand-600: #4338ca;
+  --color-brand-700: #3730a3;
+
+  --color-ink-900: #111827;
+  --color-ink-700: #374151;
+  --color-ink-500: #4b5563;
+  --color-ink-300: #9ca3af;
+  --color-ink-100: #e5e7eb;
+  --color-ink-50: #f3f4f6;
+
+  --color-ok-600: #15803d;
+  --color-ok-50: #f0fdf4;
+  --color-warn-700: #a16207;
+  --color-warn-50: #fefce8;
+  --color-err-600: #b91c1c;
+  --color-err-50: #fef2f2;
+
+  --color-surface: #ffffff;
+  --color-canvas: #f8fafc;
+
+  --radius-card: 12px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Foco visível é do produto, não do motor. O motor reforça o foco no modo
+   teclado, mas quem garante que existe foco em condição normal é este bloco —
+   e removê-lo para resolver um pedido de layout é violação de guardrail. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

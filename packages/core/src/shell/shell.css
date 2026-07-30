@@ -1,0 +1,953 @@
+/* =====================================================================
+   Chrome neutro do Design Space.
+   =====================================================================
+   Duas regras governam este arquivo:
+
+   1. Nada aqui pode vazar para a UI do produto. Todo seletor é prefixado
+      com `ds-`, toda custom property com `--ds-`, e não existe uma única
+      regra em elemento nu (`button`, `h1`, `a`) fora de `.ds-root`.
+
+   2. O chrome é escuro e deliberadamente sóbrio. Não é falta de cuidado:
+      é para que a linguagem visual do cliente — que costuma ser clara e
+      colorida — nunca seja lida como parte da mesma superfície. O
+      contraste de temperatura entre chrome e palco é o que faz a captura
+      de tela ficar honesta.
+   ===================================================================== */
+
+.ds-root {
+  --ds-bg: #0f1117;
+  --ds-bg-raised: #161923;
+  --ds-bg-input: #1d212e;
+  --ds-border: #262b3a;
+  --ds-border-strong: #343a4d;
+  --ds-fg: #e7e9ee;
+  --ds-fg-dim: #9aa0b0;
+  --ds-fg-faint: #6b7280;
+  --ds-accent: #7c9cff;
+  --ds-accent-fg: #0f1117;
+  --ds-ok: #4ade80;
+  --ds-warn: #fbbf24;
+  --ds-err: #fb7185;
+  --ds-focus: #a5b8ff;
+
+  --ds-r: 6px;
+  --ds-r-lg: 10px;
+  --ds-sidebar: 280px;
+  --ds-inspector: 340px;
+  --ds-topbar: 44px;
+
+  --ds-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ds-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: var(--ds-topbar) 1fr;
+  grid-template-columns: var(--ds-sidebar) 1fr var(--ds-inspector);
+  grid-template-areas:
+    "topbar topbar topbar"
+    "sidebar stage inspector";
+  background: var(--ds-bg);
+  color: var(--ds-fg);
+  font-family: var(--ds-font);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ds-root[data-inspector="closed"] {
+  grid-template-columns: var(--ds-sidebar) 1fr 0;
+}
+
+/* Modo de revisão limpa: o palco ocupa tudo. É o estado em que a captura de
+   tela e a comparação com produção acontecem, então o chrome sai inteiro em
+   vez de encolher. */
+.ds-root[data-chrome="hidden"] {
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+  grid-template-areas: "stage";
+}
+
+.ds-root *,
+.ds-root *::before,
+.ds-root *::after {
+  box-sizing: border-box;
+}
+
+.ds-root :focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* --------------------------------------------------------------- topbar */
+
+.ds-topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-bg-raised);
+  min-width: 0;
+}
+
+.ds-topbar__product {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ds-topbar__tagline {
+  color: var(--ds-fg-faint);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.ds-topbar__spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.ds-topbar__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ds-fg-dim);
+  font-family: var(--ds-mono);
+  font-size: 11px;
+  min-width: 0;
+}
+
+.ds-topbar__meta code {
+  padding: 2px 6px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r);
+  background: var(--ds-bg-input);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- sidebar */
+
+.ds-sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--ds-border);
+  background: var(--ds-bg-raised);
+  min-height: 0;
+}
+
+.ds-sidebar__search {
+  padding: 10px;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-sidebar__tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 6px 20px;
+}
+
+.ds-module {
+  margin-bottom: 4px;
+}
+
+.ds-module__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--ds-r);
+  background: transparent;
+  color: var(--ds-fg);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ds-module__header:hover {
+  background: var(--ds-bg-input);
+}
+
+.ds-module__chevron {
+  flex: none;
+  width: 10px;
+  color: var(--ds-fg-faint);
+  transition: transform 120ms ease;
+}
+
+.ds-module__header[aria-expanded="true"] .ds-module__chevron {
+  transform: rotate(90deg);
+}
+
+.ds-module__count {
+  margin-left: auto;
+  color: var(--ds-fg-faint);
+  font-weight: 400;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-module__scenarios {
+  margin: 2px 0 6px;
+  padding: 0 0 0 14px;
+  list-style: none;
+  border-left: 1px solid var(--ds-border);
+}
+
+.ds-scenario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--ds-r);
+  background: transparent;
+  color: var(--ds-fg-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ds-scenario:hover {
+  background: var(--ds-bg-input);
+  color: var(--ds-fg);
+}
+
+.ds-scenario[aria-current="true"] {
+  background: color-mix(in srgb, var(--ds-accent) 18%, transparent);
+  color: var(--ds-fg);
+  box-shadow: inset 2px 0 0 0 var(--ds-accent);
+}
+
+.ds-scenario__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bolinha de status: o ciclo de vida do cenário precisa estar visível na
+   navegação, não escondido no painel. Cenário aprovado e cenário proposto
+   convivendo sem distinção é como a referência envelhece em silêncio. */
+.ds-status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ds-fg-faint);
+}
+
+.ds-status-dot[data-status="proposed"] { background: #6b7280; }
+.ds-status-dot[data-status="in-review"] { background: var(--ds-warn); }
+.ds-status-dot[data-status="approved"] { background: var(--ds-ok); }
+.ds-status-dot[data-status="in-implementation"] { background: var(--ds-accent); }
+.ds-status-dot[data-status="implemented"] { background: #22d3ee; }
+.ds-status-dot[data-status="superseded"] {
+  background: transparent;
+  border: 1px solid var(--ds-fg-faint);
+}
+
+.ds-sidebar__empty {
+  padding: 16px 10px;
+  color: var(--ds-fg-faint);
+}
+
+/* ---------------------------------------------------------------- stage */
+
+.ds-stage-area {
+  grid-area: stage;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background:
+    linear-gradient(0deg, transparent 0, transparent) padding-box,
+    repeating-conic-gradient(#12141c 0% 25%, #0f1117 0% 50%) 0 0 / 16px 16px;
+}
+
+.ds-stage-scroll {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  padding: 0;
+  min-height: 0;
+}
+
+.ds-root[data-viewport="fit"] .ds-stage-scroll {
+  padding: 0;
+}
+
+.ds-root:not([data-viewport="fit"]) .ds-stage-scroll {
+  padding: 20px;
+}
+
+/* O palco. `isolation` e `contain` existem para que z-index e layout do produto
+   não conversem com o chrome — um modal do cliente não deve poder cobrir a
+   barra de controles, e um `position: fixed` do produto precisa se ancorar no
+   palco, não na janela. */
+.ds-stage {
+  position: relative;
+  flex: none;
+  width: 100%;
+  max-width: 100%;
+  background: #fff;
+  isolation: isolate;
+  container-type: inline-size;
+  overflow: auto;
+}
+
+.ds-root:not([data-viewport="fit"]) .ds-stage {
+  border-radius: var(--ds-r-lg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.4);
+  outline: 1px solid var(--ds-border-strong);
+}
+
+.ds-root[data-viewport="fit"] .ds-stage {
+  height: 100%;
+}
+
+.ds-stage[data-reduced-motion="true"] *,
+.ds-stage[data-reduced-motion="true"] *::before,
+.ds-stage[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Modo teclado: foco visível reforçado dentro do palco. Não substitui o foco do
+   produto — soma, para revelar quando o produto removeu o dele. */
+.ds-stage[data-keyboard-mode="true"] :focus {
+  outline: 3px solid #ff3d7f !important;
+  outline-offset: 2px !important;
+}
+
+.ds-taborder {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.ds-taborder__badge {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #ff3d7f;
+  color: #fff;
+  font-family: var(--ds-mono);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transform: translate(-50%, -50%);
+}
+
+.ds-taborder__badge[data-forced="true"] {
+  background: var(--ds-warn);
+  color: #1a1400;
+}
+
+.ds-stage-empty {
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  height: 100%;
+  padding: 40px;
+  color: var(--ds-fg-dim);
+  text-align: center;
+}
+
+.ds-stage-empty h2 {
+  margin: 0;
+  color: var(--ds-fg);
+  font-size: 15px;
+}
+
+.ds-stage-empty p {
+  max-width: 46ch;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------- controls */
+
+.ds-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-bg-raised);
+}
+
+.ds-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ds-field > label,
+.ds-field__label {
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ds-select,
+.ds-input {
+  max-width: 200px;
+  padding: 4px 8px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r);
+  background: var(--ds-bg-input);
+  color: var(--ds-fg);
+  font: inherit;
+  font-size: 12px;
+}
+
+.ds-input--search {
+  width: 100%;
+  max-width: none;
+}
+
+.ds-segmented {
+  display: flex;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r);
+  overflow: hidden;
+}
+
+.ds-segmented button {
+  padding: 4px 9px;
+  border: 0;
+  border-right: 1px solid var(--ds-border-strong);
+  background: var(--ds-bg-input);
+  color: var(--ds-fg-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ds-segmented button:last-child {
+  border-right: 0;
+}
+
+.ds-segmented button[aria-pressed="true"] {
+  background: var(--ds-accent);
+  color: var(--ds-accent-fg);
+  font-weight: 600;
+}
+
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r);
+  background: var(--ds-bg-input);
+  color: var(--ds-fg);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ds-btn:hover {
+  border-color: var(--ds-accent);
+}
+
+.ds-btn[aria-pressed="true"] {
+  border-color: var(--ds-accent);
+  background: color-mix(in srgb, var(--ds-accent) 22%, transparent);
+}
+
+.ds-btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ds-fg-dim);
+}
+
+/* ------------------------------------------------------------ inspector */
+
+.ds-inspector {
+  grid-area: inspector;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--ds-border);
+  background: var(--ds-bg-raised);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ds-root[data-inspector="closed"] .ds-inspector {
+  display: none;
+}
+
+.ds-inspector__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-inspector__tabs button {
+  flex: 1;
+  padding: 8px 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ds-fg-faint);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ds-inspector__tabs button[aria-selected="true"] {
+  border-bottom-color: var(--ds-accent);
+  color: var(--ds-fg);
+  font-weight: 600;
+}
+
+.ds-inspector__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.ds-block {
+  margin-bottom: 18px;
+}
+
+.ds-block__title {
+  margin: 0 0 6px;
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ds-block p {
+  margin: 0 0 6px;
+  color: var(--ds-fg-dim);
+}
+
+.ds-list {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--ds-fg-dim);
+}
+
+.ds-list li {
+  margin-bottom: 4px;
+}
+
+.ds-kv {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.ds-kv dt {
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+}
+
+.ds-kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ds-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ds-chip {
+  padding: 2px 7px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r);
+  background: var(--ds-bg-input);
+  color: var(--ds-fg-dim);
+  font-family: var(--ds-mono);
+  font-size: 11px;
+}
+
+.ds-chip[data-tone="ok"] {
+  border-color: color-mix(in srgb, var(--ds-ok) 45%, transparent);
+  color: var(--ds-ok);
+}
+
+.ds-chip[data-tone="warn"] {
+  border-color: color-mix(in srgb, var(--ds-warn) 45%, transparent);
+  color: var(--ds-warn);
+}
+
+.ds-chip[data-tone="err"] {
+  border-color: color-mix(in srgb, var(--ds-err) 45%, transparent);
+  color: var(--ds-err);
+}
+
+.ds-rule {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--ds-border);
+  border-left: 2px solid var(--ds-accent);
+  border-radius: var(--ds-r);
+  background: var(--ds-bg-input);
+}
+
+.ds-rule__id {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ds-fg-faint);
+  font-family: var(--ds-mono);
+  font-size: 10px;
+}
+
+.ds-rule__statement {
+  color: var(--ds-fg);
+}
+
+.ds-rule__rationale {
+  margin-top: 4px;
+  color: var(--ds-fg-dim);
+  font-size: 12px;
+}
+
+.ds-contrast {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ds-contrast th,
+.ds-contrast td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--ds-border);
+  text-align: left;
+}
+
+.ds-contrast th {
+  color: var(--ds-fg-faint);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ds-contrast td:last-child {
+  font-family: var(--ds-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ds-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
+.ds-note {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--ds-warn) 35%, transparent);
+  border-radius: var(--ds-r);
+  background: color-mix(in srgb, var(--ds-warn) 8%, transparent);
+  color: var(--ds-fg-dim);
+}
+
+.ds-issue {
+  margin-bottom: 6px;
+  padding: 7px 9px;
+  border-radius: var(--ds-r);
+  background: var(--ds-bg-input);
+  border-left: 2px solid var(--ds-err);
+}
+
+.ds-issue[data-level="warning"] {
+  border-left-color: var(--ds-warn);
+}
+
+.ds-issue__where {
+  display: block;
+  color: var(--ds-fg-faint);
+  font-family: var(--ds-mono);
+  font-size: 10px;
+}
+
+/* --------------------------------------------------------- responsivo */
+
+/* Abaixo de 1100px o inspetor deixa de caber ao lado sem estrangular o palco.
+   Ele vira gaveta sobreposta em vez de coluna — e o palco continua sendo a
+   coisa mais larga da tela, que é o ponto do ambiente. */
+@media (max-width: 1100px) {
+  .ds-root,
+  .ds-root[data-inspector="closed"] {
+    grid-template-columns: var(--ds-sidebar) 1fr;
+    grid-template-areas:
+      "topbar topbar"
+      "sidebar stage";
+  }
+
+  .ds-root[data-inspector="open"] .ds-inspector {
+    position: fixed;
+    top: var(--ds-topbar);
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    width: min(var(--ds-inspector), 90vw);
+    box-shadow: -12px 0 32px rgb(0 0 0 / 0.45);
+  }
+}
+
+@media (max-width: 720px) {
+  .ds-root,
+  .ds-root[data-inspector="closed"],
+  .ds-root[data-inspector="open"] {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "topbar"
+      "stage";
+  }
+
+  .ds-sidebar {
+    position: fixed;
+    top: var(--ds-topbar);
+    left: 0;
+    bottom: 0;
+    z-index: 30;
+    width: min(var(--ds-sidebar), 88vw);
+    box-shadow: 12px 0 32px rgb(0 0 0 / 0.45);
+  }
+
+  .ds-root[data-sidebar="closed"] .ds-sidebar {
+    display: none;
+  }
+}
+
+.ds-root[data-sidebar="closed"] .ds-sidebar {
+  display: none;
+}
+
+/* Volta do modo de revisão limpa. Invisível até hover ou foco, para não sujar
+   captura de tela — mas alcançável por Tab, porque prender alguém num modo sem
+   saída seria trocar um problema por outro. */
+.ds-restore {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  z-index: 50;
+  padding: 5px 10px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r);
+  background: var(--ds-bg-raised);
+  color: var(--ds-fg);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.ds-restore:hover,
+.ds-restore:focus-visible {
+  opacity: 1;
+}
+
+.ds-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ home */
+
+/* O mapa de situações é chrome, não produto: por isso vive na paleta escura do
+   motor. A superfície clara do palco é reservada para a UI do cliente, e
+   misturar as duas ensinaria a ler o mapa como parte do produto. */
+.ds-home {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 56px;
+  color: var(--ds-fg);
+}
+
+.ds-home__header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ds-home__tagline {
+  margin: 4px 0 0;
+  color: var(--ds-fg-dim);
+}
+
+.ds-home__lead {
+  max-width: 68ch;
+  margin: 12px 0;
+  color: var(--ds-fg-dim);
+  font-size: 14px;
+}
+
+.ds-home__module {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ds-border);
+}
+
+.ds-home__module h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ds-home__hint {
+  max-width: 68ch;
+  margin: 0 0 14px;
+  color: var(--ds-fg-faint);
+  font-size: 13px;
+}
+
+.ds-home__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-home__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-lg);
+  background: var(--ds-bg-raised);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.ds-home__card:hover {
+  border-color: var(--ds-accent);
+  transform: translateY(-1px);
+}
+
+.ds-home__card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-home__card-title {
+  font-weight: 600;
+}
+
+.ds-home__card-intent {
+  color: var(--ds-fg-dim);
+  font-size: 12.5px;
+}
+
+.ds-home__card-meta {
+  margin-top: auto;
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+}
+
+.ds-flow {
+  margin: 14px 0 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--ds-border);
+  border-left: 2px solid var(--ds-accent);
+  border-radius: var(--ds-r-lg);
+  background: var(--ds-bg-input);
+}
+
+.ds-flow h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ds-flow__steps {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  color: var(--ds-fg-dim);
+}
+
+.ds-flow__steps > li {
+  margin-bottom: 10px;
+}
+
+.ds-flow__step {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-accent);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.ds-flow__decision {
+  margin: 3px 0 0;
+  color: var(--ds-fg-faint);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.ds-flow__branches {
+  margin: 6px 0 0;
+  padding-left: 14px;
+  list-style: none;
+  border-left: 1px dashed var(--ds-border-strong);
+}
+
+.ds-flow__branches li {
+  margin-bottom: 4px;
+}
+
+.ds-flow__branch-label {
+  margin-right: 6px;
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+}

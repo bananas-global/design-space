@@ -1,0 +1,20 @@
+{
+  "name": "design-space-workspace",
+  "private": true,
+  "type": "module",
+  "description": "Workspace do motor do Bananas Design Space. Não é um produto: contém o motor compartilhado e o template de novos produtos.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" build",
+    "typecheck": "pnpm -r --filter \"./packages/*\" typecheck",
+    "test": "pnpm -r --filter \"./packages/*\" test",
+    "check": "pnpm run typecheck && pnpm run build && pnpm run test"
+  },
+  "packageManager": "pnpm@10.12.4",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,40 @@
+# CI do repositório de design.
+#
+# Governança proporcional (Princípio 9): iteração visual acontece local, sem PR
+# por mudança. Este workflow existe para o que é barato e pega erro caro —
+# typecheck, contrato de cenário, contraste dos tokens e build.
+#
+# A jornada Playwright com axe roda contra o preview, em `preview-tests.yml`, e
+# não aqui: rodar contra um build local testaria um artefato que ninguém revisa.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Contrato de cenário, regras e contraste dos tokens
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

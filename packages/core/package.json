@@ -1,0 +1,67 @@
+{
+  "name": "@brucesantos/design-space",
+  "version": "0.1.0",
+  "description": "Motor neutro do Bananas Design Space: registry de cenários, shell, deep links, controles de persona/viewport/rede, inspetor de regras e ferramentas de acessibilidade. Não contém UI de cliente.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Bruno Santos (https://github.com/brucesantos)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bananas-global/design-space.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/bananas-global/design-space#readme",
+  "keywords": [
+    "design-space",
+    "executable-specification",
+    "scenarios",
+    "design-engineering",
+    "react",
+    "a11y"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./styles.css": "./dist/design-space.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^26.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^3.2.4"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

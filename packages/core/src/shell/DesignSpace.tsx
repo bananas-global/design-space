@@ -1,0 +1,236 @@
+/**
+ * `<DesignSpace />` — o único componente que o produto monta.
+ *
+ * Tudo que o produto entrega é uma `ProductDefinition`. O motor cuida de
+ * navegação, deep link, controles, contexto e verificação; o produto cuida de
+ * aparência, domínio e dados. Essa é a fronteira inteira (§8).
+ */
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ProductDefinition, ScenarioContext } from "../types/index.js";
+import { createRegistry } from "../registry/index.js";
+import { useDesignSpaceState } from "../controls/state.js";
+import { resolveRoute } from "../router/index.js";
+import { fixtureAdapter } from "../adapters/index.js";
+import { useScenarioData } from "../adapters/useScenarioData.js";
+import { getDeployContext } from "../deploy/index.js";
+import { useKeyboardMode } from "../a11y/useKeyboardMode.js";
+import { Sidebar } from "./Sidebar.js";
+import { Topbar } from "./Topbar.js";
+import { Controls } from "./Controls.js";
+import { Inspector } from "./Inspector.js";
+import { Stage, StageEmpty, TabOrderOverlay } from "./Stage.js";
+import { Home } from "./Home.js";
+import "./shell.css";
+
+export type DesignSpaceProps = {
+  product: ProductDefinition;
+};
+
+export function DesignSpace({ product }: DesignSpaceProps) {
+  const registry = useMemo(() => createRegistry(product), [product]);
+  const deploy = useMemo(() => getDeployContext(), []);
+  const { location, controls, viewport, setControls, navigate, openScenario } =
+    useDesignSpaceState(registry);
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const { focused, tabStops } = useKeyboardMode(controls.keyboardMode, stageRef);
+
+  const scenario = registry.scenario(controls.scenario);
+  const persona = registry.persona(controls.persona ?? scenario?.persona);
+  const fixture = registry.fixture(controls.fixture ?? scenario?.fixture);
+
+  const adapter = useMemo(() => {
+    const id = controls.dataSource ?? "fixtures";
+    if (id === "fixtures") return fixtureAdapter;
+    return product.dataSources?.adapters?.find((a) => a.id === id) ?? fixtureAdapter;
+  }, [controls.dataSource, product.dataSources?.adapters]);
+
+  const { data, isLoading, error } = useScenarioData({ scenario, fixture, network: controls.network, adapter });
+
+  // Atalhos globais. Ficam no motor porque são do ambiente, não do produto — e
+  // porque alternar chrome com a mão no teclado é o que torna a revisão limpa
+  // usável de verdade durante uma chamada com cliente.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+
+      switch (event.key) {
+        case "C":
+          setControls({ chrome: !controls.chrome });
+          break;
+        case "K":
+          setControls({ keyboardMode: !controls.keyboardMode });
+          break;
+        case "P":
+          setControls({ inspector: !controls.inspector });
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [controls.chrome, controls.keyboardMode, controls.inspector, setControls]);
+
+  const permissions = useMemo(() => {
+    // Persona escolhida no controle manda sobre a do cenário: é assim que se
+    // responde "e se um perfil sem permissão abrir esta tela?" sem inventar um
+    // segundo cenário.
+    if (controls.persona && controls.persona !== scenario?.persona) {
+      return registry.persona(controls.persona)?.permissions ?? [];
+    }
+    return registry.permissionsOf(scenario);
+  }, [controls.persona, registry, scenario]);
+
+  const context: ScenarioContext = useMemo(
+    () => ({
+      scenario,
+      persona,
+      permissions,
+      can: (permission) => permissions.includes(permission),
+      data,
+      fixture,
+      network: controls.network,
+      isLoading,
+      error,
+      rules: registry.rulesOf(scenario),
+      viewport,
+      themeMode: controls.themeMode,
+      locale: controls.locale,
+      a11y: {
+        keyboardMode: controls.keyboardMode,
+        reducedMotion: controls.reducedMotion,
+        textScale: controls.textScale,
+      },
+      navigate,
+      openScenario,
+    }),
+    [
+      scenario,
+      persona,
+      permissions,
+      data,
+      fixture,
+      controls.network,
+      controls.themeMode,
+      controls.locale,
+      controls.keyboardMode,
+      controls.reducedMotion,
+      controls.textScale,
+      isLoading,
+      error,
+      registry,
+      viewport,
+      navigate,
+      openScenario,
+    ],
+  );
+
+  // A raiz sem cenário ativo é o mapa de situações, não uma tela do produto.
+  // Quem recebe o link cru precisa ver o que existe antes de escolher; cair no
+  // meio de um fluxo — ou num estado sem permissão — se lê como defeito.
+  const isHome = !scenario && location.path === "/";
+
+  const match = resolveRoute(product.routes, location.path);
+  const Wrapper = product.wrapper;
+  const NotFound = product.notFound;
+
+  const screen = match ? (
+    <match.definition.screen params={match.params} context={context} />
+  ) : NotFound ? (
+    <NotFound path={location.path} />
+  ) : (
+    <StageEmpty title="Nenhuma rota para este endereço">
+      <p>
+        <code>{location.path}</code> não casa com nenhuma rota declarada em{" "}
+        <code>productDefinition.routes</code>. Escolha uma situação na navegação.
+      </p>
+    </StageEmpty>
+  );
+
+  const stageContent = Wrapper ? <Wrapper context={context}>{screen}</Wrapper> : screen;
+
+  return (
+    <div
+      className="ds-root"
+      data-chrome={controls.chrome ? "visible" : "hidden"}
+      data-inspector={controls.inspector ? "open" : "closed"}
+      data-sidebar={sidebarOpen ? "open" : "closed"}
+      data-viewport={viewport.id}
+    >
+      {controls.chrome && (
+        <Topbar
+          product={product}
+          scenario={scenario}
+          deploy={deploy}
+          inspectorOpen={controls.inspector}
+          sidebarOpen={sidebarOpen}
+          onToggleInspector={() => setControls({ inspector: !controls.inspector })}
+          onToggleSidebar={() => setSidebarOpen((open) => !open)}
+          onHideChrome={() => setControls({ chrome: false })}
+        />
+      )}
+
+      {controls.chrome && (
+        <Sidebar
+          registry={registry}
+          activeScenario={controls.scenario}
+          onOpenScenario={openScenario}
+        />
+      )}
+
+      <div className="ds-stage-area">
+        {isHome ? (
+          <div className="ds-stage-scroll">
+            <Home registry={registry} onOpenScenario={openScenario} />
+          </div>
+        ) : (
+          <Stage
+            ref={stageRef}
+            viewport={viewport}
+            textScale={controls.textScale}
+            reducedMotion={controls.reducedMotion}
+            keyboardMode={controls.keyboardMode}
+          >
+            {stageContent}
+          </Stage>
+        )}
+
+        {controls.chrome && (
+          <Controls registry={registry} controls={controls} onChange={setControls} />
+        )}
+      </div>
+
+      {controls.chrome && (
+        <Inspector
+          registry={registry}
+          scenario={scenario}
+          controls={controls}
+          focusedNode={focused}
+          tabStopCount={tabStops.length}
+        />
+      )}
+
+      {controls.keyboardMode && <TabOrderOverlay stops={tabStops} />}
+
+      {/* Sem chrome não há como voltar a não ser editando a URL, o que trava
+          quem recebeu o link em modo de revisão limpa. Este botão é invisível
+          até receber hover ou foco, então não aparece em captura de tela. */}
+      {!controls.chrome && (
+        <button
+          type="button"
+          className="ds-restore"
+          onClick={() => setControls({ chrome: true })}
+        >
+          Mostrar controles
+        </button>
+      )}
+    </div>
+  );
+}

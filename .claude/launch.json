@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "template",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "packages/template", "dev"],
+      "port": 4168
+    }
+  ]
+}

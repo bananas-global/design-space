@@ -124,7 +124,7 @@ seat da Vercel. Quem revisa não precisa de conta na Vercel — só do link.
 
 Para comentar em thread na Vercel Toolbar, aí sim precisa de conta. O
 `feedback-collector` não precisa de conta nenhuma, mas roda em desenvolvimento
-(ver `bloomy-design-space/docs/decisions/0003`).
+(ver a decisão 0005 em `docs/decisions/`).
 
 ## 7. Primeira revisão com uma pessoa de negócio
 

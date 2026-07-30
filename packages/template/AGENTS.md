@@ -39,7 +39,7 @@ pnpm check        # typecheck + test + build — rode antes de concluir qualquer
 | `src/contracts/` | Tipos e schemas do domínio. |
 | `src/tokens/` | Identidade visual: `tokens.css` e os pares de contraste. |
 | `docs/product.md` | Visão, módulos, vocabulário e personas. |
-| `docs/decisions/` | Registros curtos de decisão e consequência. |
+| `docs/decisions/` | Decisões **deste produto**. As do modelo vivem no repositório do motor. |
 | `docs/handoff.md` | Modelo de entrega para engenharia. |
 
 ## Como criar um cenário
@@ -75,8 +75,9 @@ mesma situação.
   pergunte** — não escolha o layout.
 - **Não** adicionar integração com backend sem um problema concreto de fixture.
   O padrão é `dataSources: { default: "fixtures" }`.
-- Registrar em `docs/decisions/` toda nova regra ou decisão que altere
-  comportamento.
+- Registrar em `docs/decisions/` toda nova regra ou decisão **deste produto** que
+  altere comportamento. Decisão que valeria para todos os Design Spaces pertence ao
+  repositório do motor — não copie para cá.
 - Rodar `pnpm check` antes de concluir. Typecheck, contrato de cenário e
   contraste dos tokens quebram o build de propósito.
 

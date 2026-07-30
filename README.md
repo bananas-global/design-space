@@ -101,7 +101,9 @@ controle. **Sem merge automático** de versão incompatível.
 - [`docs/setup.md`](docs/setup.md) — **os passos que exigem suas credenciais**:
   publicar no npm, criar os projetos na Vercel e a decisão de contrato antes do
   primeiro preview público.
-- [`docs/decisions/`](docs/decisions/) — decisões de arquitetura do motor.
+- [`docs/decisions/`](docs/decisions/) — decisões **do modelo**: valem para todos os
+  Design Spaces e vivem aqui uma vez só. Repositório de produto registra apenas o
+  que é específico dele.
 
 ## Estado
 

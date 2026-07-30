@@ -68,6 +68,24 @@ padrão é compartilhado pela convenção no template; o componente, não.
   volte a ser auditoria de fim de projeto.
 - Rode `pnpm check` antes de concluir qualquer alteração.
 
+## Onde as decisões vivem
+
+`docs/decisions/` deste repositório guarda as decisões **do modelo** — as que valem
+para todos os Design Spaces: fixture sintética como padrão, preview público,
+acessibilidade obrigatória no contrato de cenário, escopo do source mapping, ação
+bloqueada que explica o motivo.
+
+Repositório de produto registra apenas o que é dele: identidade visual, regra de
+negócio, recorte de escopo, divergência com o sistema real.
+
+A regra é a mesma da fronteira do motor, aplicada a documento: **se valeria para
+qualquer produto, vive aqui uma vez só.** Copiar para o produto cria duas fontes que
+divergem na primeira vez que uma for atualizada — e foi o que aconteceu antes desta
+separação, com quatro decisões duplicadas em três repositórios.
+
+Um produto pode registrar uma **exceção** a uma decisão do modelo. Nesse caso o
+documento diz qual decisão ele abre e por quê, em vez de reescrevê-la.
+
 ## Estrutura de `packages/core`
 
 | Caminho | Responsabilidade |

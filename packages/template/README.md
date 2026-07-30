@@ -32,7 +32,9 @@ URL própria.
 4. Reescreva `src/app/product.ts`: módulos, jornadas e rotas com o vocabulário do
    cliente.
 5. Substitua domínio, personas, fixtures, regras e cenários.
-6. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/`.
+6. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/` — só o que
+   for específico deste produto. As decisões do modelo já estão no repositório do
+   motor e não devem ser copiadas para cá.
 7. Crie o projeto na Vercel apontando para o repositório. `vercel.json` já vem
    com o rewrite de SPA e o header `noindex`.
 
@@ -114,4 +116,5 @@ Comentário resolvido na Toolbar não significa cenário aprovado. Aprovação m
 - [`AGENTS.md`](AGENTS.md) — instruções e guardrails para agentes de IA.
 - [`docs/product.md`](docs/product.md) — visão, vocabulário e personas.
 - [`docs/handoff.md`](docs/handoff.md) — modelo de entrega para engenharia.
-- [`docs/decisions/`](docs/decisions/) — decisões e consequências.
+- [`docs/decisions/`](docs/decisions/) — decisões **deste produto**. As do modelo
+  vivem no [repositório do motor](https://github.com/bananas-global/design-space/tree/main/docs/decisions).

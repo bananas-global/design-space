@@ -105,6 +105,11 @@ O `arquivo:linha` vem do `@react-dev-inspector/babel-plugin` no
 `vite.config.ts`. Em React 19 não existe fallback pelo fiber: **sem o plugin não
 há source mapping**. Não remova.
 
+O `feedback-collector` traz uma skill de setup para agentes de código, em
+`skills/feedback-collector-setup/SKILL.md` do seu repositório. Ela cobre as
+receitas por bundler, o caveat do React 19 e como remover a instalação — use-a em
+vez de reconstruir a configuração do zero.
+
 ## Atalhos do ambiente
 
 | Atalho | Efeito |

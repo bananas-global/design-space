@@ -89,8 +89,7 @@ Para `bloomy-design-space`:
    de SPA e o header `noindex`.
 3. **Deployment Protection → desligue Vercel Authentication para preview.** No
    plano Pro ela vem ligada, e é ela que faria o cliente bater em tela de login.
-   Já decidido para o Bloomy (passo 5). Para a Finaya, **deixe ligada** até o
-   contrato ser conferido.
+   Vale para todos os projetos — ver o passo 5.
 4. Anote a URL de produção: é o link permanente do catálogo.
 
 Confira o que mais importa: abra uma rota profunda direto, em janela anônima:
@@ -102,24 +101,29 @@ https://<projeto>.vercel.app/finance/claims/GUI-4042?scenario=finance.insurance-
 Precisa abrir a guia recusada sem login e sem 404. Se der 404, o rewrite não foi
 aplicado.
 
-## 5. Decisão de contrato antes do primeiro preview público
+## 5. Preview público — decidido para todos
 
-**Bloomy: resolvido.** O contrato foi conferido e não tem cláusula de
-confidencialidade cobrindo telas e materiais, então o preview fica **público e sem
-login**. Registrado em
-`bloomy-design-space/docs/decisions/0004-preview-publico-sem-autenticacao.md`.
+**Resolvido.** Todos os Design Spaces ficam com preview **público e sem login**. É
+postura padrão, não decisão caso a caso. Registrado em
+`bloomy-design-space/docs/decisions/0004` e `finaya-design-space/docs/decisions/0003`.
 
-⚠️ **A contrapartida entrou junto.** Com o preview aberto, "não existe dado real no
-repositório" deixa de ser boa prática e passa a ser a única contramedida que resta.
-O `AGENTS.md` do Bloomy agora amarra o guardrail de fixture a isso e proíbe adapter
-apontando para staging. Se um dia surgir necessidade de dado real ou de staging, a
-decisão 0004 precisa ser revisitada **antes** da mudança.
+Na Vercel: **Deployment Protection → desligue Vercel Authentication para preview**
+em cada projeto. No plano Pro ela vem ligada por padrão.
 
-**Finaya: pendente.** É serviço financeiro e o contrato não foi conferido. Até
-conferir, mantenha Vercel Authentication ligada nesse projeto — é um toggle, e o
-resto do desenho segue igual.
+⚠️ **A contrapartida entrou junto, nos três repositórios.** Com o preview aberto,
+"não existe dado real no repositório" deixa de ser boa prática e passa a ser a única
+contramedida que resta. Os `AGENTS.md` agora amarram o guardrail de fixture a essa
+consequência e proíbem adapter apontando para staging.
 
-O `noindex` permanece nos dois casos: preview aberto não é preview indexado.
+Se em algum projeto surgir necessidade de dado real ou de staging, registre a decisão
+**antes** da mudança. Ligar a autenticação é um toggle; descobrir depois que dado de
+cliente esteve público por duas semanas não tem toggle.
+
+O `noindex` permanece em todos: preview aberto não é preview indexado.
+
+A exceção do documento de arquitetura continua válida para o futuro — cliente com
+cláusula de confidencialidade cobrindo telas e materiais liga a autenticação naquele
+projeto e registra a decisão.
 
 ## 6. Convidar quem vai revisar
 
@@ -163,7 +167,7 @@ produto — e o merge **não** deve ser automático. O arquivo
 - [ ] `finaya-design-space` criado como repositório **privado**
 - [ ] Projeto Vercel do Bloomy criado
 - [ ] Rota profunda abrindo em janela anônima, sem 404
-- [x] Contrato do Bloomy conferido — preview público aprovado (decisão 0004)
-- [ ] Contrato da Finaya conferido — até então, autenticação ligada nesse projeto
+- [x] Preview público decidido para todos os projetos
+- [ ] Vercel Authentication desligada em cada projeto criado
 - [ ] Primeira revisão com pessoa de negócio feita
 - [ ] Cenários aprovados com `approvedAt` preenchido por URL de commit

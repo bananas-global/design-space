@@ -126,7 +126,6 @@ Pendente, porque depende de você:
 | --- | --- |
 | Publicar no npm | requer credencial |
 | Criar os projetos na Vercel | requer conta |
-| Conferir o contrato da Finaya | decisão de negócio; o do Bloomy já foi conferido e o preview dele fica público |
 | Aprovar cenários | requer revisão com uma pessoa de negócio |
 
 Tudo detalhado em [`docs/setup.md`](docs/setup.md).

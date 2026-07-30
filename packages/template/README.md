@@ -79,9 +79,23 @@ de tela passam no axe — revisão humana nas jornadas críticas continua necess
 
 ## Preview e revisão
 
-Todo push gera um preview automático na Vercel. O preview é **público, sem
-login**: como o ambiente roda só com fixture sintética, não há dado a proteger, e
-qualquer barreira cobraria atrito de quem mais precisa revisar sem esforço.
+Todo push gera um preview automático na Vercel. O preview é **público, sem login** —
+postura padrão do estúdio, não decisão caso a caso. Como o ambiente roda só com
+fixture sintética, não há dado a proteger, e qualquer barreira cobraria atrito de
+quem mais precisa revisar sem esforço.
+
+⚠️ **A contrapartida vem junto, e não é opcional.** Com o preview aberto, "não existe
+dado real neste repositório" deixa de ser boa prática e passa a ser a única
+contramedida que resta:
+
+- Fixture sempre sintética e sanitizada. Documento, CPF, CNPJ e identificador
+  inválidos de propósito.
+- Nenhum segredo, token ou credencial commitado — nem em teste, nem em comentário.
+- Nenhum adapter apontando para staging em branch com preview público.
+
+Se alguma dessas coisas precisar mudar, registre a decisão **antes** da mudança.
+Ligar Vercel Authentication é um toggle; descobrir depois que dado de cliente esteve
+público por duas semanas não tem toggle.
 
 - **URL de branch** (`projeto-git-branch-escopo.vercel.app`) — revisão em
   andamento, sempre o último commit daquela branch.
@@ -89,9 +103,12 @@ qualquer barreira cobraria atrito de quem mais precisa revisar sem esforço.
   Imutável, então a aprovação não muda de conteúdo debaixo de quem aprovou.
 
 O header `X-Robots-Tag: noindex, nofollow` mantém a URL clicável e fora de busca.
-Se algum contrato de cliente tiver cláusula de confidencialidade cobrindo telas e
-materiais, ligue Vercel Authentication naquele projeto — é um toggle, e o resto
-do desenho segue igual.
+Preview aberto não é preview indexado.
+
+A exceção continua existindo: se um contrato de cliente tiver cláusula de
+confidencialidade cobrindo telas e materiais, ligue Vercel Authentication naquele
+projeto e registre em `docs/decisions/`. É um toggle, e o resto do desenho segue
+igual.
 
 ## Feedback
 

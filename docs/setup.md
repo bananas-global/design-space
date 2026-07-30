@@ -103,23 +103,19 @@ aplicado.
 
 ## 5. Preview público — decidido para todos
 
-Todos os Design Spaces ficam com preview **público e sem login**. É postura padrão,
+Todos os Design Spaces ficam com preview **público e sem login**. Postura padrão,
 não decisão caso a caso.
 
 Na Vercel: **Deployment Protection → desligue Vercel Authentication para preview**
 em cada projeto. No plano Pro ela vem ligada por padrão.
 
-**Por que não vale a pena deixar ligada**, e isso não está claro no documento de
-arquitetura, que descreve como "um toggle": Vercel Authentication exige que cada
-pessoa que revisa seja **membro do time na Vercel**, e no Pro seat é pago. Mandar um
-fluxo para um cliente deixaria de ser mandar um link e passaria a ser adicionar
-pessoa e pagar por revisor.
+A proteção é URL não adivinhável mais o header `noindex`, que o `vercel.json` já
+manda. Mesmo modelo de link compartilhado do Figma.
 
-Se um dia algum projeto precisar ser fechado, as alternativas a checar antes são
-Password Protection (senha compartilhada, sem conta por pessoa) e shareable links por
-deployment — não conferi disponibilidade nem preço das duas no plano atual.
-
-O `noindex` permanece em todos: preview aberto não é preview indexado.
+Nota sobre o documento de arquitetura: ele diz que ligar a autenticação "é um
+toggle". Não é — ela exige que cada revisor seja membro do time na Vercel, e no Pro
+seat é pago. Vale corrigir na fonte, para ninguém decidir fechar um projeto achando
+que é trivial.
 
 ## 6. Convidar quem vai revisar
 

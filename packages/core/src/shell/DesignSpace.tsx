@@ -29,7 +29,7 @@ export type DesignSpaceProps = {
 
 export function DesignSpace({ product }: DesignSpaceProps) {
   const registry = useMemo(() => createRegistry(product), [product]);
-  const deploy = useMemo(() => getDeployContext(), []);
+  const deploy = useMemo(() => getDeployContext(product.deploy), [product.deploy]);
   const { location, controls, viewport, setControls, navigate, openScenario } =
     useDesignSpaceState(registry);
 

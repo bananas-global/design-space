@@ -331,10 +331,50 @@ export type ProductDefinition = {
     default: string;
     adapters?: DataSourceAdapter[];
   };
+  /**
+   * Contexto do deployment, informado pelo produto.
+   *
+   * O motor **não consegue** descobrir isso sozinho. Ele é uma biblioteca já
+   * compilada: o `import.meta.env` do código dele foi resolvido no build do
+   * pacote, não no build do produto, então não sobra nada para o bundler do
+   * produto substituir. Quem tem acesso ao próprio ambiente de build é o produto.
+   *
+   * Passe os valores do bundler:
+   *
+   * ```ts
+   * deploy: {
+   *   env: import.meta.env.VITE_VERCEL_ENV,
+   *   branch: import.meta.env.VITE_VERCEL_GIT_COMMIT_REF,
+   *   commit: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
+   * }
+   * ```
+   *
+   * Sem isso o cabeçalho da revisão mostra "development" e fica sem branch nem
+   * commit — e é o commit que torna uma aprovação rastreável.
+   */
+  deploy?: DeployOverrides;
+
   /** Renderizado quando nenhuma rota casa. Padrão: aviso neutro do motor. */
   notFound?: ComponentType<{ path: string }>;
   /** Envolve a UI do produto. Serve para providers de tema, i18n ou store. */
   wrapper?: ComponentType<{ children: ReactNode; context: ScenarioContext }>;
+};
+
+/**
+ * Contexto do deployment informado pelo produto. Todos os campos são opcionais:
+ * o que vier preenchido substitui a detecção do motor.
+ */
+export type DeployOverrides = {
+  /** `development`, `preview` ou `production`. */
+  env?: string;
+  /** Domínio da branch, sem protocolo. Quando ausente, usa a origem da janela. */
+  branchUrl?: string;
+  /** Domínio único deste deployment, sem protocolo. */
+  deploymentUrl?: string;
+  /** Nome da branch, para rotular a revisão. */
+  branch?: string;
+  /** Commit exato, gravado junto com o status de aprovação do cenário. */
+  commit?: string;
 };
 
 /* ------------------------------------------------------------------ *

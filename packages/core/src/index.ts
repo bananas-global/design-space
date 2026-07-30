@@ -102,6 +102,7 @@ export {
   type ContrastPair,
   type ContrastTarget,
   type ControlsState,
+  type DeployOverrides,
   type DataRequest,
   type DataSourceAdapter,
   type Fixture,

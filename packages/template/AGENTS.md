@@ -29,7 +29,8 @@ pnpm check        # typecheck + test + build — rode antes de concluir qualquer
 
 | Caminho | Conteúdo |
 | --- | --- |
-| `src/app/product.ts` | A `ProductDefinition`: módulos, jornadas, rotas, tema. Comece aqui. |
+| `src/app/catalog.ts` | Módulos, jornadas, cenários, personas, fixtures e regras. **Livre de React e de `import.meta`.** Comece aqui. |
+| `src/app/product.ts` | O catálogo mais rotas, tema e contexto de deployment. É o que o motor recebe. |
 | `src/scenarios/` | Cenários registráveis, um arquivo por módulo. |
 | `src/screens/` | Composições de tela. Recebem `params` e `context` do motor. |
 | `src/components/` | Componentes exclusivos deste produto. |
@@ -57,6 +58,12 @@ pnpm check        # typecheck + test + build — rode antes de concluir qualquer
 5. Preencha `expected`. Sem critério de aceite, o cenário não vira caso
    verificável no handoff — é tela bonita.
 6. Garanta que `route` casa com uma rota declarada em `product.ts`.
+
+**Por que `catalog.ts` é separado de `product.ts`:** o Playwright carrega os testes
+com esbuild puro, sem os plugins do Vite. Um `import` de SVG, de CSS ou um
+`import.meta.env` na cadeia derruba a suíte antes do primeiro teste, e o erro
+aparece como "No tests found". O teste de jornada importa o catálogo. Não junte os
+dois.
 
 Um cenário só existe de verdade quando abre por URL direta e produz sempre a
 mesma situação.

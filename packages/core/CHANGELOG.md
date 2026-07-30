@@ -6,7 +6,39 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
-## 0.1.0 — não publicado
+## 0.1.1
+
+### Corrigido
+
+- **O motor não conseguia detectar o contexto do deployment.** `getDeployContext`
+  lia `import.meta.env`, mas o motor é uma biblioteca já compilada: esse
+  `import.meta.env` foi resolvido no build do **pacote**, não no build do produto,
+  então não sobrava nada para o bundler do produto substituir. O resultado era o
+  cabeçalho da revisão sempre em "development", sem branch nem commit — e é o
+  commit que torna uma aprovação rastreável.
+
+  Uma biblioteca publicada não tem como ler o ambiente de build de quem a consome.
+  Quem tem acesso a ele é o produto.
+
+### Adicionado
+
+- **`ProductDefinition.deploy`** (`DeployOverrides`): o produto informa `env`,
+  `branch`, `commit`, `branchUrl` e `deploymentUrl`. O que vier preenchido tem
+  precedência sobre a detecção por ambiente, que continua funcionando quando o
+  motor roda a partir do código-fonte.
+
+  ```ts
+  deploy: {
+    env: import.meta.env.VITE_VERCEL_ENV,
+    branch: import.meta.env.VITE_VERCEL_GIT_COMMIT_REF,
+    commit: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
+  }
+  ```
+
+  Compatível com 0.1.0: o campo é opcional e quem não passar continua no
+  comportamento anterior — que, na prática, nunca detectou nada em produto real.
+
+## 0.1.0
 
 Primeira versão do motor. Fase 1 do roadmap.
 

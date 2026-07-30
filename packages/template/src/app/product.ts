@@ -1,9 +1,6 @@
 import type { ProductDefinition } from "@brucesantos/design-space";
 
-import { personas } from "../personas/index.js";
-import { fixtures } from "../fixtures/requests.js";
-import { rules } from "../rules/requests.js";
-import { scenarios } from "../scenarios/requests.js";
+import { fixtures, modules, personas, rules, scenarios } from "./catalog.js";
 import { contrastPairs } from "../tokens/contrast.js";
 import { RequestList } from "../screens/RequestList.js";
 import { RequestDetail } from "../screens/RequestDetail.js";
@@ -11,42 +8,16 @@ import { RequestDetail } from "../screens/RequestDetail.js";
 /**
  * A única coisa que o produto entrega ao motor.
  *
- * Comece por aqui ao trocar de produto: módulos e cenários usam o vocabulário do
- * cliente, e é esse vocabulário que a navegação e a busca expõem para PO e
- * negócio.
+ * A especificação — módulos, jornadas, cenários, personas, fixtures e regras —
+ * vive em `catalog.ts`, livre de React. Aqui ela é combinada com as telas que a
+ * materializam. Ver o comentário de `catalog.ts` para o porquê da separação.
  */
 export const productDefinition: ProductDefinition = {
   id: "template",
   name: "Design Space",
   tagline: "Template — troque por seu produto",
 
-  modules: [
-    {
-      id: "requests",
-      name: "Solicitações",
-      description: "Registro, análise e decisão de solicitações de compra.",
-      flows: [
-        {
-          id: "decide-request",
-          title: "Decidir uma solicitação",
-          description: "Da fila até a decisão, com as duas ramificações de bloqueio.",
-          steps: [
-            { scenario: "requests.queue", label: "Escolher na fila" },
-            {
-              scenario: "requests.approve-allowed",
-              label: "Analisar e decidir",
-              decision: "A solicitação atende à regra de documentação?",
-              branches: {
-                "Falta documento": "requests.approve-blocked-by-rule",
-                "Perfil sem permissão": "requests.approve-no-permission",
-              },
-            },
-          ],
-        },
-      ],
-    },
-  ],
-
+  modules,
   scenarios,
   personas,
   fixtures,
@@ -57,6 +28,16 @@ export const productDefinition: ProductDefinition = {
     { path: "/requests", screen: RequestList },
     { path: "/requests/:id", screen: RequestDetail },
   ],
+
+  // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build
+  // deste repositório. Quem tem acesso ao próprio build é o produto, então o
+  // contexto vem daqui — sem isso o cabeçalho da revisão fica sem branch nem
+  // commit, e é o commit que torna uma aprovação rastreável.
+  deploy: {
+    env: import.meta.env.VITE_VERCEL_ENV,
+    branch: import.meta.env.VITE_VERCEL_GIT_COMMIT_REF,
+    commit: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
+  },
 
   theme: {
     contrastPairs,

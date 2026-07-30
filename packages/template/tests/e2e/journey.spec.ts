@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { pathFor } from "@brucesantos/design-space/testing";
-import { productDefinition } from "../../src/app/product.js";
+// Importa o catálogo, não a `ProductDefinition`: o Playwright carrega os testes
+// com esbuild puro, sem os plugins do Vite, e um `import.meta.env` na cadeia
+// derruba a suíte antes do primeiro teste. Ver `src/app/catalog.ts`.
+import { scenarios as catalogScenarios } from "../../src/app/catalog.js";
 
 /**
  * Uma jornada real contra o preview, com axe na mesma passagem (E9, E16).
@@ -18,7 +21,7 @@ import { productDefinition } from "../../src/app/product.js";
  *   manutenção de teste.
  */
 
-const scenarios = productDefinition.scenarios;
+const scenarios = catalogScenarios;
 
 /**
  * Abre o cenário pelo deep link, com o chrome do motor fora do caminho.

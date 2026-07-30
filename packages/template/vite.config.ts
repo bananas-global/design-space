@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -33,16 +34,41 @@ const isDev = process.env.NODE_ENV !== "production";
 // projeto, não padrão.
 const sourceMappingInBuild = process.env.DESIGN_SPACE_SOURCE_MAPPING === "1";
 
+/**
+ * Contexto do deployment, injetado no código do produto.
+ *
+ * Vem de `build-info.json`, gravado pelo workflow de deploy. Duas coisas que
+ * explicam este desenho e que não são óbvias:
+ *
+ * 1. O `vercel build` não repassa o ambiente do shell ao build do Vite, e
+ *    sobrescreve um `.env` na raiz com o arquivo que ele mesmo gera. Um arquivo
+ *    lido aqui, em Node, é o único ponto que nada mais toca.
+ *
+ * 2. O `define` substitui **texto literal**. Funciona no código deste
+ *    repositório, que escreve `import.meta.env.VITE_VERCEL_ENV` por extenso, e
+ *    não funciona dentro do motor, que é uma biblioteca já compilada e lê
+ *    `import.meta.env` como objeto. Por isso o produto entrega o contexto ao
+ *    motor pelo campo `deploy` da `ProductDefinition`, em `src/app/product.ts`.
+ */
+type BuildInfo = { env?: string; ref?: string; sha?: string };
+
+function readBuildInfo(): BuildInfo {
+  try {
+    return JSON.parse(
+      readFileSync(new URL("./build-info.json", import.meta.url), "utf8"),
+    ) as BuildInfo;
+  } catch {
+    // Sem o arquivo — desenvolvimento local — o produto cai para os padrões.
+    return {};
+  }
+}
+
+const buildInfo = readBuildInfo();
+
 const deployEnv = {
-  "import.meta.env.VITE_VERCEL_ENV": JSON.stringify(process.env.VERCEL_ENV ?? ""),
-  "import.meta.env.VITE_VERCEL_URL": JSON.stringify(process.env.VERCEL_URL ?? ""),
-  "import.meta.env.VITE_VERCEL_BRANCH_URL": JSON.stringify(process.env.VERCEL_BRANCH_URL ?? ""),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_REF": JSON.stringify(
-    process.env.VERCEL_GIT_COMMIT_REF ?? "",
-  ),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA": JSON.stringify(
-    process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-  ),
+  "import.meta.env.VITE_VERCEL_ENV": JSON.stringify(buildInfo.env ?? "development"),
+  "import.meta.env.VITE_VERCEL_GIT_COMMIT_REF": JSON.stringify(buildInfo.ref ?? ""),
+  "import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA": JSON.stringify(buildInfo.sha ?? ""),
 };
 
 export default defineConfig({

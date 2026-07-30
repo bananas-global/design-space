@@ -10,7 +10,7 @@
  * nasce com o mapeamento no `vite.config.ts`.
  */
 
-import type { ControlsState, Scenario } from "../types/index.js";
+import type { ControlsState, DeployOverrides, Scenario } from "../types/index.js";
 import { PARAM, applyOverrides } from "../controls/params.js";
 
 export type DeployContext = {
@@ -43,14 +43,22 @@ function readEnv(): EnvRecord {
   return {};
 }
 
-/** Lê o contexto do deployment. Seguro em SSR, em Node e no browser. */
-export function getDeployContext(): DeployContext {
+/**
+ * Lê o contexto do deployment.
+ *
+ * `overrides` vem do produto e tem precedência. Ele existe porque o motor é uma
+ * biblioteca já compilada: o `import.meta.env` deste arquivo foi resolvido no
+ * build do pacote, não no build do produto. A leitura de ambiente abaixo só
+ * funciona quando o motor roda a partir do código-fonte — em testes e no
+ * workspace — e por isso não pode ser a única fonte.
+ */
+export function getDeployContext(overrides: DeployOverrides = {}): DeployContext {
   const env = readEnv();
 
-  const branchUrl = env.VITE_VERCEL_BRANCH_URL || env.VERCEL_BRANCH_URL;
-  const deploymentUrl = env.VITE_VERCEL_URL || env.VERCEL_URL;
-  const vercelEnv = env.VITE_VERCEL_ENV || env.VERCEL_ENV;
-  const commit = env.VITE_VERCEL_GIT_COMMIT_SHA || env.VERCEL_GIT_COMMIT_SHA;
+  const branchUrl = overrides.branchUrl || env.VITE_VERCEL_BRANCH_URL || env.VERCEL_BRANCH_URL;
+  const deploymentUrl = overrides.deploymentUrl || env.VITE_VERCEL_URL || env.VERCEL_URL;
+  const vercelEnv = overrides.env || env.VITE_VERCEL_ENV || env.VERCEL_ENV;
+  const commit = overrides.commit || env.VITE_VERCEL_GIT_COMMIT_SHA || env.VERCEL_GIT_COMMIT_SHA;
 
   // Preferência deliberada: a URL de branch é estável e sempre reflete o último
   // commit daquela branch, que é o que se quer ao circular um cenário em
@@ -65,7 +73,7 @@ export function getDeployContext(): DeployContext {
     origin: origin.replace(/\/$/, ""),
     branchUrl,
     deploymentUrl,
-    branch: env.VITE_VERCEL_GIT_COMMIT_REF || env.VERCEL_GIT_COMMIT_REF,
+    branch: overrides.branch || env.VITE_VERCEL_GIT_COMMIT_REF || env.VERCEL_GIT_COMMIT_REF,
     commit,
     shortCommit: commit?.slice(0, 7),
     isDeployed: vercelEnv === "preview" || vercelEnv === "production",

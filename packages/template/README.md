@@ -29,8 +29,8 @@ URL própria.
 3. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente e
    atualize `src/tokens/contrast.ts` com os pares reais. O teste de tokens falha
    se algum par ficar abaixo do alvo.
-4. Reescreva `src/app/product.ts`: módulos, jornadas e rotas com o vocabulário do
-   cliente.
+4. Reescreva `src/app/catalog.ts` com o vocabulário do cliente — módulos, jornadas
+   e cenários — e ajuste as rotas em `src/app/product.ts`.
 5. Substitua domínio, personas, fixtures, regras e cenários.
 6. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/` — só o que
    for específico deste produto. As decisões do modelo já estão no repositório do
@@ -42,7 +42,7 @@ URL própria.
 
 ```
 src/
-├── app/           # ProductDefinition e integração com o motor
+├── app/           # catalog.ts (especificação) e product.ts (integração com o motor)
 ├── components/    # componentes exclusivos deste produto
 ├── screens/       # composições de tela
 ├── scenarios/     # cenários registráveis

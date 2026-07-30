@@ -65,7 +65,16 @@ cd design-space && git push -u origin main
 Design Space de cliente vive em repositório privado controlado pela Bananas:
 
 ```bash
+cd ../bloomy-design-space
 gh repo create bananas-global/bloomy-design-space --private --source=. --push
+```
+
+`finaya-design-space` também. Ele é o segundo produto e serve de referência viva da
+fronteira do motor, então vale versionar mesmo com os tokens ainda provisórios:
+
+```bash
+cd ../finaya-design-space
+gh repo create bananas-global/finaya-design-space --private --source=. --push
 ```
 
 ## 4. Criar os projetos na Vercel
@@ -148,6 +157,7 @@ produto — e o merge **não** deve ser automático. O arquivo
 - [ ] `bloomy-design-space` apontando para a versão publicada
 - [ ] `design-space` enviado para o GitHub
 - [ ] `bloomy-design-space` criado como repositório **privado**
+- [ ] `finaya-design-space` criado como repositório **privado**
 - [ ] Projeto Vercel do Bloomy criado
 - [ ] Rota profunda abrindo em janela anônima, sem 404
 - [ ] Contrato do Bloomy conferido quanto a cláusula sobre telas e materiais

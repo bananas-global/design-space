@@ -31,9 +31,25 @@ O motor não contém e não pode passar a conter: componente visual, token,
 tipografia, cor, ícone, ilustração, persona de domínio, fixture, regra de
 negócio ou conteúdo de cliente.
 
-Antes de adicionar qualquer capacidade ao motor, responda: **isto já provou ser
-genérico em mais de um produto?** Se a resposta é não, o lugar é o produto. O
-motor começa pequeno e cresce por evidência, não por antecipação.
+Antes de adicionar qualquer capacidade ao motor, os três critérios precisam valer
+ao mesmo tempo:
+
+1. **Dois produtos.** Já apareceu, implementado separadamente, em dois produtos
+   independentes. Um produto só não é evidência — é antecipação.
+2. **Zero aparência.** Nenhuma decisão de cor, raio, espaçamento, tipografia ou
+   anatomia de layout.
+3. **Zero domínio.** Nenhum conceito de cliente: nada de paciente, guia, cobrança,
+   convênio.
+
+Falhar em qualquer um dos três significa que o lugar é o produto.
+
+Exemplo do que **passou**: `parseIsoDate`. Bloomy e Finaya escreveram a mesma
+correção de fuso separadamente, e ela não decide nada visual nem conhece domínio.
+
+Exemplo do que **não passa**: um `Button` compartilhado. Os dois produtos têm um,
+com a mesma prop `unavailableReason` resolvendo o mesmo problema conceitual — e
+ainda assim extrair faria mudar o raio de canto de um cliente mexer no outro. O
+padrão é compartilhado pela convenção no template; o componente, não.
 
 ## Guardrails
 

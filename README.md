@@ -105,15 +105,28 @@ controle. **Sem merge automático** de versão incompatível.
 
 ## Estado
 
-Fase 1 construída e verificada localmente. O piloto é
-[`bloomy-design-space`](../bloomy-design-space), com 24 cenários em Agenda,
-Pacientes e Financeiro.
+Fases 1 e 2 construídas e verificadas localmente.
 
-| Verificação | Estado |
+| Repositório | Papel | Verificação |
+| --- | --- | --- |
+| `design-space/packages/core` | motor | typecheck, build, 56 testes |
+| `design-space/packages/template` | molde | typecheck, build, 10 testes, 15 jornadas |
+| [`bloomy-design-space`](../bloomy-design-space) | piloto — 24 cenários | 45 testes, 75 jornadas com axe |
+| [`finaya-design-space`](../finaya-design-space) | validação da fronteira — 8 cenários | 7 testes, 27 jornadas com axe |
+
+O que a Fase 2 provou está em
+[`finaya-design-space/docs/decisions/0001`](../finaya-design-space/docs/decisions/0001-o-que-a-finaya-provou-sobre-a-fronteira.md):
+a fronteira se sustentou, um vazamento de CSS foi encontrado e travado por teste, e
+exatamente uma capacidade foi extraída para o motor — por evidência, não por
+antecipação.
+
+Pendente, porque depende de você:
+
+| Passo | Por quê |
 | --- | --- |
-| Motor: typecheck, build, 49 testes | ✅ |
-| Template: typecheck, build, 10 testes, 15 jornadas | ✅ |
-| Bloomy: typecheck, build, 45 testes, 75 jornadas com axe | ✅ |
-| Publicado no npm | ⏳ requer credencial — ver `docs/setup.md` |
-| Projeto na Vercel | ⏳ requer conta — ver `docs/setup.md` |
-| Cenários aprovados | ⏳ requer revisão com pessoa de negócio |
+| Publicar no npm | requer credencial |
+| Criar os projetos na Vercel | requer conta |
+| Conferir cláusula de confidencialidade do contrato | decisão de negócio, antes do primeiro preview público |
+| Aprovar cenários | requer revisão com uma pessoa de negócio |
+
+Tudo detalhado em [`docs/setup.md`](docs/setup.md).

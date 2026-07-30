@@ -55,3 +55,22 @@ Primeira versão do motor. Fase 1 do roadmap.
 - `checkContrastPair`, `checkContrastPairs` e `contrastRatio` passaram a ser
   exportados por `/testing`. O produto valida os próprios tokens; o motor só sabe
   medir.
+
+### Extraído por evidência, depois do segundo produto
+
+- **`parseIsoDate`, `ageInYears` e `daysBetween`.** Primeira capacidade a entrar no
+  motor pela régua do Princípio 10 — apareceu em dois produtos independentes, não
+  carrega aparência e não carrega domínio.
+
+  O bug de origem: `new Date("2011-09-08")` é meia-noite **UTC** e, formatado em
+  qualquer fuso a oeste de Greenwich, exibe o dia anterior. No Bloomy isso
+  deslocava a data de nascimento, o cálculo de idade e portanto a regra do paciente
+  menor de idade; na Finaya, errava o vencimento da cobrança por um dia. Os dois
+  produtos escreveram a mesma correção separadamente, sem saber um do outro.
+
+  `ageInYears` exige a data de referência como parâmetro obrigatório de propósito:
+  um padrão `new Date()` faria fixture depender do relógio.
+
+  O que **não** foi extraído, e por quê, está em
+  `finaya-design-space/docs/decisions/0001`. A régua para a próxima extração:
+  **dois produtos, zero aparência, zero domínio.**

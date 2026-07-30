@@ -89,6 +89,11 @@ export {
   type TabStop,
 } from "./a11y/useKeyboardMode.js";
 
+/* -------------------------------- utilitários */
+/* Extraído por evidência, não por antecipação: os dois primeiros produtos
+   escreveram a mesma correção de parse de data separadamente. */
+export { ageInYears, daysBetween, parseIsoDate } from "./util/date.js";
+
 /* ------------------------------------- tipos */
 export {
   NETWORK_STATES,

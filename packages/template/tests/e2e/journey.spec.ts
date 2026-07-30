@@ -52,11 +52,6 @@ test.describe("acessibilidade por cenário", () => {
 
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-        // A UI do coletor de feedback é ferramenta, não produto. Ela só existe
-        // em desenvolvimento, então incluí-la faria o teste local reprovar por
-        // algo que o preview nem publica — e pior, esconderia um problema real
-        // do produto no meio do ruído.
-        .exclude("[data-fbc]")
         .analyze();
 
       const blocking = results.violations.filter((violation) =>

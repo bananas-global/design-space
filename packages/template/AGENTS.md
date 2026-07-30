@@ -66,11 +66,6 @@ mesma situação.
 - **Nunca** usar credencial ou dado pessoal de produção. Fixture é sempre
   sintética e determinística: nada de `new Date()`, `Math.random()` ou id gerado
   em runtime dentro de fixture.
-  Isto não é higiene: o preview destes projetos é **público e sem login**, então a
-  ausência de dado real é a única contramedida que resta. Vale também para teste,
-  comentário e mensagem de commit.
-- **Não** criar adapter apontando para staging. Além de contrariar o padrão de
-  fixture, um preview público lendo staging expõe dado real.
 - **Não** modificar `@brucesantos/design-space` (o motor) para resolver uma
   necessidade específica deste produto. Se parecer necessário, pare e pergunte.
 - **Não** introduzir componente global quando a necessidade é local. Reuso de UI

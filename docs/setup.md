@@ -103,27 +103,23 @@ aplicado.
 
 ## 5. Preview público — decidido para todos
 
-**Resolvido.** Todos os Design Spaces ficam com preview **público e sem login**. É
-postura padrão, não decisão caso a caso. Registrado em
-`bloomy-design-space/docs/decisions/0004` e `finaya-design-space/docs/decisions/0003`.
+Todos os Design Spaces ficam com preview **público e sem login**. É postura padrão,
+não decisão caso a caso.
 
 Na Vercel: **Deployment Protection → desligue Vercel Authentication para preview**
 em cada projeto. No plano Pro ela vem ligada por padrão.
 
-⚠️ **A contrapartida entrou junto, nos três repositórios.** Com o preview aberto,
-"não existe dado real no repositório" deixa de ser boa prática e passa a ser a única
-contramedida que resta. Os `AGENTS.md` agora amarram o guardrail de fixture a essa
-consequência e proíbem adapter apontando para staging.
+**Por que não vale a pena deixar ligada**, e isso não está claro no documento de
+arquitetura, que descreve como "um toggle": Vercel Authentication exige que cada
+pessoa que revisa seja **membro do time na Vercel**, e no Pro seat é pago. Mandar um
+fluxo para um cliente deixaria de ser mandar um link e passaria a ser adicionar
+pessoa e pagar por revisor.
 
-Se em algum projeto surgir necessidade de dado real ou de staging, registre a decisão
-**antes** da mudança. Ligar a autenticação é um toggle; descobrir depois que dado de
-cliente esteve público por duas semanas não tem toggle.
+Se um dia algum projeto precisar ser fechado, as alternativas a checar antes são
+Password Protection (senha compartilhada, sem conta por pessoa) e shareable links por
+deployment — não conferi disponibilidade nem preço das duas no plano atual.
 
 O `noindex` permanece em todos: preview aberto não é preview indexado.
-
-A exceção do documento de arquitetura continua válida para o futuro — cliente com
-cláusula de confidencialidade cobrindo telas e materiais liga a autenticação naquele
-projeto e registra a decisão.
 
 ## 6. Convidar quem vai revisar
 

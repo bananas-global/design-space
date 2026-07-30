@@ -28,7 +28,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^5.0.0",
     "axe-core": "^4.10.3",
-    "feedback-collector": "^0.1.0",
+    "feedback-collector": "^0.1.1",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3",
     "vite": "^7.0.0",

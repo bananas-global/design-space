@@ -126,7 +126,6 @@ Pendente, porque depende de você:
 
 | Passo | Por quê |
 | --- | --- |
-| Publicar no npm | requer credencial |
 | Criar os projetos na Vercel | requer conta |
 | Aprovar cenários | requer revisão com uma pessoa de negócio |
 

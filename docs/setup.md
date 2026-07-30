@@ -5,52 +5,28 @@ credenciais, aprovação de conta ou decisão de contrato, então ficaram sem
 execução de propósito. Cada um diz o que fazer, por que, e como conferir que
 funcionou.
 
-## 1. Publicar o motor no npm
+## 1. Publicar no npm — feito
 
-O pacote `@brucesantos/design-space` está pronto para publicar: `files`,
-`exports`, `types`, `peerDependencies` e `CHANGELOG.md` configurados.
+`feedback-collector@0.1.1` e `@brucesantos/design-space@0.1.0` estão publicados.
 
-Confira o conteúdo do tarball antes:
-
-```bash
-pnpm -C packages/core pack --pack-destination /tmp && tar -tzf /tmp/brucesantos-design-space-0.1.0.tgz
-```
-
-Deve conter apenas `dist/`, `README.md`, `CHANGELOG.md` e `package.json` — nada de
-`src/`, nada de teste.
-
-Depois:
-
-```bash
-pnpm -C packages/core publish --access public
-```
-
-`--access public` é necessário na primeira publicação de um pacote com escopo,
-senão o npm assume privado e recusa sem plano pago.
-
-**Automatizado depois:** com o secret `NPM_TOKEN` no repositório, criar a tag
-`core-v0.1.0` dispara `.github/workflows/release.yml`, que roda `pnpm check`,
+Para as próximas versões do motor, com o secret `NPM_TOKEN` no repositório, criar a
+tag `core-v<versão>` dispara `.github/workflows/release.yml`, que roda `pnpm check`,
 confere que a tag casa com a versão do `package.json` e publica com provenance.
 
-## 2. Trocar o link local pela versão publicada
+## 2. Produtos apontando para o npm — feito
 
-`bloomy-design-space` hoje consome o motor por link de sistema de arquivos:
+Bloomy e Finaya consomem `@brucesantos/design-space@^0.1.0` e
+`feedback-collector@^0.1.1`, ambos do registro. Nenhum caminho local sobrou — era o
+que faria o build da Vercel quebrar.
 
-```json
-"@brucesantos/design-space": "link:../design-space/packages/core"
-```
-
-Isso funciona e é conveniente para desenvolver os dois lados junto, mas amarra o
-produto ao caminho da sua máquina. Depois de publicar:
+Para desenvolver motor e produto ao mesmo tempo, dá para apontar temporariamente
+para a pasta local:
 
 ```bash
-cd ../bloomy-design-space
-pnpm add @brucesantos/design-space@^0.1.0
-pnpm check
+pnpm add @brucesantos/design-space@link:../design-space/packages/core
 ```
 
-Se preferir manter o link durante a Fase 1, mantenha — só não faça deploy na
-Vercel com ele, porque o build remoto não encontra o caminho.
+Só lembre de voltar para a versão publicada antes de commitar.
 
 ## 3. Criar os repositórios no GitHub
 
@@ -152,11 +128,11 @@ produto — e o merge **não** deve ser automático. O arquivo
 
 ## Checklist
 
-- [ ] `pnpm -C packages/core publish --access public`
-- [ ] `bloomy-design-space` apontando para a versão publicada
-- [ ] `design-space` enviado para o GitHub
-- [ ] `bloomy-design-space` criado como repositório **privado**
-- [ ] `finaya-design-space` criado como repositório **privado**
+- [x] `feedback-collector@0.1.1` e `@brucesantos/design-space@0.1.0` publicados
+- [x] Bloomy e Finaya apontando para as versões publicadas
+- [x] `design-space` enviado para o GitHub
+- [x] `bloomy-design-space` criado como repositório **privado**
+- [x] `finaya-design-space` criado como repositório **privado**
 - [ ] Projeto Vercel do Bloomy criado
 - [ ] Rota profunda abrindo em janela anônima, sem 404
 - [x] Preview público decidido para todos os projetos

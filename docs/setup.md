@@ -89,7 +89,8 @@ Para `bloomy-design-space`:
    de SPA e o header `noindex`.
 3. **Deployment Protection → desligue Vercel Authentication para preview.** No
    plano Pro ela vem ligada, e é ela que faria o cliente bater em tela de login.
-   Ver o passo 5 antes de fazer isso.
+   Já decidido para o Bloomy (passo 5). Para a Finaya, **deixe ligada** até o
+   contrato ser conferido.
 4. Anote a URL de produção: é o link permanente do catálogo.
 
 Confira o que mais importa: abra uma rota profunda direto, em janela anônima:
@@ -103,20 +104,22 @@ aplicado.
 
 ## 5. Decisão de contrato antes do primeiro preview público
 
-⚠️ **Isto é decisão sua, não técnica.**
+**Bloomy: resolvido.** O contrato foi conferido e não tem cláusula de
+confidencialidade cobrindo telas e materiais, então o preview fica **público e sem
+login**. Registrado em
+`bloomy-design-space/docs/decisions/0004-preview-publico-sem-autenticacao.md`.
 
-O preview é público por desenho: o ambiente roda só com fixture sintética, não há
-dado de paciente, e qualquer barreira cobraria atrito de quem mais precisa revisar
-sem esforço.
+⚠️ **A contrapartida entrou junto.** Com o preview aberto, "não existe dado real no
+repositório" deixa de ser boa prática e passa a ser a única contramedida que resta.
+O `AGENTS.md` do Bloomy agora amarra o guardrail de fixture a isso e proíbe adapter
+apontando para staging. Se um dia surgir necessidade de dado real ou de staging, a
+decisão 0004 precisa ser revisitada **antes** da mudança.
 
-Mas o que fica público não é dado — é **a interface e as regras de negócio do
-Bloomy antes do lançamento**. Contratos de saúde costumam ter cláusula de
-confidencialidade cobrindo materiais e telas do projeto, não apenas dados
-pessoais.
+**Finaya: pendente.** É serviço financeiro e o contrato não foi conferido. Até
+conferir, mantenha Vercel Authentication ligada nesse projeto — é um toggle, e o
+resto do desenho segue igual.
 
-Confira o contrato do Bloomy. Se houver cláusula desse tipo, mantenha Vercel
-Authentication ligada neste projeto — é um toggle, e o resto do desenho segue
-igual. O `noindex` já cobre o risco de indexação nos dois casos.
+O `noindex` permanece nos dois casos: preview aberto não é preview indexado.
 
 ## 6. Convidar quem vai revisar
 
@@ -160,6 +163,7 @@ produto — e o merge **não** deve ser automático. O arquivo
 - [ ] `finaya-design-space` criado como repositório **privado**
 - [ ] Projeto Vercel do Bloomy criado
 - [ ] Rota profunda abrindo em janela anônima, sem 404
-- [ ] Contrato do Bloomy conferido quanto a cláusula sobre telas e materiais
+- [x] Contrato do Bloomy conferido — preview público aprovado (decisão 0004)
+- [ ] Contrato da Finaya conferido — até então, autenticação ligada nesse projeto
 - [ ] Primeira revisão com pessoa de negócio feita
 - [ ] Cenários aprovados com `approvedAt` preenchido por URL de commit

@@ -26,17 +26,20 @@ URL própria.
 
 1. Copie o diretório para um repositório novo, `<produto>-design-space`.
 2. Troque `name` no `package.json` — isso muda a porta de dev automaticamente.
-3. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente e
+3. Troque a dependência do motor de `workspace:*` para a versão publicada
+   (`^0.2.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
+   `pnpm install` falha.
+4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente e
    atualize `src/tokens/contrast.ts` com os pares reais. O teste de tokens falha
    se algum par ficar abaixo do alvo.
-4. Reescreva `src/app/catalog.ts` com o vocabulário do cliente — módulos, jornadas
+5. Reescreva `src/app/catalog.ts` com o vocabulário do cliente — módulos, jornadas
    e cenários — e ajuste as rotas em `src/app/product.ts`.
-5. Substitua domínio, personas, fixtures, regras e cenários.
-6. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/` — só o que
+6. Substitua domínio, personas, fixtures, regras e cenários.
+7. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/` — só o que
    for específico deste produto. As decisões do modelo já estão no repositório do
    motor e não devem ser copiadas para cá.
-7. Crie o projeto na Vercel apontando para o repositório. `vercel.json` já vem
-   com o rewrite de SPA e o header `noindex`.
+8. Escolha a hospedagem, se for haver alguma: `pnpm setup:hosting vercel`. O padrão
+   é nenhuma. Ver [Hospedagem](#hospedagem).
 
 ## Estrutura
 
@@ -59,6 +62,8 @@ tests/
 ├── product.test.ts   # contrato de cenário e regras
 ├── tokens.test.ts    # contraste na origem
 └── e2e/              # jornada Playwright + axe
+hosting/              # arquivos por provedor, instalados por escolha explícita
+└── vercel/
 ```
 
 ## Qualidade
@@ -79,19 +84,48 @@ Verificação automática é piso, não teto. Ordem de leitura confusa, rótulo
 tecnicamente presente mas sem sentido e fluxo impossível de completar com leitor
 de tela passam no axe — revisão humana nas jornadas críticas continua necessária.
 
-## Preview e revisão
+## Hospedagem
 
-Todo push gera um preview automático na Vercel. O preview é **público, sem login** —
-postura padrão do estúdio, não decisão caso a caso. Quem tem o link abre e revisa,
-sem conta e sem convite, que é o ponto do ambiente.
+Escolha explícita, e o padrão é **nenhuma**:
 
-- **URL de branch** (`projeto-git-branch-escopo.vercel.app`) — revisão em
-  andamento, sempre o último commit daquela branch.
-- **URL de commit** (`projeto-hash-escopo.vercel.app`) — aprovação e handoff.
-  Imutável, então a aprovação não muda de conteúdo debaixo de quem aprovou.
+```bash
+pnpm setup:hosting          # nenhuma: só local
+pnpm setup:hosting vercel   # publica preview e produção
+```
 
-O header `X-Robots-Tag: noindex, nofollow` mantém a URL clicável e fora de busca.
-Preview aberto não é preview indexado.
+Sem hospedagem, o Design Space roda por `pnpm dev` e a revisão acontece ao lado de
+quem desenha ou por chamada com tela compartilhada, com feedback pelo coletor. É um
+uso completo do modelo, não uma versão reduzida: `env` fica `development` e o
+cabeçalho da revisão omite branch e commit, e nada mais muda.
+
+O que você perde é a revisão **assíncrona** — e, com ela, a aprovação por URL
+imutável. `approvedAt` continua obrigatório em cenário aprovado, então registre o
+permalink do commit no Git e anote a escolha em `docs/decisions/`: sem artefato que
+o aprovador consiga abrir, a aprovação passa a depender do repositório.
+
+`hosting/<provedor>/` guarda os arquivos que cada provedor exige. O script copia
+para a raiz e para `.github/workflows/`, e remove o que o provedor anterior
+instalou — então trocar de alvo não deixa resto.
+
+### Vercel
+
+`pnpm setup:hosting vercel` instala `vercel.json` e o workflow `deploy.yml`. Depois
+falta o que só uma pessoa faz: criar o projeto na Vercel, gravar os secrets
+`VERCEL_TOKEN`, `VERCEL_ORG_ID` e `VERCEL_PROJECT_ID` no GitHub e desligar Vercel
+Authentication no preview.
+
+Quem publica é o workflow, não a integração Git — no plano Pro a Vercel só publica
+commit cujo autor é membro pago do time, e pelo token o autor deixa de importar. O
+mesmo workflow grava o `build-info.json` que dá branch e commit ao cabeçalho da
+revisão.
+
+O preview fica **público, sem login**: quem tem o link abre e revisa, sem conta e
+sem convite. `X-Robots-Tag: noindex, nofollow` mantém a URL clicável e fora de
+busca — preview aberto não é preview indexado.
+
+- **URL de branch** — revisão em andamento, sempre o último commit daquela branch.
+- **URL de commit** — aprovação e handoff. Imutável, então a aprovação não muda de
+  conteúdo debaixo de quem aprovou.
 
 Se algum dia um projeto precisar ser fechado, saiba o que isso custa antes de
 decidir: **Vercel Authentication exige que cada pessoa que revisa seja membro do

@@ -6,6 +6,53 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.2.0
+
+Hospedagem deixa de ser suposição do motor. Um Design Space que roda só na
+máquina de quem desenha passa a ser caso suportado e documentado, não um caso
+degradado de um modelo que pressupõe um fornecedor.
+
+### Alterado (incompatível)
+
+- **`commitUrl` recebe um template de URL em vez de projeto e escopo.** O formato
+  do endereço é de quem hospeda, não do motor.
+
+  ```ts
+  // 0.1.x
+  commitUrl(scenario, { project: "acme", scope: "time" });
+
+  // 0.2.0
+  commitUrl(scenario, { template: "https://acme-{shortCommit}-time.example.app" });
+  commitUrl(scenario, { template: "https://{commit}.review.acme.dev" });
+  ```
+
+  `{commit}` e `{shortCommit}` são substituídos. Sem commit a função continua
+  devolvendo `undefined`, porque aprovação sem commit não é rastreável.
+
+  Migração: nenhum produto usava a função. Se o seu usa, monte o template com o
+  endereço que o seu host produz.
+
+- **`getDeployContext` não lê mais variável de ambiente.** O contexto vem só de
+  `ProductDefinition.deploy`. A leitura anterior de `import.meta.env` e
+  `process.env` era inócua em produto real — o motor é biblioteca compilada, o
+  `import.meta.env` dele foi resolvido no build do pacote (ver 0.1.1) — então na
+  prática nada muda para quem já informava o campo `deploy`. Quem dependia da
+  detecção automática nunca teve detecção.
+
+  Campo vazio agora é tratado como ausente: `branch: ""`, que é o que um `define`
+  de bundler produz quando a variável não existe, deixa de virar um rótulo vazio
+  no cabeçalho da revisão.
+
+### Adicionado
+
+- **Trava de fronteira de hospedagem** (`src/deploy/hosting.test.ts`): reprova o
+  build se qualquer arquivo do motor citar um provedor, ou se `deploy/index.ts`
+  voltar a ler ambiente. No mesmo espírito da trava de fronteira visual.
+
+- **Testes do módulo de deploy** (`src/deploy/deploy.test.ts`), que não existiam:
+  contexto local sem hospedagem, precedência do que o produto informa, string
+  vazia como ausente e substituição no template de aprovação.
+
 ## 0.1.1
 
 ### Corrigido

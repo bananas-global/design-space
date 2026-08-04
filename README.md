@@ -99,8 +99,8 @@ controle. **Sem merge automático** de versão incompatível.
 - [`packages/core/README.md`](packages/core/README.md) — API do motor.
 - [`AGENTS.md`](AGENTS.md) — instruções e guardrails para agentes de IA.
 - [`docs/setup.md`](docs/setup.md) — **os passos que exigem suas credenciais**:
-  publicar no npm, criar os projetos na Vercel e a decisão de contrato antes do
-  primeiro preview público.
+  publicar no npm, criar projeto no provedor de hospedagem, quando houver, e a
+  decisão de contrato antes do primeiro preview público.
 - [`docs/decisions/`](docs/decisions/) — decisões **do modelo**: valem para todos os
   Design Spaces e vivem aqui uma vez só. Repositório de produto registra apenas o
   que é específico dele.
@@ -111,7 +111,7 @@ Fases 1 e 2 construídas e verificadas localmente.
 
 | Repositório | Papel | Verificação |
 | --- | --- | --- |
-| `design-space/packages/core` | motor | typecheck, build, 56 testes |
+| `design-space/packages/core` | motor | typecheck, build, 67 testes |
 | `design-space/packages/template` | molde | typecheck, build, 10 testes, 15 jornadas |
 | [`bloomy-design-space`](../bloomy-design-space) | piloto — 24 cenários | 45 testes, 75 jornadas com axe |
 | [`finaya-design-space`](../finaya-design-space) | validação da fronteira — 8 cenários | 7 testes, 27 jornadas com axe |

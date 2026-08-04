@@ -1,6 +1,6 @@
 {
   "name": "@brucesantos/design-space",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Motor neutro do Bananas Design Space: registry de cenários, shell, deep links, controles de persona/viewport/rede, inspetor de regras e ferramentas de acessibilidade. Não contém UI de cliente.",
   "type": "module",
   "license": "MIT",

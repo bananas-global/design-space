@@ -1,13 +1,20 @@
 /**
  * Contexto de deployment e deep links (§10.3).
  *
- * A Vercel expõe o contexto do deployment como variável de ambiente. O motor lê
- * esse contexto e monta a URL absoluta de qualquer cenário sem nenhum domínio
- * hardcoded — que é o que permite o botão "copiar link" funcionar igual em
- * localhost, em preview de branch e em produção.
+ * O motor não conhece provedor de hospedagem. Ele recebe o contexto do produto —
+ * `ProductDefinition.deploy` — e monta a URL absoluta de qualquer cenário sem
+ * domínio hardcoded, que é o que faz o botão "copiar link" funcionar igual em
+ * localhost, em preview e em produção.
  *
- * As variáveis precisam do prefixo `VITE_` para chegar ao cliente. O template já
- * nasce com o mapeamento no `vite.config.ts`.
+ * Não existe detecção automática aqui, e a razão é concreta: o motor é uma
+ * biblioteca já compilada, então o `import.meta.env` deste arquivo foi resolvido
+ * no build do **pacote**, não no build do produto. Ler ambiente daqui nunca
+ * funcionou em produto real — ver 0.1.1 no `CHANGELOG.md`. Quem tem acesso ao
+ * próprio ambiente de build é o produto, então é ele quem informa.
+ *
+ * Design Space sem hospedagem nenhuma é caso suportado, não degradação: sem
+ * contexto, `env` é `development`, a origem é a da janela e o cabeçalho da
+ * revisão omite branch e commit.
  */
 
 import type { ControlsState, DeployOverrides, Scenario } from "../types/index.js";
@@ -28,37 +35,22 @@ export type DeployContext = {
   commit: string | undefined;
   /** Primeiros 7 caracteres do commit. */
   shortCommit: string | undefined;
-  /** `true` quando roda em preview ou produção na Vercel. */
+  /** `true` quando o produto informou preview ou produção. */
   isDeployed: boolean;
 };
 
-type EnvRecord = Record<string, string | undefined>;
-
-function readEnv(): EnvRecord {
-  // `import.meta.env` só existe sob um bundler. Em Node (testes, scripts de CI)
-  // cai para `process.env`, que é onde a Vercel também publica as variáveis.
-  const viteEnv = (import.meta as unknown as { env?: EnvRecord }).env;
-  if (viteEnv) return viteEnv;
-  if (typeof process !== "undefined" && process.env) return process.env as EnvRecord;
-  return {};
-}
-
 /**
- * Lê o contexto do deployment.
+ * Monta o contexto do deployment a partir do que o produto informou.
  *
- * `overrides` vem do produto e tem precedência. Ele existe porque o motor é uma
- * biblioteca já compilada: o `import.meta.env` deste arquivo foi resolvido no
- * build do pacote, não no build do produto. A leitura de ambiente abaixo só
- * funciona quando o motor roda a partir do código-fonte — em testes e no
- * workspace — e por isso não pode ser a única fonte.
+ * Campo ausente ou vazio cai no padrão local — string vazia é o que um `define`
+ * de bundler produz quando a variável não existe, e um cabeçalho de revisão com
+ * branch vazia é pior que um sem branch.
  */
 export function getDeployContext(overrides: DeployOverrides = {}): DeployContext {
-  const env = readEnv();
-
-  const branchUrl = overrides.branchUrl || env.VITE_VERCEL_BRANCH_URL || env.VERCEL_BRANCH_URL;
-  const deploymentUrl = overrides.deploymentUrl || env.VITE_VERCEL_URL || env.VERCEL_URL;
-  const vercelEnv = overrides.env || env.VITE_VERCEL_ENV || env.VERCEL_ENV;
-  const commit = overrides.commit || env.VITE_VERCEL_GIT_COMMIT_SHA || env.VERCEL_GIT_COMMIT_SHA;
+  const branchUrl = overrides.branchUrl || undefined;
+  const deploymentUrl = overrides.deploymentUrl || undefined;
+  const commit = overrides.commit || undefined;
+  const env = overrides.env || "development";
 
   // Preferência deliberada: a URL de branch é estável e sempre reflete o último
   // commit daquela branch, que é o que se quer ao circular um cenário em
@@ -69,14 +61,14 @@ export function getDeployContext(overrides: DeployOverrides = {}): DeployContext
     (typeof window !== "undefined" ? window.location.origin : "http://localhost:5173");
 
   return {
-    env: vercelEnv ?? "development",
+    env,
     origin: origin.replace(/\/$/, ""),
     branchUrl,
     deploymentUrl,
-    branch: overrides.branch || env.VITE_VERCEL_GIT_COMMIT_REF || env.VERCEL_GIT_COMMIT_REF,
+    branch: overrides.branch || undefined,
     commit,
     shortCommit: commit?.slice(0, 7),
-    isDeployed: vercelEnv === "preview" || vercelEnv === "production",
+    isDeployed: env === "preview" || env === "production",
   };
 }
 
@@ -108,15 +100,27 @@ export function scenarioUrl(
  * URL imutável de aprovação (§10.2). Aponta para o commit exato, então a
  * aprovação não muda de conteúdo debaixo de quem aprovou.
  *
- * Requer o escopo do projeto na Vercel, que é a parte do domínio depois do
- * hash e não está exposta como variável — por isso vem do produto.
+ * O formato da URL é do provedor, não do motor, então vem do produto como
+ * template com `{commit}` ou `{shortCommit}`:
+ *
+ * ```ts
+ * commitUrl(scenario, { template: "https://acme-{shortCommit}-time.example.app" });
+ * commitUrl(scenario, { template: "https://{commit}.review.acme.dev" });
+ * ```
+ *
+ * Sem commit não há aprovação rastreável, e a função devolve `undefined` em vez
+ * de um link que aponta para o lugar errado.
  */
 export function commitUrl(
   scenario: Scenario,
-  options: { project: string; scope: string; commit?: string },
+  options: { template: string; commit?: string },
 ): string | undefined {
-  const commit = options.commit ?? getDeployContext().shortCommit;
+  const commit = options.commit ?? getDeployContext().commit;
   if (!commit) return undefined;
-  const origin = `https://${options.project}-${commit}-${options.scope}.vercel.app`;
+
+  const origin = options.template
+    .replaceAll("{shortCommit}", commit.slice(0, 7))
+    .replaceAll("{commit}", commit);
+
   return scenarioUrl(scenario, { origin });
 }

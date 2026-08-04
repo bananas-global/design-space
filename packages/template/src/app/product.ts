@@ -33,10 +33,14 @@ export const productDefinition: ProductDefinition = {
   // deste repositório. Quem tem acesso ao próprio build é o produto, então o
   // contexto vem daqui — sem isso o cabeçalho da revisão fica sem branch nem
   // commit, e é o commit que torna uma aprovação rastreável.
+  //
+  // Sem hospedagem os três chegam vazios e o motor trata como desenvolvimento
+  // local, que é um caso suportado. Ver `vite.config.ts` para a origem dos
+  // valores e `hosting/` para ligar um provedor.
   deploy: {
-    env: import.meta.env.VITE_VERCEL_ENV,
-    branch: import.meta.env.VITE_VERCEL_GIT_COMMIT_REF,
-    commit: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
+    env: import.meta.env.VITE_DEPLOY_ENV,
+    branch: import.meta.env.VITE_DEPLOY_BRANCH,
+    commit: import.meta.env.VITE_DEPLOY_COMMIT,
   },
 
   theme: {

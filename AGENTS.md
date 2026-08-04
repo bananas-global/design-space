@@ -14,7 +14,7 @@ O motor compartilhado (`packages/core`) e o template de novos produtos
 ```bash
 pnpm install
 pnpm check                      # typecheck + build + testes de todos os pacotes
-pnpm -C packages/core test      # 44 testes unitários do motor
+pnpm -C packages/core test      # 67 testes unitários do motor
 pnpm -C packages/template dev   # o motor rodando dentro de um produto de exemplo
 pnpm -C packages/template test:e2e
 ```
@@ -58,6 +58,10 @@ padrão é compartilhado pela convenção no template; o componente, não.
 - **Não** adicione dependência de runtime. O motor tem `react` e `react-dom` como
   peers e nada além disso. Roteamento, validação e medição de contraste são
   implementados aqui de propósito, porque o que se precisa deles é pequeno.
+- **Não** cite provedor de hospedagem no motor, nem em comentário, e não volte a ler
+  variável de ambiente em `deploy/`. Contexto de deployment vem do produto por
+  `ProductDefinition.deploy` — ver `docs/decisions/0007-hospedagem-opcional.md`.
+  Existe trava em `src/deploy/hosting.test.ts`.
 - **Não** escreva CSS que possa alcançar a UI do produto. Todo seletor é
   prefixado com `ds-`, toda custom property com `--ds-`, e não existe regra em
   elemento nu fora de `.ds-root`.

@@ -332,24 +332,25 @@ export type ProductDefinition = {
     adapters?: DataSourceAdapter[];
   };
   /**
-   * Contexto do deployment, informado pelo produto.
+   * Contexto do deployment, informado pelo produto. **Opcional**: um Design
+   * Space que roda só local não precisa dele.
    *
    * O motor **não consegue** descobrir isso sozinho. Ele é uma biblioteca já
    * compilada: o `import.meta.env` do código dele foi resolvido no build do
    * pacote, não no build do produto, então não sobra nada para o bundler do
    * produto substituir. Quem tem acesso ao próprio ambiente de build é o produto.
    *
-   * Passe os valores do bundler:
+   * Passe os valores do bundler, com o nome que o seu build usar:
    *
    * ```ts
    * deploy: {
-   *   env: import.meta.env.VITE_VERCEL_ENV,
-   *   branch: import.meta.env.VITE_VERCEL_GIT_COMMIT_REF,
-   *   commit: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
+   *   env: import.meta.env.VITE_DEPLOY_ENV,
+   *   branch: import.meta.env.VITE_DEPLOY_BRANCH,
+   *   commit: import.meta.env.VITE_DEPLOY_COMMIT,
    * }
    * ```
    *
-   * Sem isso o cabeçalho da revisão mostra "development" e fica sem branch nem
+   * Sem isso o cabeçalho da revisão mostra "development" e omite branch e
    * commit — e é o commit que torna uma aprovação rastreável.
    */
   deploy?: DeployOverrides;
@@ -361,8 +362,9 @@ export type ProductDefinition = {
 };
 
 /**
- * Contexto do deployment informado pelo produto. Todos os campos são opcionais:
- * o que vier preenchido substitui a detecção do motor.
+ * Contexto do deployment informado pelo produto. Todos os campos são opcionais,
+ * e é essa a fonte única: o motor não lê ambiente nem conhece provedor de
+ * hospedagem. Campo ausente cai no padrão local.
  */
 export type DeployOverrides = {
   /** `development`, `preview` ou `production`. */

@@ -25,6 +25,11 @@ pnpm build        # typecheck + build de produção
 pnpm check        # typecheck + test + build — rode antes de concluir qualquer alteração
 ```
 
+Hospedagem é escolha explícita, e o padrão é nenhuma: `pnpm setup:hosting vercel`
+instala os arquivos do provedor, `pnpm setup:hosting none` os remove. **Não** crie
+`vercel.json` nem workflow de deploy à mão — eles vivem em `hosting/<provedor>/`, e
+um Design Space que roda só local é caso suportado, não pendência.
+
 ## Onde as coisas ficam
 
 | Caminho | Conteúdo |

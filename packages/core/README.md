@@ -93,10 +93,17 @@ rede declarados no cenário.
 
 ### Deploy e deep links
 
-- `getDeployContext()` — lê o contexto da Vercel: branch, commit, ambiente,
-  origem absoluta.
+O motor não conhece provedor de hospedagem, e um Design Space que roda só local é
+caso suportado: sem contexto, o ambiente é `development` e o cabeçalho da revisão
+omite branch e commit.
+
+- `getDeployContext(overrides)` — monta branch, commit, ambiente e origem absoluta
+  a partir do que o produto informou em `ProductDefinition.deploy`. Não lê
+  ambiente: o motor é biblioteca compilada e não alcança o build de quem o
+  consome.
 - `scenarioUrl(scenario, options)` — URL absoluta reproduzível.
-- `commitUrl(scenario, options)` — URL imutável para registrar aprovação.
+- `commitUrl(scenario, { template })` — URL imutável para registrar aprovação. O
+  template é do produto, com `{commit}` ou `{shortCommit}`.
 
 ### Dados
 
@@ -120,8 +127,8 @@ preview.
 
 - `pathFor(scenario, overrides)` — caminho relativo para `page.goto`, deixando o
   `baseURL` do Playwright decidir entre preview e dev server.
-- `testOrigin(fallback)` — lê `PREVIEW_URL`, que o gatilho `deployment_status`
-  entrega pronto.
+- `testOrigin(fallback)` — lê `PREVIEW_URL` quando existe um ambiente publicado
+  para testar; sem ela, o Playwright roda contra o dev server local.
 - `assertValidProduct(product)` — falha o teste quando o contrato tem erro.
 - `scenariosUnderTest(product)`, `keyboardScenarios(product)` — recortes para
   parametrizar jornadas.

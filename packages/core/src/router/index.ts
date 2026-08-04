@@ -6,9 +6,11 @@
  * casar um path contra uma lista declarada e extrair parâmetros. Em troca, o
  * produto não herda a versão nem as convenções de um router externo.
  *
- * O que faz este roteamento funcionar em preview é o rewrite de SPA no
- * `vercel.json` (§10.4): sem ele, abrir uma rota profunda direto pela URL
- * devolve 404 no primeiro carregamento e quebra a promessa central do produto.
+ * Em desenvolvimento o dev server já serve qualquer rota. Publicado, o que faz
+ * isso continuar funcionando é o rewrite de SPA de quem hospeda (§10.4): sem ele,
+ * abrir uma rota profunda direto pela URL devolve 404 no primeiro carregamento e
+ * quebra a promessa central do produto. A configuração é do host, e por isso vive
+ * no produto — não aqui.
  */
 
 import type { RouteDefinition } from "../types/index.js";

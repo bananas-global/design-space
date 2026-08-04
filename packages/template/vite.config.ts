@@ -22,10 +22,9 @@ import { devPort } from "./dev-port.js";
  *    Ver `docs/decisions/0002-source-mapping-no-preview.md` para o raciocínio e
  *    para como ligar em preview quando a revisão justificar.
  *
- * 3. **Variáveis de deployment.** A Vercel publica o contexto como `VERCEL_*`
- *    no build. Mapear explicitamente para `VITE_VERCEL_*` é o que garante que o
- *    motor monte o link absoluto do cenário sem domínio hardcoded, sem depender
- *    de a exposição automática de variáveis de sistema estar ligada no projeto.
+ * 3. **Variáveis de deployment.** Nome próprio, `VITE_DEPLOY_*`, e não o nome de
+ *    um provedor: quem publica muda, o contrato com o motor não. É o que garante
+ *    que o motor monte o link absoluto do cenário sem domínio hardcoded.
  */
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -37,15 +36,20 @@ const sourceMappingInBuild = process.env.DESIGN_SPACE_SOURCE_MAPPING === "1";
 /**
  * Contexto do deployment, injetado no código do produto.
  *
- * Vem de `build-info.json`, gravado pelo workflow de deploy. Duas coisas que
- * explicam este desenho e que não são óbvias:
+ * Vem de `build-info.json`, que o workflow de deploy grava — se houver um. Sem
+ * hospedagem o arquivo não existe, o produto cai para os padrões locais e está
+ * tudo certo: `pnpm setup:hosting none` é o estado inicial.
  *
- * 1. O `vercel build` não repassa o ambiente do shell ao build do Vite, e
- *    sobrescreve um `.env` na raiz com o arquivo que ele mesmo gera. Um arquivo
- *    lido aqui, em Node, é o único ponto que nada mais toca.
+ * Duas coisas explicam este desenho e não são óbvias:
+ *
+ * 1. Um arquivo lido aqui, em Node, é o único ponto que a ferramenta de deploy
+ *    não toca. Passar por variável de shell ou por `.env` na raiz falhou na
+ *    prática: a CLI da Vercel não repassa o ambiente do shell ao build do Vite e
+ *    sobrescreve o `.env` com o arquivo que ela mesma gera. Outras ferramentas de
+ *    deploy têm limitações parecidas, e o arquivo funciona em todas.
  *
  * 2. O `define` substitui **texto literal**. Funciona no código deste
- *    repositório, que escreve `import.meta.env.VITE_VERCEL_ENV` por extenso, e
+ *    repositório, que escreve `import.meta.env.VITE_DEPLOY_ENV` por extenso, e
  *    não funciona dentro do motor, que é uma biblioteca já compilada e lê
  *    `import.meta.env` como objeto. Por isso o produto entrega o contexto ao
  *    motor pelo campo `deploy` da `ProductDefinition`, em `src/app/product.ts`.
@@ -66,9 +70,9 @@ function readBuildInfo(): BuildInfo {
 const buildInfo = readBuildInfo();
 
 const deployEnv = {
-  "import.meta.env.VITE_VERCEL_ENV": JSON.stringify(buildInfo.env ?? "development"),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_REF": JSON.stringify(buildInfo.ref ?? ""),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA": JSON.stringify(buildInfo.sha ?? ""),
+  "import.meta.env.VITE_DEPLOY_ENV": JSON.stringify(buildInfo.env ?? "development"),
+  "import.meta.env.VITE_DEPLOY_BRANCH": JSON.stringify(buildInfo.ref ?? ""),
+  "import.meta.env.VITE_DEPLOY_COMMIT": JSON.stringify(buildInfo.sha ?? ""),
 };
 
 export default defineConfig({

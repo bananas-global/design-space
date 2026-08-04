@@ -1,0 +1,128 @@
+# Publica na Vercel pelo GitHub Actions, não pela integração Git da Vercel.
+#
+# Por quê: no plano Pro, a Vercel só publica um commit se o **autor** do commit for
+# membro pago do time. Com um só assento, isso significa que apenas os commits do
+# dono viram deploy. Aqui quem publica é o token — então o autor do commit deixa de
+# importar, e o time inteiro continua sem consumir assento.
+#
+# A troca: `vercel.json` desliga o deploy automático da Vercel
+# (`deploymentEnabled: false`). Se este workflow parar de rodar, nada é publicado.
+# É deslocamento de responsabilidade, não redundância.
+#
+# Consequência já tratada: sem a integração Git, a Vercel não emite o evento
+# `deployment_status` do GitHub, então a jornada Playwright roda aqui, contra a URL
+# que este mesmo job acabou de publicar.
+#
+# Requer os secrets VERCEL_TOKEN, VERCEL_ORG_ID e VERCEL_PROJECT_ID.
+name: Publicar e verificar
+
+on:
+  push:
+
+# Um deploy por branch de cada vez. Push em sequência cancela o anterior em vez de
+# publicar os dois fora de ordem.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Typecheck e testes antes de publicar: falha rápida e barata, sem gastar um
+      # deploy. A jornada Playwright fica depois, porque ela testa o que foi
+      # publicado de verdade.
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Contrato de cenário, regras e contraste dos tokens
+        run: pnpm test
+
+      - name: Instalar a CLI da Vercel
+        run: npm install --global vercel@latest
+
+      - name: Definir o ambiente pela branch
+        id: ambiente
+        run: |
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            echo "alvo=production" >> "$GITHUB_OUTPUT"
+            echo "flag=--prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "alvo=preview" >> "$GITHUB_OUTPUT"
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Puxar a configuração do projeto
+        run: vercel pull --yes --environment=${{ steps.ambiente.outputs.alvo }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      # Gravado como arquivo lido pelo `vite.config.ts`, e não como variável de
+      # ambiente: o `vercel build` não repassa o ambiente do shell ao build do Vite,
+      # e sobrescreve um `.env` na raiz com o arquivo que ele mesmo gera. Ambos
+      # foram testados e falharam.
+      #
+      # Sem isso o cabeçalho da revisão mostra "development" e fica sem branch nem
+      # commit, e é o commit que torna uma aprovação rastreável.
+      - name: Gravar o contexto do deployment
+        run: |
+          cat > build-info.json <<JSON
+          {
+            "env": "${{ steps.ambiente.outputs.alvo }}",
+            "ref": "${{ github.ref_name }}",
+            "sha": "${{ github.sha }}"
+          }
+          JSON
+          cat build-info.json
+
+      # O build roda aqui, no runner do GitHub. Para a Vercel sobe só o resultado.
+      - name: Build
+        run: vercel build ${{ steps.ambiente.outputs.flag }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Publicar
+        id: deploy
+        run: echo "url=$(vercel deploy --prebuilt ${{ steps.ambiente.outputs.flag }} --token=${{ secrets.VERCEL_TOKEN }})" >> "$GITHUB_OUTPUT"
+
+      - name: Instalar navegador
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Jornada e axe contra o que foi publicado
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+        run: pnpm test:e2e
+
+      # O link aparece no resumo da execução, para não ter que caçar na saída dos
+      # comandos. É o endereço que circula em revisão.
+      - name: Mostrar o link
+        if: always()
+        run: |
+          {
+            echo "## Design Space publicado"
+            echo ""
+            echo "${{ steps.deploy.outputs.url }}"
+            echo ""
+            echo "Mapa de situações na raiz. Cada cenário abre por URL própria."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar o relatório do Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

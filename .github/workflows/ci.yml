@@ -20,6 +20,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Antes de qualquer typecheck: o template importa o motor pelo `dist`, que
+      # não é versionado. Em checkout limpo, typecheck antes do build reprova com
+      # "Cannot find module '@brucesantos/design-space'" — um erro sobre o CI, não
+      # sobre o código.
+      - name: Build do motor
+        run: pnpm -C packages/core build
+
       - name: Typecheck
         run: pnpm typecheck
 

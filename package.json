@@ -10,7 +10,7 @@
     "build": "pnpm -r --filter \"./packages/*\" build",
     "typecheck": "pnpm -r --filter \"./packages/*\" typecheck",
     "test": "pnpm -r --filter \"./packages/*\" test",
-    "check": "pnpm run typecheck && pnpm run build && pnpm run test"
+    "check": "pnpm run build && pnpm run typecheck && pnpm run test"
   },
   "packageManager": "pnpm@10.12.4",
   "pnpm": {

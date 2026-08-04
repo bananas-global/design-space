@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.12.4",
   "description": "Molde de novos Design Spaces. Inicia repositório novo e nunca atualiza projeto existente (D-07): o que evolui continuamente é distribuído pelo pacote do motor.",
   "scripts": {
     "dev": "vite",

@@ -42,7 +42,10 @@ jobs:
             exit 1
           fi
 
+      # `--filter`, não `-C packages/core`: com `-C` o pnpm repassa a linha inteira
+      # para o `npm publish`, que não conhece `--no-git-checks` e aborta com EUSAGE
+      # antes de tentar publicar.
       - name: Publicar
-        run: pnpm -C packages/core publish --access public --no-git-checks --provenance
+        run: pnpm --filter @brucesantos/design-space publish --access public --no-git-checks --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

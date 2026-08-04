@@ -1,23 +1,29 @@
-# Setup — o que só você pode fazer
+# Setup — o que exige credencial ou decisão
 
-O código está pronto e verificado localmente. Os passos abaixo exigem
-credenciais, aprovação de conta ou decisão de contrato, então ficaram sem
-execução de propósito. Cada um diz o que fazer, por que, e como conferir que
-funcionou.
+O que um Design Space novo precisa e que nenhum agente executa: credencial de
+conta, permissão de organização e decisão de contrato. Cada passo diz o que fazer,
+por que, e como conferir que funcionou.
 
-## 1. Publicar no npm — feito
+Os passos são por produto. O motor deste repositório não vira site — ele é
+publicado como pacote.
 
-`feedback-collector@0.1.1` e `@brucesantos/design-space@0.1.0` estão publicados.
+## 1. Publicar o motor no npm
 
-Para as próximas versões do motor, com o secret `NPM_TOKEN` no repositório, criar a
-tag `core-v<versão>` dispara `.github/workflows/release.yml`, que roda `pnpm check`,
-confere que a tag casa com a versão do `package.json` e publica com provenance.
+Com o secret `NPM_TOKEN` no repositório, criar a tag `core-v<versão>` dispara
+[`.github/workflows/release.yml`](../.github/workflows/release.yml), que roda
+`pnpm check`, confere que a tag casa com a versão do `package.json` e publica com
+provenance.
 
-## 2. Produtos apontando para o npm — feito
+```bash
+gh secret set NPM_TOKEN
+git tag core-v<versão> && git push origin core-v<versão>
+```
 
-Bloomy e Finaya consomem `@brucesantos/design-space@^0.1.0` e
-`feedback-collector@^0.1.1`, ambos do registro. Nenhum caminho local sobrou — era o
-que faria o build da Vercel quebrar.
+## 2. Produto apontando para a versão publicada
+
+O template consome o motor por `workspace:*`, que só resolve dentro deste
+monorepo. Em um repositório de produto isso precisa virar a versão publicada, ou o
+`pnpm install` falha — e o build no CI falha com ele.
 
 Para desenvolver motor e produto ao mesmo tempo, dá para apontar temporariamente
 para a pasta local:
@@ -28,114 +34,76 @@ pnpm add @brucesantos/design-space@link:../design-space/packages/core
 
 Só lembre de voltar para a versão publicada antes de commitar.
 
-## 3. Criar os repositórios no GitHub
+## 3. Criar o repositório do produto
 
-`design-space` já tem remote (`bananas-global/design-space`) e dois commits
-locais. Nada foi enviado.
-
-```bash
-cd design-space && git push -u origin main
-```
-
-`bloomy-design-space` é um repositório novo, ainda sem remote. Crie **privado** —
-Design Space de cliente vive em repositório privado controlado pela Bananas:
+Design Space de cliente vive em repositório **privado**:
 
 ```bash
-cd ../bloomy-design-space
-gh repo create bananas-global/bloomy-design-space --private --source=. --push
+gh repo create <org>/<produto>-design-space --private --source=. --push
 ```
 
-`finaya-design-space` também. Ele é o segundo produto e serve de referência viva da
-fronteira do motor, então vale versionar mesmo com os tokens ainda provisórios:
+## 4. Hospedagem, quando houver
 
-```bash
-cd ../finaya-design-space
-gh repo create bananas-global/finaya-design-space --private --source=. --push
-```
+O padrão do template é **nenhuma**: `pnpm dev` local é um uso completo do modelo.
+Ver [`0007`](decisions/0007-hospedagem-opcional.md) para o que se ganha e o que se
+perde em cada caminho.
 
-## 4. Criar os projetos na Vercel
+Optando por publicar, `pnpm setup:hosting <provedor>` instala os arquivos do
+provedor, e o que sobra é de conta:
 
-Um projeto por repositório de produto. O motor **não** vira site: ele é publicado
-como pacote.
+1. Criar o projeto no provedor, apontando para o repositório.
+2. Gravar os secrets que o workflow de deploy usa.
+3. **Desligar a proteção de acesso do preview.** É ela que faria quem revisa bater
+   em tela de login — ver o passo 5.
+4. Anotar a URL de produção: é o link permanente do catálogo.
 
-Para `bloomy-design-space`:
-
-1. Vercel → Add New → Project → importe o repositório.
-2. Framework detectado: Vite. Nada a configurar — `vercel.json` já tem o rewrite
-   de SPA e o header `noindex`.
-3. **Deployment Protection → desligue Vercel Authentication para preview.** No
-   plano Pro ela vem ligada, e é ela que faria o cliente bater em tela de login.
-   Vale para todos os projetos — ver o passo 5.
-4. Anote a URL de produção: é o link permanente do catálogo.
-
-Confira o que mais importa: abra uma rota profunda direto, em janela anônima:
+Confira o que mais importa: abra uma rota profunda direto, em janela anônima.
 
 ```
-https://<projeto>.vercel.app/finance/claims/GUI-4042?scenario=finance.insurance-denied
+https://<projeto>/<rota-profunda>?scenario=<modulo>.<situacao>
 ```
 
-Precisa abrir a guia recusada sem login e sem 404. Se der 404, o rewrite não foi
-aplicado.
+Precisa abrir a situação certa sem login e sem 404. Se der 404, o rewrite de SPA
+não foi aplicado.
 
-## 5. Preview público — decidido para todos
+## 5. Preview público
 
-Todos os Design Spaces ficam com preview **público e sem login**. Postura padrão,
-não decisão caso a caso.
+Todos os Design Spaces publicados ficam com preview **público e sem login** —
+postura padrão, não decisão caso a caso. Ver
+[`0004`](decisions/0004-preview-publico-sem-autenticacao.md).
 
-Na Vercel: **Deployment Protection → desligue Vercel Authentication para preview**
-em cada projeto. No plano Pro ela vem ligada por padrão.
+A proteção é URL não adivinhável mais o header `noindex`, que o `vercel.json` do
+template já manda. Mesmo modelo de link compartilhado do Figma.
 
-A proteção é URL não adivinhável mais o header `noindex`, que o `vercel.json` já
-manda. Mesmo modelo de link compartilhado do Figma.
-
-Nota sobre o documento de arquitetura: ele diz que ligar a autenticação "é um
-toggle". Não é — ela exige que cada revisor seja membro do time na Vercel, e no Pro
-seat é pago. Vale corrigir na fonte, para ninguém decidir fechar um projeto achando
-que é trivial.
+Fechar um preview não é ligar uma chave: a autenticação de deployment exige que
+cada pessoa que revisa seja membro do time no provedor, e em plano pago seat é
+pago. É passar a administrar acesso, e é o oposto do que este ambiente existe para
+fazer.
 
 ## 6. Convidar quem vai revisar
 
 GitHub → Settings → Collaborators, permissão **Read**. É gratuito e não consome
-seat da Vercel. Quem revisa não precisa de conta na Vercel — só do link.
+seat de hospedagem. Quem revisa não precisa de conta no provedor — só do link.
 
-Para comentar em thread na Vercel Toolbar, aí sim precisa de conta. O
-`feedback-collector` não precisa de conta nenhuma, mas roda em desenvolvimento
-(ver a decisão 0005 em `docs/decisions/`).
+O `feedback-collector` não exige conta nenhuma, mas roda em desenvolvimento (ver a
+decisão [`0005`](decisions/0005-source-mapping-so-em-desenvolvimento.md)).
 
 ## 7. Primeira revisão com uma pessoa de negócio
 
-É o passo 6 da sequência de execução do documento, e o que falta para os cenários
-saírem de `em revisão`.
-
-Sugestão de roteiro, com os três cenários que mais rendem conversa:
-
-| Link | Pergunta a fazer |
-| --- | --- |
-| `?scenario=finance.insurance-denied` | "O motivo da recusa está claro o suficiente para você saber o que fazer?" |
-| `?scenario=agenda.double-booking` | "Assim você percebe o conflito antes dos dois pacientes chegarem?" |
-| `?scenario=patients.minor-without-guardian` | "Faz sentido bloquear o agendamento aqui, ou a clínica precisa de uma exceção?" |
+É o que falta para os cenários saírem de `em revisão`. Escolha os três cenários que
+mais rendem conversa — normalmente uma recusa, um conflito e um bloqueio por
+permissão — e leve uma pergunta por cenário, não uma apresentação.
 
 Depois da revisão, para cada cenário aprovado: mude `status` para `"approved"` e
-preencha `approvedAt` com a **URL de commit** (não a de branch) e o sha. O
-validador avisa se você esquecer — aprovação sem URL imutável muda de conteúdo
-debaixo de quem aprovou.
+preencha `approvedAt` com a **URL de commit**, não a de branch. O validador avisa se
+você esquecer — aprovação sem URL imutável muda de conteúdo debaixo de quem
+aprovou.
 
-## 8. Dependabot ou Renovate nos produtos
+Sem hospedagem não existe URL de commit: registre o permalink do commit no Git e
+anote a escolha nas decisões do produto.
+
+## 8. Dependabot ou Renovate no produto
 
 Quando sair uma versão nova do motor, o PR deve ser aberto automaticamente em cada
-produto — e o merge **não** deve ser automático. O arquivo
-`.github/dependabot.yml` do template já vem configurado para isso.
-
-## Checklist
-
-- [x] `feedback-collector@0.1.1` e `@brucesantos/design-space@0.1.0` publicados
-- [x] Bloomy e Finaya apontando para as versões publicadas
-- [x] `design-space` enviado para o GitHub
-- [x] `bloomy-design-space` criado como repositório **privado**
-- [x] `finaya-design-space` criado como repositório **privado**
-- [ ] Projeto Vercel do Bloomy criado
-- [ ] Rota profunda abrindo em janela anônima, sem 404
-- [x] Preview público decidido para todos os projetos
-- [ ] Vercel Authentication desligada em cada projeto criado
-- [ ] Primeira revisão com pessoa de negócio feita
-- [ ] Cenários aprovados com `approvedAt` preenchido por URL de commit
+produto — e o merge **não** deve ser automático. O `.github/dependabot.yml` do
+template já vem configurado para isso.

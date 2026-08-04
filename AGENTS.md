@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Instruções para agentes de IA trabalhando no **motor** do Design Space. Se você
-está em um repositório de produto (`bloomy-design-space` e afins), leia o
+está em um repositório de produto — um `<produto>-design-space` — leia o
 `AGENTS.md` daquele repositório em vez deste.
 
 ## O que este repositório é
@@ -38,13 +38,14 @@ ao mesmo tempo:
    independentes. Um produto só não é evidência — é antecipação.
 2. **Zero aparência.** Nenhuma decisão de cor, raio, espaçamento, tipografia ou
    anatomia de layout.
-3. **Zero domínio.** Nenhum conceito de cliente: nada de paciente, guia, cobrança,
-   convênio.
+3. **Zero domínio.** Nenhum conceito de cliente, de nenhum setor. Se o nome só faz
+   sentido dentro do negócio de um cliente, o lugar é o repositório dele.
 
 Falhar em qualquer um dos três significa que o lugar é o produto.
 
-Exemplo do que **passou**: `parseIsoDate`. Bloomy e Finaya escreveram a mesma
-correção de fuso separadamente, e ela não decide nada visual nem conhece domínio.
+Exemplo do que **passou**: `parseIsoDate`. Dois produtos independentes escreveram a
+mesma correção de fuso separadamente, e ela não decide nada visual nem conhece
+domínio.
 
 Exemplo do que **não passa**: um `Button` compartilhado. Os dois produtos têm um,
 com a mesma prop `unavailableReason` resolvendo o mesmo problema conceitual — e

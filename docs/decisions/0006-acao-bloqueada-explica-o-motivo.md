@@ -43,14 +43,13 @@ documentos faltam** transforma um bloqueio em uma instrução.
 ## Como isto é compartilhado
 
 **O padrão é compartilhado; o componente, não.** Cada produto implementa seu
-próprio `Button` com uma prop de motivo — `unavailableReason` no Bloomy e na
-Finaya. Um botão compartilhado no motor faria o raio de canto de um cliente mexer
-no outro.
+próprio `Button` com uma prop de motivo — os dois primeiros produtos chegaram
+separadamente ao mesmo nome, `unavailableReason`. Um botão compartilhado no motor
+faria o raio de canto de um cliente mexer no outro.
 
 Ver [`AGENTS.md`](../../AGENTS.md) para os critérios de extração.
 
 ## Exceção
 
 Ação que a persona **nunca** terá acesso, em nenhuma circunstância, pode ser
-omitida — é o caso do drawer do Bloomy, que esconde módulos que o perfil não
-alcança. A diferença é entre "você não pode agora" e "isto não é para você".
+omitida — é o caso de um drawer que esconde os módulos que o perfil não alcança. A diferença é entre "você não pode agora" e "isto não é para você".

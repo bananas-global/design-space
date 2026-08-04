@@ -113,7 +113,9 @@ describe("fronteira visual", () => {
 describe("fronteira de vocabulário", () => {
   const src = dirname(dirname(fileURLToPath(import.meta.url)));
 
-  const CLIENTES = [/\bbloomy\b/i, /\bfinaya\b/i, /\bbananas\b/i];
+  // Nome de cliente. O nome do estúdio não entra: ele assina o pacote, e o
+  // problema nunca foi identificar quem fez — foi expor para quem.
+  const CLIENTES = [/\bbloomy\b/i, /\bfinaya\b/i];
 
   function sourceFiles(dir: string): string[] {
     return readdirSync(dir).flatMap((entry) => {
@@ -133,5 +135,18 @@ describe("fronteira de vocabulário", () => {
       offenders,
       "Nome de cliente citado no motor. Exemplo do motor usa vocabulário genérico.",
     ).toEqual([]);
+  });
+
+  it("nenhum documento publicado com o pacote nomeia um cliente", () => {
+    // `README.md` e `CHANGELOG.md` vão dentro do tarball do npm, então são tão
+    // públicos quanto o código — e foi num exemplo do README que o nome de um
+    // cliente real apareceu.
+    const pkg = dirname(src);
+
+    const offenders = ["README.md", "CHANGELOG.md"].filter((file) =>
+      CLIENTES.some((pattern) => pattern.test(readFileSync(join(pkg, file), "utf8"))),
+    );
+
+    expect(offenders, "Nome de cliente em documento publicado no npm.").toEqual([]);
   });
 });

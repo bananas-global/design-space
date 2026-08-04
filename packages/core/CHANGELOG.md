@@ -82,11 +82,11 @@ degradado de um modelo que pressupõe um fornecedor.
 ### Corrigido
 
 - **O motor não carrega mais o domínio dos primeiros clientes.** Comentários,
-  exemplos de JSDoc e fixtures de teste falavam de convênio recusado, paciente
-  menor de idade e guia. Nada disso tinha efeito em runtime; o efeito era outro,
-  e caro: um agente que lê esses arquivos conclui que o motor é de um setor
-  específico e escreve como se fosse. Os exemplos passaram a usar vocabulário
-  genérico — solicitação, aprovação, cobrança.
+  exemplos de JSDoc e fixtures de teste usavam o vocabulário do setor de um
+  cliente, inclusive o exemplo do README deste pacote. Nada disso tinha efeito em
+  runtime; o efeito era outro, e caro: um agente que lê esses arquivos conclui que
+  o motor serve a um setor e escreve como se fosse. Os exemplos passaram a usar
+  vocabulário genérico — solicitação, aprovação, cobrança.
 
 - **Testes do módulo de deploy** (`src/deploy/deploy.test.ts`), que não existiam:
   contexto local sem hospedagem, precedência do que o produto informa, string
@@ -181,14 +181,14 @@ Primeira versão do motor. Fase 1 do roadmap.
   carrega aparência e não carrega domínio.
 
   O bug de origem: `new Date("2011-09-08")` é meia-noite **UTC** e, formatado em
-  qualquer fuso a oeste de Greenwich, exibe o dia anterior. No Bloomy isso
-  deslocava a data de nascimento, o cálculo de idade e portanto a regra do paciente
-  menor de idade; na Finaya, errava o vencimento da cobrança por um dia. Os dois
-  produtos escreveram a mesma correção separadamente, sem saber um do outro.
+  qualquer fuso a oeste de Greenwich, exibe o dia anterior. Em um produto isso
+  deslocava uma data de nascimento e, com ela, a idade calculada e uma regra que
+  dependia da idade; em outro, errava um vencimento por um dia. Os dois produtos
+  escreveram a mesma correção separadamente, sem saber um do outro.
 
   `ageInYears` exige a data de referência como parâmetro obrigatório de propósito:
   um padrão `new Date()` faria fixture depender do relógio.
 
-  O que **não** foi extraído, e por quê, está em
-  `finaya-design-space/docs/decisions/0001`. A régua para a próxima extração:
-  **dois produtos, zero aparência, zero domínio.**
+  O que **não** foi extraído, e por quê, está registrado no repositório do segundo
+  produto. A régua para a próxima extração: **dois produtos, zero aparência, zero
+  domínio.**

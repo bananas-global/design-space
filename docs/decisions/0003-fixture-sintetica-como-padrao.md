@@ -6,8 +6,8 @@
 
 ## Contexto
 
-Um Design Space precisa reproduzir situações específicas — convênio recusado,
-menor sem responsável, cliente com verificação pendente. Duas formas de conseguir
+Um Design Space precisa reproduzir situações específicas — solicitação recusada,
+permissão faltando, cliente com verificação pendente. Duas formas de conseguir
 isso: ligar em uma API real (staging) ou modelar dados sintéticos locais.
 
 ## Decisão

@@ -22,19 +22,19 @@ a distância entre a intenção de design e o que a engenharia interpreta.
 
 O repositório de produção reduz essa distância, mas cobra permissões, banco,
 autenticação e governança que não pertencem ao ciclo diário do time. Um designer
-que precisa revisar uma recusa de convênio não deveria construir a cadeia de
+que precisa revisar uma solicitação recusada não deveria construir a cadeia de
 dados inteira para chegar naquele estado.
 
 O Design Space reproduz apenas o necessário para tornar a experiência explorável
-e verificável — e fala a linguagem do produto: convênio recusado, paciente
-inadimplente, consulta reagendada.
+e verificável — e fala a linguagem do produto: a situação tem o nome que o time do
+cliente usa para ela, não o nome do componente que a desenha.
 
 ## Arquitetura
 
 | Camada | Onde vive | O que contém |
 | --- | --- | --- |
 | Motor | `@brucesantos/design-space` | Navegação, registry de cenários, painel, deep links, controles, ferramentas de acessibilidade e teste. |
-| Produto | `bloomy-design-space`, `finaya-design-space` | UI, tokens, componentes, telas, fluxos, regras, personas e fixtures exclusivas. |
+| Produto | um `<produto>-design-space` privado por cliente | UI, tokens, componentes, telas, fluxos, regras, personas e fixtures exclusivas. |
 | Dados | fixture adapter por padrão | Dado sintético e determinístico. REST, GraphQL ou staging entram como adapters opcionais. |
 
 A **regra de fronteira**: se aparece dentro da interface do cliente e contribui
@@ -113,20 +113,19 @@ Fases 1 e 2 construídas e verificadas localmente.
 | --- | --- | --- |
 | `design-space/packages/core` | motor | typecheck, build, 67 testes |
 | `design-space/packages/template` | molde | typecheck, build, 10 testes, 15 jornadas |
-| [`bloomy-design-space`](../bloomy-design-space) | piloto — 24 cenários | 45 testes, 75 jornadas com axe |
-| [`finaya-design-space`](../finaya-design-space) | validação da fronteira — 8 cenários | 7 testes, 27 jornadas com axe |
+| produto piloto | 24 cenários | 45 testes, 75 jornadas com axe |
+| segundo produto | 8 cenários — validação da fronteira | 7 testes, 27 jornadas com axe |
 
-O que a Fase 2 provou está em
-[`finaya-design-space/docs/decisions/0001`](../finaya-design-space/docs/decisions/0001-o-que-a-finaya-provou-sobre-a-fronteira.md):
-a fronteira se sustentou, um vazamento de CSS foi encontrado e travado por teste, e
-exatamente uma capacidade foi extraída para o motor — por evidência, não por
-antecipação.
+Os dois produtos vivem em repositórios privados, e o registro do que a Fase 2
+provou fica com eles: a fronteira se sustentou, um vazamento de CSS foi encontrado
+e travado por teste, e exatamente uma capacidade foi extraída para o motor — por
+evidência, não por antecipação.
 
 Pendente, porque depende de você:
 
 | Passo | Por quê |
 | --- | --- |
-| Criar os projetos na Vercel | requer conta |
+| Criar o projeto no provedor de hospedagem, quando houver | requer conta |
 | Aprovar cenários | requer revisão com uma pessoa de negócio |
 
 Tudo detalhado em [`docs/setup.md`](docs/setup.md).

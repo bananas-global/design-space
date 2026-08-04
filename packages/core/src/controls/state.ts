@@ -12,7 +12,7 @@
  * 2. valor declarado no cenário ativo;
  * 3. padrão do motor.
  *
- * Isso é o que permite colar `?scenario=finance.insurance-denied` sozinho e
+ * Isso é o que permite colar `?scenario=requests.approve-blocked` sozinho e
  * receber a persona, a fixture e o estado de rede corretos de brinde.
  */
 

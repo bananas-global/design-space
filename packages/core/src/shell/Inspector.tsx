@@ -12,7 +12,7 @@ import type { Registry } from "../registry/index.js";
 import type { AccessibleNode } from "../a11y/accessible-tree.js";
 import { checkContrastPairs } from "../a11y/contrast.js";
 import type { ControlsState, Scenario } from "../types/index.js";
-import { KEYBOARD_LABELS, NETWORK_LABELS, STATUS_LABELS, STATUS_MEANING } from "./labels.js";
+import { useLabels } from "./labels.js";
 
 type Tab = "scenario" | "a11y" | "diagnostics";
 
@@ -31,20 +31,21 @@ export function Inspector({
   focusedNode,
   tabStopCount,
 }: InspectorProps) {
+  const labels = useLabels().inspector;
   const [tab, setTab] = useState<Tab>("scenario");
   const errorCount = registry.issues.filter((issue) => issue.level === "error").length;
 
   return (
-    <aside className="ds-chrome ds-inspector" aria-label="Painel de contexto">
+    <aside className="ds-chrome ds-inspector" aria-label={labels.region}>
       <div className="ds-inspector__tabs" role="tablist">
         <TabButton id="scenario" current={tab} onSelect={setTab}>
-          Cenário
+          {labels.tabScenario}
         </TabButton>
         <TabButton id="a11y" current={tab} onSelect={setTab}>
-          Acessibilidade
+          {labels.tabA11y}
         </TabButton>
         <TabButton id="diagnostics" current={tab} onSelect={setTab}>
-          {errorCount > 0 ? `Diagnóstico (${errorCount})` : "Diagnóstico"}
+          {errorCount > 0 ? labels.diagnosticsWithErrors(errorCount) : labels.tabDiagnostics}
         </TabButton>
       </div>
 
@@ -103,13 +104,11 @@ function ScenarioPanel({
   scenario: Scenario | undefined;
   controls: ControlsState;
 }) {
+  const all = useLabels();
+  const labels = all.inspector;
+
   if (!scenario) {
-    return (
-      <p className="ds-block">
-        Nenhum cenário ativo. Escolha uma situação na navegação para ver contexto, regras e
-        critérios.
-      </p>
-    );
+    return <p className="ds-block">{labels.noScenario}</p>;
   }
 
   const persona = registry.persona(controls.persona ?? scenario.persona);
@@ -127,12 +126,12 @@ function ScenarioPanel({
   return (
     <>
       <div className="ds-block">
-        <h2 className="ds-block__title">Situação</h2>
+        <h2 className="ds-block__title">{labels.situation}</h2>
         <p style={{ color: "var(--ds-fg)", fontSize: 14, fontWeight: 600 }}>{scenario.title}</p>
         {scenario.intent && <p>{scenario.intent}</p>}
         <div className="ds-chips">
           <span className="ds-chip" data-tone={statusTone(scenario.status)}>
-            {STATUS_LABELS[scenario.status]}
+            {all.status[scenario.status]}
           </span>
           {(scenario.tags ?? []).map((tag) => (
             <span className="ds-chip" key={tag}>
@@ -140,36 +139,36 @@ function ScenarioPanel({
             </span>
           ))}
         </div>
-        <p style={{ marginTop: 6 }}>{STATUS_MEANING[scenario.status]}</p>
+        <p style={{ marginTop: 6 }}>{all.statusMeaning[scenario.status]}</p>
       </div>
 
       <div className="ds-block">
-        <h2 className="ds-block__title">Reprodução</h2>
+        <h2 className="ds-block__title">{labels.reproduction}</h2>
         <dl className="ds-kv">
-          <dt>Id</dt>
+          <dt>{labels.id}</dt>
           <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>{scenario.id}</dd>
-          <dt>Rota</dt>
+          <dt>{labels.route}</dt>
           <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>{scenario.route}</dd>
-          <dt>Persona</dt>
+          <dt>{labels.persona}</dt>
           <dd>
             {persona?.name ?? "—"}
             {personaOverridden && (
               <span className="ds-chip" data-tone="warn" style={{ marginLeft: 6 }}>
-                trocada
+                {labels.personaSwapped}
               </span>
             )}
           </dd>
-          <dt>Dados</dt>
+          <dt>{labels.data}</dt>
           <dd>{fixture?.label ?? "—"}</dd>
-          <dt>Rede</dt>
-          <dd>{NETWORK_LABELS[controls.network]}</dd>
+          <dt>{labels.network}</dt>
+          <dd>{all.network[controls.network]}</dd>
         </dl>
-        {persona?.goal && <p style={{ marginTop: 8 }}>Objetivo: {persona.goal}</p>}
+        {persona?.goal && <p style={{ marginTop: 8 }}>{labels.goal(persona.goal)}</p>}
       </div>
 
       {permissions.length > 0 && (
         <div className="ds-block">
-          <h2 className="ds-block__title">Permissões efetivas</h2>
+          <h2 className="ds-block__title">{labels.permissions}</h2>
           <div className="ds-chips">
             {permissions.map((permission) => (
               <span className="ds-chip" key={permission}>
@@ -182,7 +181,7 @@ function ScenarioPanel({
 
       {scenario.preconditions?.length ? (
         <div className="ds-block">
-          <h2 className="ds-block__title">Pré-condições</h2>
+          <h2 className="ds-block__title">{labels.preconditions}</h2>
           <ul className="ds-list">
             {scenario.preconditions.map((item) => (
               <li key={item}>{item}</li>
@@ -193,7 +192,7 @@ function ScenarioPanel({
 
       {rules.length > 0 && (
         <div className="ds-block">
-          <h2 className="ds-block__title">Regras</h2>
+          <h2 className="ds-block__title">{labels.rules}</h2>
           {rules.map((rule) => (
             <div className="ds-rule" key={rule.id}>
               <span className="ds-rule__id">{rule.id}</span>
@@ -206,7 +205,7 @@ function ScenarioPanel({
 
       {scenario.actions?.length ? (
         <div className="ds-block">
-          <h2 className="ds-block__title">Ações disponíveis</h2>
+          <h2 className="ds-block__title">{labels.actions}</h2>
           <ul className="ds-list">
             {scenario.actions.map((item) => (
               <li key={item}>{item}</li>
@@ -217,7 +216,7 @@ function ScenarioPanel({
 
       {scenario.expected?.length ? (
         <div className="ds-block">
-          <h2 className="ds-block__title">Critérios de aceite</h2>
+          <h2 className="ds-block__title">{labels.expected}</h2>
           <ul className="ds-list">
             {scenario.expected.map((item) => (
               <li key={item}>{item}</li>
@@ -228,19 +227,19 @@ function ScenarioPanel({
 
       {scenario.approvedAt && (
         <div className="ds-block">
-          <h2 className="ds-block__title">Aprovação</h2>
+          <h2 className="ds-block__title">{labels.approval}</h2>
           <p>
             {scenario.approvedAt.date} · <code>{scenario.approvedAt.commit.slice(0, 7)}</code>
           </p>
           <a href={scenario.approvedAt.url} target="_blank" rel="noreferrer">
-            Abrir a versão aprovada
+            {labels.openApproved}
           </a>
         </div>
       )}
 
       {scenario.ticket && (
         <div className="ds-block">
-          <h2 className="ds-block__title">Engenharia</h2>
+          <h2 className="ds-block__title">{labels.engineering}</h2>
           <p>{scenario.ticket}</p>
         </div>
       )}
@@ -265,6 +264,8 @@ function A11yPanel({
   keyboardMode: boolean;
   tabStopCount: number;
 }) {
+  const all = useLabels();
+  const labels = all.inspector;
   const contrast = checkContrastPairs(registry.product.theme?.contrastPairs);
   const failing = contrast.filter((result) => result.passes !== true);
 
@@ -272,16 +273,16 @@ function A11yPanel({
     <>
       {scenario && (
         <div className="ds-block">
-          <h2 className="ds-block__title">Contrato do cenário</h2>
+          <h2 className="ds-block__title">{labels.a11yContract}</h2>
           <dl className="ds-kv">
-            <dt>Teclado</dt>
-            <dd>{KEYBOARD_LABELS[scenario.a11y.keyboard]}</dd>
-            <dt>Contraste</dt>
-            <dd>WCAG 2.2 {scenario.a11y.contrast}</dd>
+            <dt>{labels.keyboard}</dt>
+            <dd>{all.keyboard[scenario.a11y.keyboard]}</dd>
+            <dt>{labels.contrast}</dt>
+            <dd>{labels.contrastTarget(scenario.a11y.contrast)}</dd>
           </dl>
           {scenario.a11y.announces?.length ? (
             <>
-              <p style={{ marginTop: 8 }}>Precisa ser anunciado:</p>
+              <p style={{ marginTop: 8 }}>{labels.announces}</p>
               <div className="ds-chips">
                 {scenario.a11y.announces.map((event) => (
                   <span className="ds-chip" key={event}>
@@ -296,35 +297,33 @@ function A11yPanel({
       )}
 
       <div className="ds-block">
-        <h2 className="ds-block__title">Elemento em foco</h2>
+        <h2 className="ds-block__title">{labels.focusedElement}</h2>
         {!keyboardMode ? (
-          <p>Ligue o modo teclado na barra de controles para inspecionar a árvore acessível.</p>
+          <p>{labels.keyboardModeOff}</p>
         ) : !focusedNode ? (
-          <p>
-            Pressione Tab dentro do palco. {tabStopCount} paradas de tabulação foram encontradas.
-          </p>
+          <p>{labels.pressTab(tabStopCount)}</p>
         ) : (
           <>
             <dl className="ds-kv">
-              <dt>Papel</dt>
+              <dt>{labels.role}</dt>
               <dd>{focusedNode.role}</dd>
-              <dt>Nome</dt>
+              <dt>{labels.name}</dt>
               <dd>
                 {focusedNode.name ? (
                   focusedNode.name
                 ) : (
-                  <span style={{ color: "var(--ds-err)" }}>sem nome acessível</span>
+                  <span style={{ color: "var(--ds-err)" }}>{labels.noAccessibleName}</span>
                 )}
               </dd>
-              <dt>Nome vem de</dt>
+              <dt>{labels.nameFrom}</dt>
               <dd>{focusedNode.nameFrom}</dd>
               {focusedNode.description ? (
                 <>
-                  <dt>Descrição</dt>
+                  <dt>{labels.description}</dt>
                   <dd>{focusedNode.description}</dd>
                 </>
               ) : null}
-              <dt>Seletor</dt>
+              <dt>{labels.selector}</dt>
               <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>
                 {focusedNode.selector}
               </dd>
@@ -340,28 +339,24 @@ function A11yPanel({
             )}
             {focusedNode.hiddenFromAssistiveTech && (
               <p className="ds-note" style={{ marginTop: 8 }}>
-                Este elemento é focável mas está escondido de tecnologia assistiva. Um leitor de
-                tela recebe foco sem receber conteúdo.
+                {labels.focusableButHidden}
               </p>
             )}
-            <p style={{ marginTop: 8 }}>{tabStopCount} paradas de tabulação no palco.</p>
+            <p style={{ marginTop: 8 }}>{labels.tabStopsInStage(tabStopCount)}</p>
           </>
         )}
       </div>
 
       <div className="ds-block">
-        <h2 className="ds-block__title">Contraste dos tokens</h2>
+        <h2 className="ds-block__title">{labels.tokenContrast}</h2>
         {contrast.length === 0 ? (
-          <p>
-            O produto não declarou pares de contraste em <code>theme.contrastPairs</code>. Contraste
-            é propriedade de par de cores: declarar aqui valida na origem, uma vez.
-          </p>
+          <p>{labels.noContrastPairs}</p>
         ) : (
           <table className="ds-contrast">
             <thead>
               <tr>
-                <th scope="col">Par</th>
-                <th scope="col">Razão</th>
+                <th scope="col">{labels.pair}</th>
+                <th scope="col">{labels.ratio}</th>
               </tr>
             </thead>
             <tbody>
@@ -399,16 +394,12 @@ function A11yPanel({
         )}
         {failing.length > 0 && (
           <p className="ds-note" style={{ marginTop: 8 }}>
-            {failing.length} {failing.length === 1 ? "par" : "pares"} fora do alvo. O teste de
-            tokens do produto falha o build por isso.
+            {labels.pairsFailing(failing.length)}
           </p>
         )}
       </div>
 
-      <p className="ds-note">
-        Verificação automática é piso, não teto. Ordem de leitura confusa, rótulo tecnicamente
-        presente mas sem sentido e fluxo impossível de completar com leitor de tela passam no axe.
-      </p>
+      <p className="ds-note">{labels.automatedIsFloor}</p>
     </>
   );
 }
@@ -418,30 +409,32 @@ function A11yPanel({
  * ------------------------------------------------------------------ */
 
 function DiagnosticsPanel({ registry }: { registry: Registry }) {
+  const all = useLabels();
+  const labels = all.inspector;
   const coverage = registry.coverage();
   const { issues } = registry;
 
   return (
     <>
       <div className="ds-block">
-        <h2 className="ds-block__title">Cobertura por status</h2>
+        <h2 className="ds-block__title">{labels.coverage}</h2>
         <dl className="ds-kv">
           {Object.entries(coverage)
             .filter(([, count]) => count > 0)
             .map(([status, count]) => (
               <div key={status} style={{ display: "contents" }}>
-                <dt>{STATUS_LABELS[status as keyof typeof STATUS_LABELS]}</dt>
+                <dt>{all.status[status as Scenario["status"]]}</dt>
                 <dd style={{ fontVariantNumeric: "tabular-nums" }}>{count}</dd>
               </div>
             ))}
         </dl>
-        <p style={{ marginTop: 8 }}>{registry.product.scenarios.length} cenários registrados.</p>
+        <p style={{ marginTop: 8 }}>{labels.scenariosRegistered(registry.product.scenarios.length)}</p>
       </div>
 
       <div className="ds-block">
-        <h2 className="ds-block__title">Contrato de cenário</h2>
+        <h2 className="ds-block__title">{labels.scenarioContract}</h2>
         {issues.length === 0 ? (
-          <p>Nenhum problema encontrado.</p>
+          <p>{labels.noIssues}</p>
         ) : (
           issues.map((issue, index) => (
             <div className="ds-issue" data-level={issue.level} key={`${issue.where}-${index}`}>

@@ -46,6 +46,15 @@ export const productDefinition: ProductDefinition = {
   theme: {
     contrastPairs,
     locales: ["pt-BR"],
+
+    // O chrome do motor vem em português. Se o time do cliente revisa em outro
+    // idioma, sobrescreva por grupo — o que não for declarado fica no padrão.
+    // Ver `DEFAULT_LABELS` no motor para a lista completa.
+    //
+    // labels: {
+    //   status: { approved: "Approved", "in-review": "In review" },
+    //   topbar: { copyLink: "Copy link" },
+    // },
   },
 
   // Fixture é o padrão (D-05). Um adapter remoto entra aqui como opção

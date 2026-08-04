@@ -12,10 +12,15 @@ export { DesignSpace, type DesignSpaceProps } from "./shell/DesignSpace.js";
 export { Stage, StageEmpty, TabOrderOverlay, type StageProps } from "./shell/Stage.js";
 export { Home, type HomeProps } from "./shell/Home.js";
 export {
+  DEFAULT_LABELS,
   KEYBOARD_LABELS,
   NETWORK_LABELS,
   STATUS_LABELS,
   STATUS_MEANING,
+  resolveLabels,
+  useLabels,
+  type Labels,
+  type LabelsOverride,
 } from "./shell/labels.js";
 
 /* ---------------------------------- registry */

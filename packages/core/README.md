@@ -32,26 +32,29 @@ diferentes.
 ```ts
 import type { Scenario } from "@brucesantos/design-space";
 
-export const insuranceDenied: Scenario = {
-  id: "finance.insurance-denied",
-  title: "Convênio recusado",
-  route: "/finance/claims/CLM-1042",
-  persona: "financial-analyst",
-  permissions: ["claims.read", "claims.retry"],
-  fixture: "claim-denied-unimed",
-  rules: ["retry-after-document-review"],
+export const approveBlocked: Scenario = {
+  id: "requests.approve-blocked",
+  title: "Aprovação bloqueada por falta de documento",
+  route: "/requests/REQ-2043",
+  persona: "approver",
+  permissions: ["requests.read", "requests.approve"],
+  fixture: "request-without-document",
+  rules: ["approval-needs-document"],
   a11y: {
     keyboard: "full",
     contrast: "AA",
-    announces: ["claim.status", "retry.result"],
+    announces: ["request.status", "approval.result"],
   },
   status: "approved",
 };
 ```
 
+O vocabulário do exemplo é genérico de propósito: o domínio é do produto, nunca do
+motor.
+
 `a11y` é obrigatório. Acessibilidade é campo do contrato, não auditoria de fim de
-projeto: um cenário de convênio recusado em que a recusa não é anunciada para
-leitor de tela está incompleto, não está pronto para aprovação.
+projeto: um cenário de ação bloqueada em que o bloqueio não é anunciado para leitor
+de tela está incompleto, não está pronto para aprovação.
 
 ## A URL é o estado
 
@@ -82,6 +85,29 @@ rede declarados no cenário.
 - `Home` — mapa de situações, usado na raiz.
 - `Stage`, `StageEmpty`, `TabOrderOverlay` — partes do palco, expostas para casos
   fora do padrão.
+
+### Rótulos do chrome
+
+O chrome vem em português por padrão e é traduzível pelo produto, por grupo. O que
+não for declarado fica no padrão.
+
+```ts
+theme: {
+  labels: {
+    status: { approved: "Approved", "in-review": "In review" },
+    topbar: { copyLink: "Copy link" },
+    home: { lead: (total) => `${total} scenarios, each one a link.` },
+  },
+}
+```
+
+- `DEFAULT_LABELS` — o dicionário completo, em português.
+- `resolveLabels(override)` — mescla por grupo. Útil fora de React.
+- `useLabels()` — os rótulos resolvidos, dentro do chrome.
+- `Labels`, `LabelsOverride` — os tipos.
+
+Rótulo de **produto** continua vindo do produto: nome de módulo, título de cenário,
+nome de persona, rótulo de fixture.
 
 ### Registry e validação
 
@@ -145,8 +171,12 @@ preview.
 
 O motor **não** contém e não deve conter: componente visual, token, tipografia,
 cor, ícone, persona de domínio, fixture, regra de negócio ou conteúdo de cliente.
-Isso é exclusivo de cada produto — e é o que permite que Bloomy e Finaya
-continuem parecendo produtos distintos.
+Isso é exclusivo de cada produto — e é o que permite que dois produtos sobre o
+mesmo motor continuem parecendo produtos distintos.
+
+Três coisas que também não pertencem ao motor, cada uma travada por teste:
+provedor de hospedagem, texto visível fixo em componente do chrome e nome de
+cliente em exemplo.
 
 ## Licença
 

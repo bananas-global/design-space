@@ -13,6 +13,7 @@ import { useState } from "react";
 import type { DeployContext } from "../deploy/index.js";
 import { scenarioUrl } from "../deploy/index.js";
 import type { ProductDefinition, Scenario } from "../types/index.js";
+import { useLabels } from "./labels.js";
 
 export type TopbarProps = {
   product: ProductDefinition;
@@ -35,6 +36,7 @@ export function Topbar({
   onToggleSidebar,
   onHideChrome,
 }: TopbarProps) {
+  const labels = useLabels().topbar;
   const [copied, setCopied] = useState(false);
 
   const copyLink = async () => {
@@ -50,7 +52,7 @@ export function Topbar({
       // Clipboard bloqueado (iframe, contexto não seguro): abrir um prompt é
       // pior que oferecer o texto selecionável, então o fallback é o próprio
       // endereço no título do botão.
-      window.prompt("Copie o link do cenário:", url);
+      window.prompt(labels.copyPrompt, url);
     }
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
@@ -63,7 +65,7 @@ export function Topbar({
         className="ds-btn ds-btn--ghost"
         aria-pressed={sidebarOpen}
         onClick={onToggleSidebar}
-        title="Mostrar ou ocultar a navegação"
+        title={labels.toggleNav}
       >
         ☰
       </button>
@@ -77,25 +79,27 @@ export function Topbar({
 
       <div className="ds-topbar__meta">
         {deploy.branch && (
-          <code title={`Branch: ${deploy.branch}`}>
+          <code title={labels.branchTitle(deploy.branch)}>
             {deploy.branch.length > 28 ? `${deploy.branch.slice(0, 27)}…` : deploy.branch}
           </code>
         )}
-        {deploy.shortCommit && <code title={`Commit: ${deploy.commit}`}>{deploy.shortCommit}</code>}
-        <code title={`Ambiente: ${deploy.env}`}>{deploy.env}</code>
+        {deploy.commit && (
+          <code title={labels.commitTitle(deploy.commit)}>{deploy.shortCommit}</code>
+        )}
+        <code title={labels.envTitle(deploy.env)}>{deploy.env}</code>
       </div>
 
       <button type="button" className="ds-btn" onClick={copyLink}>
-        {copied ? "Link copiado" : "Copiar link"}
+        {copied ? labels.copied : labels.copyLink}
       </button>
 
       <button
         type="button"
         className="ds-btn"
         onClick={onHideChrome}
-        title="Ocultar o chrome do Design Space para revisão limpa e captura de tela"
+        title={labels.cleanReviewTitle}
       >
-        Revisão limpa
+        {labels.cleanReview}
       </button>
 
       <button
@@ -104,7 +108,7 @@ export function Topbar({
         aria-pressed={inspectorOpen}
         onClick={onToggleInspector}
       >
-        Painel
+        {labels.panel}
       </button>
     </header>
   );

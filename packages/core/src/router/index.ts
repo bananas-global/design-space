@@ -51,8 +51,8 @@ export function matchPath(pattern: string, path: string): Record<string, string>
 }
 
 /**
- * Resolve a rota ativa. Rotas mais específicas primeiro: entre `/patients/new`
- * e `/patients/:id`, a literal ganha, independente da ordem de declaração.
+ * Resolve a rota ativa. Rotas mais específicas primeiro: entre `/requests/new`
+ * e `/requests/:id`, a literal ganha, independente da ordem de declaração.
  */
 export function resolveRoute(routes: RouteDefinition[], path: string): RouteMatch | undefined {
   const ranked = [...routes].sort((a, b) => specificity(b.path) - specificity(a.path));

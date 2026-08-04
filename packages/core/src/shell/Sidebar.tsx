@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react";
 import type { Registry } from "../registry/index.js";
 import type { Scenario } from "../types/index.js";
-import { STATUS_LABELS } from "./labels.js";
+import { useLabels } from "./labels.js";
 
 export type SidebarProps = {
   registry: Registry;
@@ -19,6 +19,7 @@ export type SidebarProps = {
 };
 
 export function Sidebar({ registry, activeScenario, onOpenScenario }: SidebarProps) {
+  const labels = useLabels();
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -48,14 +49,14 @@ export function Sidebar({ registry, activeScenario, onOpenScenario }: SidebarPro
   const total = nodes.reduce((sum, node) => sum + node.scenarios.length, 0) + orphans.length;
 
   return (
-    <nav className="ds-chrome ds-sidebar" aria-label="Cenários do produto">
+    <nav className="ds-chrome ds-sidebar" aria-label={labels.sidebar.region}>
       <div className="ds-sidebar__search">
         <input
           className="ds-input ds-input--search"
           type="search"
           value={query}
-          placeholder="Buscar situação…"
-          aria-label="Buscar cenário pelo vocabulário do produto"
+          placeholder={labels.sidebar.searchPlaceholder}
+          aria-label={labels.sidebar.searchLabel}
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
@@ -63,9 +64,7 @@ export function Sidebar({ registry, activeScenario, onOpenScenario }: SidebarPro
       <div className="ds-sidebar__tree">
         {query.trim() !== "" && (
           <p className="ds-sidebar__empty" role="status">
-            {total === 0
-              ? `Nenhuma situação para "${query}".`
-              : `${total} ${total === 1 ? "situação" : "situações"}.`}
+            {total === 0 ? labels.sidebar.noMatch(query) : labels.sidebar.matchCount(total)}
           </p>
         )}
 
@@ -97,7 +96,7 @@ export function Sidebar({ registry, activeScenario, onOpenScenario }: SidebarPro
                     />
                   ))}
                   {node.scenarios.length === 0 && (
-                    <li className="ds-sidebar__empty">Nenhum cenário ainda.</li>
+                    <li className="ds-sidebar__empty">{labels.sidebar.emptyModule}</li>
                   )}
                 </ul>
               )}
@@ -109,7 +108,7 @@ export function Sidebar({ registry, activeScenario, onOpenScenario }: SidebarPro
           <section className="ds-module">
             <div className="ds-module__header" aria-hidden="true">
               <span className="ds-module__chevron">▶</span>
-              <span>Sem módulo</span>
+              <span>{labels.sidebar.withoutModule}</span>
               <span className="ds-module__count">{orphans.length}</span>
             </div>
             <ul className="ds-module__scenarios">
@@ -138,6 +137,8 @@ function ScenarioItem({
   isActive: boolean;
   onOpen: (id: string) => void;
 }) {
+  const status = useLabels().status[scenario.status];
+
   return (
     <li>
       <button
@@ -149,10 +150,10 @@ function ScenarioItem({
         <span
           className="ds-status-dot"
           data-status={scenario.status}
-          title={STATUS_LABELS[scenario.status]}
+          title={status}
         />
         <span className="ds-scenario__title">{scenario.title}</span>
-        <span className="ds-visually-hidden">{STATUS_LABELS[scenario.status]}</span>
+        <span className="ds-visually-hidden">{status}</span>
       </button>
     </li>
   );

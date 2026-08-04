@@ -13,7 +13,7 @@
 
 import type { Registry } from "../registry/index.js";
 import type { Flow, Module, Scenario } from "../types/index.js";
-import { STATUS_LABELS } from "./labels.js";
+import { useLabels } from "./labels.js";
 
 export type HomeProps = {
   registry: Registry;
@@ -21,6 +21,7 @@ export type HomeProps = {
 };
 
 export function Home({ registry, onOpenScenario }: HomeProps) {
+  const labels = useLabels();
   const { product } = registry;
   const coverage = registry.coverage();
   const total = product.scenarios.length;
@@ -30,16 +31,13 @@ export function Home({ registry, onOpenScenario }: HomeProps) {
       <header className="ds-home__header">
         <h1>{product.name}</h1>
         {product.tagline && <p className="ds-home__tagline">{product.tagline}</p>}
-        <p className="ds-home__lead">
-          Especificação executável: cada situação abaixo abre por link, com persona, dados e regras
-          próprios. {total} {total === 1 ? "situação registrada" : "situações registradas"}.
-        </p>
+        <p className="ds-home__lead">{labels.home.lead(total)}</p>
         <div className="ds-chips">
           {Object.entries(coverage)
             .filter(([, count]) => count > 0)
             .map(([status, count]) => (
               <span className="ds-chip" key={status}>
-                {STATUS_LABELS[status as Scenario["status"]]}: {count}
+                {labels.status[status as Scenario["status"]]}: {count}
               </span>
             ))}
         </div>
@@ -57,11 +55,8 @@ export function Home({ registry, onOpenScenario }: HomeProps) {
 
       {registry.orphans.length > 0 && (
         <section className="ds-home__module">
-          <h2>Sem módulo</h2>
-          <p className="ds-home__hint">
-            O prefixo do id não corresponde a nenhum módulo registrado, então estas situações não
-            aparecem na navegação por módulo.
-          </p>
+          <h2>{labels.home.withoutModule}</h2>
+          <p className="ds-home__hint">{labels.home.withoutModuleHint}</p>
           <ScenarioGrid
             scenarios={registry.orphans}
             registry={registry}
@@ -154,8 +149,10 @@ function ScenarioGrid({
   registry: Registry;
   onOpenScenario: (id: string) => void;
 }) {
+  const labels = useLabels();
+
   if (scenarios.length === 0) {
-    return <p className="ds-home__hint">Nenhuma situação registrada neste módulo ainda.</p>;
+    return <p className="ds-home__hint">{labels.home.emptyModule}</p>;
   }
 
   return (
@@ -171,8 +168,8 @@ function ScenarioGrid({
             <span className="ds-home__card-meta">
               {registry.persona(scenario.persona)?.name ?? scenario.persona}
               {" · "}
-              {STATUS_LABELS[scenario.status]}
-              {scenario.a11y.keyboard === "full" ? " · teclado" : ""}
+              {labels.status[scenario.status]}
+              {scenario.a11y.keyboard === "full" ? ` · ${labels.home.keyboardBadge}` : ""}
             </span>
           </button>
         </li>

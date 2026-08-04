@@ -21,6 +21,7 @@ import { Controls } from "./Controls.js";
 import { Inspector } from "./Inspector.js";
 import { Stage, StageEmpty, TabOrderOverlay } from "./Stage.js";
 import { Home } from "./Home.js";
+import { LabelsContext, resolveLabels } from "./labels.js";
 import "./shell.css";
 
 export type DesignSpaceProps = {
@@ -29,6 +30,7 @@ export type DesignSpaceProps = {
 
 export function DesignSpace({ product }: DesignSpaceProps) {
   const registry = useMemo(() => createRegistry(product), [product]);
+  const labels = useMemo(() => resolveLabels(product.theme?.labels), [product.theme?.labels]);
   const deploy = useMemo(() => getDeployContext(product.deploy), [product.deploy]);
   const { location, controls, viewport, setControls, navigate, openScenario } =
     useDesignSpaceState(registry);
@@ -146,10 +148,9 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   ) : NotFound ? (
     <NotFound path={location.path} />
   ) : (
-    <StageEmpty title="Nenhuma rota para este endereço">
+    <StageEmpty title={labels.shell.noRoute}>
       <p>
-        <code>{location.path}</code> não casa com nenhuma rota declarada em{" "}
-        <code>productDefinition.routes</code>. Escolha uma situação na navegação.
+        <code>{location.path}</code> {labels.shell.noRouteHint}
       </p>
     </StageEmpty>
   );
@@ -157,80 +158,82 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   const stageContent = Wrapper ? <Wrapper context={context}>{screen}</Wrapper> : screen;
 
   return (
-    <div
-      className="ds-root"
-      data-chrome={controls.chrome ? "visible" : "hidden"}
-      data-inspector={controls.inspector ? "open" : "closed"}
-      data-sidebar={sidebarOpen ? "open" : "closed"}
-      data-viewport={viewport.id}
-    >
-      {controls.chrome && (
-        <Topbar
-          product={product}
-          scenario={scenario}
-          deploy={deploy}
-          inspectorOpen={controls.inspector}
-          sidebarOpen={sidebarOpen}
-          onToggleInspector={() => setControls({ inspector: !controls.inspector })}
-          onToggleSidebar={() => setSidebarOpen((open) => !open)}
-          onHideChrome={() => setControls({ chrome: false })}
-        />
-      )}
-
-      {controls.chrome && (
-        <Sidebar
-          registry={registry}
-          activeScenario={controls.scenario}
-          onOpenScenario={openScenario}
-        />
-      )}
-
-      <div className="ds-stage-area">
-        {isHome ? (
-          <div className="ds-stage-scroll">
-            <Home registry={registry} onOpenScenario={openScenario} />
-          </div>
-        ) : (
-          <Stage
-            ref={stageRef}
-            viewport={viewport}
-            textScale={controls.textScale}
-            reducedMotion={controls.reducedMotion}
-            keyboardMode={controls.keyboardMode}
-          >
-            {stageContent}
-          </Stage>
+    <LabelsContext.Provider value={labels}>
+      <div
+        className="ds-root"
+        data-chrome={controls.chrome ? "visible" : "hidden"}
+        data-inspector={controls.inspector ? "open" : "closed"}
+        data-sidebar={sidebarOpen ? "open" : "closed"}
+        data-viewport={viewport.id}
+      >
+        {controls.chrome && (
+          <Topbar
+            product={product}
+            scenario={scenario}
+            deploy={deploy}
+            inspectorOpen={controls.inspector}
+            sidebarOpen={sidebarOpen}
+            onToggleInspector={() => setControls({ inspector: !controls.inspector })}
+            onToggleSidebar={() => setSidebarOpen((open) => !open)}
+            onHideChrome={() => setControls({ chrome: false })}
+          />
         )}
 
         {controls.chrome && (
-          <Controls registry={registry} controls={controls} onChange={setControls} />
+          <Sidebar
+            registry={registry}
+            activeScenario={controls.scenario}
+            onOpenScenario={openScenario}
+          />
+        )}
+
+        <div className="ds-stage-area">
+          {isHome ? (
+            <div className="ds-stage-scroll">
+              <Home registry={registry} onOpenScenario={openScenario} />
+            </div>
+          ) : (
+            <Stage
+              ref={stageRef}
+              viewport={viewport}
+              textScale={controls.textScale}
+              reducedMotion={controls.reducedMotion}
+              keyboardMode={controls.keyboardMode}
+            >
+              {stageContent}
+            </Stage>
+          )}
+
+          {controls.chrome && (
+            <Controls registry={registry} controls={controls} onChange={setControls} />
+          )}
+        </div>
+
+        {controls.chrome && (
+          <Inspector
+            registry={registry}
+            scenario={scenario}
+            controls={controls}
+            focusedNode={focused}
+            tabStopCount={tabStops.length}
+          />
+        )}
+
+        {controls.keyboardMode && <TabOrderOverlay stops={tabStops} />}
+
+        {/* Sem chrome não há como voltar a não ser editando a URL, o que trava
+            quem recebeu o link em modo de revisão limpa. Este botão é invisível
+            até receber hover ou foco, então não aparece em captura de tela. */}
+        {!controls.chrome && (
+          <button
+            type="button"
+            className="ds-chrome ds-restore"
+            onClick={() => setControls({ chrome: true })}
+          >
+            {labels.shell.restoreChrome}
+          </button>
         )}
       </div>
-
-      {controls.chrome && (
-        <Inspector
-          registry={registry}
-          scenario={scenario}
-          controls={controls}
-          focusedNode={focused}
-          tabStopCount={tabStops.length}
-        />
-      )}
-
-      {controls.keyboardMode && <TabOrderOverlay stops={tabStops} />}
-
-      {/* Sem chrome não há como voltar a não ser editando a URL, o que trava
-          quem recebeu o link em modo de revisão limpa. Este botão é invisível
-          até receber hover ou foco, então não aparece em captura de tela. */}
-      {!controls.chrome && (
-        <button
-          type="button"
-          className="ds-chrome ds-restore"
-          onClick={() => setControls({ chrome: true })}
-        >
-          Mostrar controles
-        </button>
-      )}
-    </div>
+    </LabelsContext.Provider>
   );
 }

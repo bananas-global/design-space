@@ -11,6 +11,10 @@
 
 import type { ComponentType, ReactNode } from "react";
 
+// Import de tipo, apagado no build: o dicionário de rótulos mora junto com os
+// valores padrão, em `shell/labels.ts`, e só a forma dele é contrato.
+import type { LabelsOverride } from "../shell/labels.js";
+
 /* ------------------------------------------------------------------ *
  * Ciclo de vida
  * ------------------------------------------------------------------ */
@@ -56,9 +60,9 @@ export type A11yContract = {
   contrast: ContrastTarget;
   /**
    * Eventos que precisam ser anunciados para leitor de tela. São chaves de
-   * domínio, não seletores: `claim.status`, `retry.result`.
+   * domínio, não seletores: `request.status`, `retry.result`.
    *
-   * Um cenário de convênio recusado em que a recusa não é anunciada está
+   * Um cenário de aprovação bloqueada em que a recusa não é anunciada está
    * incompleto, não está pronto para aprovação.
    */
   announces?: string[];
@@ -73,7 +77,7 @@ export type A11yContract = {
 export type Persona = {
   /** Identificador estável usado em URL e em cenário. */
   id: string;
-  /** Nome no vocabulário do cliente: "Recepcionista". */
+  /** Nome no vocabulário do cliente: "Aprovador". */
   name: string;
   /** O que essa pessoa está tentando fazer. */
   goal?: string;
@@ -93,7 +97,7 @@ export type Rule = {
   statement: string;
   /** Por que a regra existe. Contexto, não implementação. */
   rationale?: string;
-  /** Onde a regra vive no código, quando existir: `src/rules/claims.ts`. */
+  /** Onde a regra vive no código, quando existir: `src/rules/requests.ts`. */
   source?: string;
 };
 
@@ -141,9 +145,9 @@ export const NETWORK_STATES: readonly NetworkState[] = [
  * disponíveis, regras e resultado esperado.
  */
 export type Scenario = {
-  /** `modulo.situacao` em kebab-case: `finance.insurance-denied`. */
+  /** `modulo.situacao` em kebab-case: `requests.approve-blocked`. */
   id: string;
-  /** Título no vocabulário do negócio: "Convênio recusado". */
+  /** Título no vocabulário do negócio: "Aprovação bloqueada por falta de documento". */
   title: string;
   /** Rota que o cenário abre. Precisa casar com uma rota do produto. */
   route: string;
@@ -151,8 +155,8 @@ export type Scenario = {
   persona: string;
   /**
    * Permissões efetivas do cenário. Quando ausente, herda as da persona.
-   * Declarar aqui permite representar "recepcionista sem permissão de
-   * cancelamento" sem inventar uma segunda persona.
+   * Declarar aqui permite representar "solicitante sem permissão de aprovar"
+   * sem inventar uma segunda persona.
    */
   permissions?: string[];
   /** Id de uma fixture registrada no produto. */
@@ -196,7 +200,7 @@ export type Scenario = {
  */
 export type Flow = {
   id: string;
-  /** Título de negócio: "Agendar uma consulta". */
+  /** Título de negócio: "Decidir uma solicitação". */
   title: string;
   description?: string;
   steps: FlowStep[];
@@ -214,9 +218,9 @@ export type FlowStep = {
 };
 
 export type Module = {
-  /** `agenda`, `patients`, `finance`. */
+  /** `requests`, `catalog`, `billing`. */
   id: string;
-  /** Nome no vocabulário do cliente: "Agenda". */
+  /** Nome no vocabulário do cliente: "Solicitações". */
   name: string;
   description?: string;
   /** Jornadas guiadas do módulo. Opcional: navegação livre é o padrão. */
@@ -290,6 +294,18 @@ export type ProductTheme = {
   modes?: string[];
   /** Idiomas disponíveis, quando o produto tiver essa variação. */
   locales?: string[];
+  /**
+   * Rótulos do chrome do motor. Sobrescreve por grupo o que estiver em
+   * `DEFAULT_LABELS`; o que não for declarado fica no padrão em português.
+   *
+   * Serve para o Design Space de um cliente que revisa em outro idioma: o chrome
+   * divide a tela com a UI do produto, e chrome em português ao lado de interface
+   * em inglês é ruído no meio da revisão.
+   *
+   * Isto é rótulo de **mecanismo**. Nome de módulo, título de cenário e nome de
+   * persona continuam vindo do catálogo do produto.
+   */
+  labels?: LabelsOverride;
 };
 
 export type ContrastPair = {
@@ -310,9 +326,9 @@ export type ContrastPair = {
  * ------------------------------------------------------------------ */
 
 export type ProductDefinition = {
-  /** `bloomy`. */
+  /** `acme`. */
   id: string;
-  /** "Bloomy". */
+  /** "Acme". */
   name: string;
   /** Uma linha sobre o produto, exibida na entrada do Design Space. */
   tagline?: string;

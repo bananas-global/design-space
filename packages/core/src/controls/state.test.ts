@@ -8,14 +8,14 @@ const screen = (() => null) as unknown as RouteDefinition["screen"];
 const registry = createRegistry({
   id: "acme",
   name: "Acme",
-  modules: [{ id: "finance", name: "Financeiro" }],
+  modules: [{ id: "requests", name: "Solicitações" }],
   scenarios: [
     {
-      id: "finance.insurance-denied",
-      title: "Convênio recusado",
-      route: "/finance/claims/CLM-1042",
+      id: "requests.approve-blocked",
+      title: "Aprovação bloqueada por falta de documento",
+      route: "/requests/REQ-2043",
       persona: "analyst",
-      fixture: "claim-denied",
+      fixture: "request-blocked",
       a11y: { keyboard: "full", contrast: "AA" },
       status: "approved",
       network: "error",
@@ -23,29 +23,29 @@ const registry = createRegistry({
   ],
   personas: [
     { id: "analyst", name: "Analista", permissions: [] },
-    { id: "receptionist", name: "Recepcionista", permissions: [] },
+    { id: "requester", name: "Solicitante", permissions: [] },
   ],
   fixtures: [
-    { id: "claim-denied", label: "Recusada", data: {} },
-    { id: "claim-approved", label: "Aprovada", data: {} },
+    { id: "request-blocked", label: "Recusada", data: {} },
+    { id: "request-approved", label: "Aprovada", data: {} },
   ],
-  routes: [{ path: "/finance/claims/:id", screen }],
+  routes: [{ path: "/requests/:id", screen }],
 } satisfies ProductDefinition);
 
 describe("parseControls", () => {
   it("herda persona, fixture e rede do cenário quando só o id vem na URL", () => {
-    const controls = parseControls("?scenario=finance.insurance-denied", registry);
+    const controls = parseControls("?scenario=requests.approve-blocked", registry);
     expect(controls.persona).toBe("analyst");
-    expect(controls.fixture).toBe("claim-denied");
+    expect(controls.fixture).toBe("request-blocked");
     expect(controls.network).toBe("error");
   });
 
   it("deixa o parâmetro explícito ganhar do cenário", () => {
     const controls = parseControls(
-      "?scenario=finance.insurance-denied&persona=receptionist&network=empty",
+      "?scenario=requests.approve-blocked&persona=requester&network=empty",
       registry,
     );
-    expect(controls.persona).toBe("receptionist");
+    expect(controls.persona).toBe("requester");
     expect(controls.network).toBe("empty");
   });
 
@@ -69,23 +69,23 @@ describe("parseControls", () => {
 
 describe("serializeControls", () => {
   it("omite o que já é o padrão do cenário, mantendo a URL curta", () => {
-    const controls = parseControls("?scenario=finance.insurance-denied", registry);
-    expect(serializeControls(controls, registry)).toBe("?scenario=finance.insurance-denied");
+    const controls = parseControls("?scenario=requests.approve-blocked", registry);
+    expect(serializeControls(controls, registry)).toBe("?scenario=requests.approve-blocked");
   });
 
   it("carrega o que divergir do cenário", () => {
     const controls = parseControls(
-      "?scenario=finance.insurance-denied&persona=receptionist",
+      "?scenario=requests.approve-blocked&persona=requester",
       registry,
     );
     const search = serializeControls(controls, registry);
-    expect(search).toContain("persona=receptionist");
+    expect(search).toContain("persona=requester");
     expect(search).not.toContain("fixture=");
   });
 
   it("faz round-trip de todos os controles de ambiente", () => {
     const original = parseControls(
-      "?scenario=finance.insurance-denied&viewport=custom&w=800&chrome=0&kb=1&motion=1&scale=1.5&panel=0",
+      "?scenario=requests.approve-blocked&viewport=custom&w=800&chrome=0&kb=1&motion=1&scale=1.5&panel=0",
       registry,
     );
     const roundTripped = parseControls(serializeControls(original, registry), registry);

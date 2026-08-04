@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -95,5 +95,43 @@ describe("fronteira visual", () => {
       .map((match) => match[1]!)
       .filter((selector) => !selector.startsWith("@"));
     expect(bareElementRules).toEqual([]);
+  });
+});
+
+/**
+ * Trava da fronteira de vocabulário.
+ *
+ * O motor carregava o domínio dos primeiros clientes nos comentários e nos testes
+ * — convênio recusado, paciente menor de idade, guia — sem nenhum efeito em
+ * runtime. O custo era outro: um agente que lê estes arquivos conclui que o motor
+ * é de um setor específico e escreve como se fosse, e o exemplo de um cliente
+ * aparece no repositório do concorrente dele.
+ *
+ * Exemplo em comentário e em teste é vocabulário genérico: solicitação, pedido,
+ * cobrança. Nome de cliente, nunca.
+ */
+describe("fronteira de vocabulário", () => {
+  const src = dirname(dirname(fileURLToPath(import.meta.url)));
+
+  const CLIENTES = [/\bbloomy\b/i, /\bfinaya\b/i, /\bbananas\b/i];
+
+  function sourceFiles(dir: string): string[] {
+    return readdirSync(dir).flatMap((entry) => {
+      const path = join(dir, entry);
+      if (statSync(path).isDirectory()) return sourceFiles(path);
+      return /\.tsx?$/.test(entry) ? [path] : [];
+    });
+  }
+
+  it("nenhum arquivo do motor nomeia um cliente", () => {
+    const offenders = sourceFiles(src)
+      .filter((path) => !path.endsWith("boundary.test.ts"))
+      .filter((path) => CLIENTES.some((pattern) => pattern.test(readFileSync(path, "utf8"))))
+      .map((path) => path.slice(src.length + 1));
+
+    expect(
+      offenders,
+      "Nome de cliente citado no motor. Exemplo do motor usa vocabulário genérico.",
+    ).toEqual([]);
   });
 });

@@ -7,17 +7,17 @@ const route = (path: string): RouteDefinition => ({ path, screen });
 
 describe("matchPath", () => {
   it("casa rota literal", () => {
-    expect(matchPath("/agenda", "/agenda")).toEqual({});
-    expect(matchPath("/agenda", "/patients")).toBeNull();
+    expect(matchPath("/orders", "/orders")).toEqual({});
+    expect(matchPath("/orders", "/requests")).toBeNull();
   });
 
   it("extrai parâmetros", () => {
-    expect(matchPath("/finance/claims/:id", "/finance/claims/CLM-1042")).toEqual({ id: "CLM-1042" });
+    expect(matchPath("/requests/:id", "/requests/REQ-2043")).toEqual({ id: "REQ-2043" });
   });
 
   it("exige o mesmo número de segmentos", () => {
-    expect(matchPath("/patients/:id", "/patients")).toBeNull();
-    expect(matchPath("/patients/:id", "/patients/1/history")).toBeNull();
+    expect(matchPath("/requests/:id", "/requests")).toBeNull();
+    expect(matchPath("/requests/:id", "/requests/1/history")).toBeNull();
   });
 
   it("captura o resto com curinga", () => {
@@ -25,7 +25,7 @@ describe("matchPath", () => {
   });
 
   it("ignora a query string e decodifica o path", () => {
-    expect(matchPath("/patients/:name", "/patients/Ana%20Silva?scenario=x")).toEqual({
+    expect(matchPath("/requests/:name", "/requests/Ana%20Silva?scenario=x")).toEqual({
       name: "Ana Silva",
     });
   });
@@ -33,18 +33,18 @@ describe("matchPath", () => {
 
 describe("resolveRoute", () => {
   it("prefere segmento literal a parâmetro, independente da ordem declarada", () => {
-    const routes = [route("/patients/:id"), route("/patients/new")];
-    expect(resolveRoute(routes, "/patients/new")?.definition.path).toBe("/patients/new");
-    expect(resolveRoute(routes, "/patients/42")?.definition.path).toBe("/patients/:id");
+    const routes = [route("/requests/:id"), route("/requests/new")];
+    expect(resolveRoute(routes, "/requests/new")?.definition.path).toBe("/requests/new");
+    expect(resolveRoute(routes, "/requests/42")?.definition.path).toBe("/requests/:id");
   });
 
   it("usa o curinga só como último recurso", () => {
-    const routes = [route("/*"), route("/agenda")];
-    expect(resolveRoute(routes, "/agenda")?.definition.path).toBe("/agenda");
+    const routes = [route("/*"), route("/orders")];
+    expect(resolveRoute(routes, "/orders")?.definition.path).toBe("/orders");
     expect(resolveRoute(routes, "/qualquer")?.definition.path).toBe("/*");
   });
 
   it("devolve undefined quando nada casa", () => {
-    expect(resolveRoute([route("/agenda")], "/finance")).toBeUndefined();
+    expect(resolveRoute([route("/requests")], "/billing")).toBeUndefined();
   });
 });

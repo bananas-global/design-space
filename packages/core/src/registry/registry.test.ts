@@ -7,15 +7,15 @@ const screen = (() => null) as unknown as RouteDefinition["screen"];
 
 function scenario(overrides: Partial<Scenario> = {}): Scenario {
   return {
-    id: "finance.insurance-denied",
-    title: "Convênio recusado",
-    route: "/finance/claims/CLM-1042",
-    persona: "financial-analyst",
-    fixture: "claim-denied",
+    id: "requests.approve-blocked",
+    title: "Aprovação bloqueada por falta de documento",
+    route: "/requests/REQ-2043",
+    persona: "approver",
+    fixture: "request-blocked",
     rules: ["retry-after-document-review"],
-    a11y: { keyboard: "full", contrast: "AA", announces: ["claim.status"] },
+    a11y: { keyboard: "full", contrast: "AA", announces: ["request.status"] },
     status: "in-review",
-    expected: ["A recusa é anunciada para leitor de tela."],
+    expected: ["O bloqueio é anunciado para leitor de tela."],
     ...overrides,
   };
 }
@@ -24,12 +24,12 @@ function product(overrides: Partial<ProductDefinition> = {}): ProductDefinition 
   return {
     id: "acme",
     name: "Acme",
-    modules: [{ id: "finance", name: "Financeiro" }],
+    modules: [{ id: "requests", name: "Solicitações" }],
     scenarios: [scenario()],
-    personas: [{ id: "financial-analyst", name: "Analista", permissions: ["claims.read"] }],
-    fixtures: [{ id: "claim-denied", label: "Guia recusada", data: { id: "CLM-1042" } }],
-    rules: [{ id: "retry-after-document-review", statement: "Reenvio exige revisão de documento." }],
-    routes: [{ path: "/finance/claims/:id", screen }],
+    personas: [{ id: "approver", name: "Analista", permissions: ["requests.read"] }],
+    fixtures: [{ id: "request-blocked", label: "Solicitação sem documento", data: { id: "REQ-2043" } }],
+    rules: [{ id: "retry-after-document-review", statement: "Aprovação exige documento anexado." }],
+    routes: [{ path: "/requests/:id", screen }],
     ...overrides,
   };
 }
@@ -45,7 +45,7 @@ describe("validateScenario", () => {
   });
 
   it("recusa id fora do padrão", () => {
-    const issues = validateScenario(scenario({ id: "Finance.InsuranceDenied" }));
+    const issues = validateScenario(scenario({ id: "Requests.ApproveBlocked" }));
     expect(hasErrors(issues)).toBe(true);
   });
 
@@ -88,9 +88,9 @@ describe("validateProduct", () => {
       product({
         modules: [
           {
-            id: "finance",
-            name: "Financeiro",
-            flows: [{ id: "claim", title: "Reenviar guia", steps: [{ scenario: "finance.fantasma" }] }],
+            id: "requests",
+            name: "Solicitações",
+            flows: [{ id: "decide", title: "Decidir uma solicitação", steps: [{ scenario: "requests.fantasma" }] }],
           },
         ],
       }),
@@ -115,30 +115,30 @@ describe("createRegistry", () => {
   const registry = createRegistry(product());
 
   it("agrupa cenários pelo prefixo do módulo", () => {
-    expect(registry.tree[0]?.module.id).toBe("finance");
+    expect(registry.tree[0]?.module.id).toBe("requests");
     expect(registry.tree[0]?.scenarios).toHaveLength(1);
     expect(registry.orphans).toEqual([]);
   });
 
   it("herda as permissões da persona quando o cenário não declara", () => {
-    expect(registry.permissionsOf(registry.scenario("finance.insurance-denied"))).toEqual([
-      "claims.read",
+    expect(registry.permissionsOf(registry.scenario("requests.approve-blocked"))).toEqual([
+      "requests.read",
     ]);
   });
 
   it("respeita as permissões do cenário quando declaradas", () => {
     const custom = createRegistry(
-      product({ scenarios: [scenario({ permissions: ["claims.read", "claims.retry"] })] }),
+      product({ scenarios: [scenario({ permissions: ["requests.read", "requests.approve"] })] }),
     );
-    expect(custom.permissionsOf(custom.scenario("finance.insurance-denied"))).toEqual([
-      "claims.read",
-      "claims.retry",
+    expect(custom.permissionsOf(custom.scenario("requests.approve-blocked"))).toEqual([
+      "requests.read",
+      "requests.approve",
     ]);
   });
 
   it("busca pelo vocabulário do negócio, ignorando acento", () => {
-    expect(registry.search("convenio").map((s) => s.id)).toEqual(["finance.insurance-denied"]);
-    expect(registry.search("Financeiro")).toHaveLength(1);
+    expect(registry.search("aprovacao").map((s) => s.id)).toEqual(["requests.approve-blocked"]);
+    expect(registry.search("Solicitações")).toHaveLength(1);
     expect(registry.search("nada disso")).toEqual([]);
   });
 

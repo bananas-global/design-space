@@ -45,9 +45,48 @@ degradado de um modelo que pressupõe um fornecedor.
 
 ### Adicionado
 
+- **`theme.labels`: o chrome deixa de ser fixo em português.** Todo rótulo de
+  mecanismo — status, estado de rede, viewport, botão, aba, mensagem do painel —
+  vive em `DEFAULT_LABELS` e pode ser sobrescrito por grupo:
+
+  ```ts
+  theme: {
+    labels: {
+      status: { approved: "Approved", "in-review": "In review" },
+      topbar: { copyLink: "Copy link" },
+    },
+  }
+  ```
+
+  O que não for declarado fica no padrão. Novos exports: `DEFAULT_LABELS`,
+  `resolveLabels`, `useLabels`, `Labels`, `LabelsOverride`. `STATUS_LABELS`,
+  `STATUS_MEANING`, `NETWORK_LABELS` e `KEYBOARD_LABELS` continuam exportados,
+  agora como atalhos para os grupos de `DEFAULT_LABELS`.
+
+  O motivo: o chrome divide a tela com a UI do cliente. Um Design Space revisado
+  em inglês misturava "Em revisão" e "Copiar link" com a interface dele, e
+  traduzir só os status seria pior que não traduzir.
+
 - **Trava de fronteira de hospedagem** (`src/deploy/hosting.test.ts`): reprova o
   build se qualquer arquivo do motor citar um provedor, ou se `deploy/index.ts`
   voltar a ler ambiente. No mesmo espírito da trava de fronteira visual.
+
+- **Trava de idioma** (`src/shell/labels.test.ts`): reprova o build quando um
+  componente do chrome tem texto visível fixo — nó de texto, `aria-label`,
+  `title` ou `placeholder`. Sem ela, o próximo rótulo nasce no JSX e volta a ser
+  intraduzível.
+
+- **Trava de vocabulário** (`src/shell/boundary.test.ts`): reprova o build se o
+  motor nomear um cliente.
+
+### Corrigido
+
+- **O motor não carrega mais o domínio dos primeiros clientes.** Comentários,
+  exemplos de JSDoc e fixtures de teste falavam de convênio recusado, paciente
+  menor de idade e guia. Nada disso tinha efeito em runtime; o efeito era outro,
+  e caro: um agente que lê esses arquivos conclui que o motor é de um setor
+  específico e escreve como se fosse. Os exemplos passaram a usar vocabulário
+  genérico — solicitação, aprovação, cobrança.
 
 - **Testes do módulo de deploy** (`src/deploy/deploy.test.ts`), que não existiam:
   contexto local sem hospedagem, precedência do que o produto informa, string

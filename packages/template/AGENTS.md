@@ -44,6 +44,7 @@ um Design Space que roda só local é caso suportado, não pendência.
 | `src/rules/` | Regras de negócio, separadas por domínio, com a implementação. |
 | `src/contracts/` | Tipos e schemas do domínio. |
 | `src/tokens/` | Identidade visual: `tokens.css` e os pares de contraste. |
+| `hosting/` | Arquivos por provedor de hospedagem, instalados por `pnpm setup:hosting`. |
 | `docs/product.md` | Visão, módulos, vocabulário e personas. |
 | `docs/decisions/` | Decisões **deste produto**. As do modelo vivem no repositório do motor. |
 | `docs/handoff.md` | Modelo de entrega para engenharia. |
@@ -53,8 +54,8 @@ um Design Space que roda só local é caso suportado, não pendência.
 1. Escolha o id no formato `modulo.situacao`, em kebab-case, com o prefixo
    correspondendo a um módulo registrado — o motor usa o prefixo para montar a
    navegação.
-2. Use o **vocabulário do negócio** no `title`. "Convênio recusado", não
-   "ClaimDeniedState".
+2. Use o **vocabulário do negócio** no `title`. "Aprovação bloqueada por falta de
+   documento", não "ApprovalBlockedState".
 3. Aponte `fixture` e `persona` para ids que já existem. O motor valida em
    runtime e reclama no painel de Diagnóstico se não existirem.
 4. Preencha `a11y`. É obrigatório, e não é formalidade: `keyboard: "full"`
@@ -80,6 +81,8 @@ mesma situação.
   em runtime dentro de fixture.
 - **Não** modificar `@brucesantos/design-space` (o motor) para resolver uma
   necessidade específica deste produto. Se parecer necessário, pare e pergunte.
+- **Não** traduzir o chrome do motor editando o pacote. O idioma do chrome é
+  `theme.labels` em `src/app/product.ts`; o padrão é português.
 - **Não** introduzir componente global quando a necessidade é local. Reuso de UI
   é decisão local deste produto.
 - **Não** remover foco visível, rótulo acessível, ordem de tabulação ou contraste

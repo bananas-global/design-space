@@ -62,6 +62,12 @@ padrão é compartilhado pela convenção no template; o componente, não.
   variável de ambiente em `deploy/`. Contexto de deployment vem do produto por
   `ProductDefinition.deploy` — ver `docs/decisions/0007-hospedagem-opcional.md`.
   Existe trava em `src/deploy/hosting.test.ts`.
+- **Não** escreva texto visível fixo em componente do chrome. Todo rótulo de
+  mecanismo nasce em `src/shell/labels.ts` e é sobrescrevível por `theme.labels`;
+  existe trava em `src/shell/labels.test.ts`.
+- **Não** use nome de cliente nem vocabulário de um setor específico em comentário,
+  exemplo ou fixture de teste do motor. Exemplo do motor é genérico: solicitação,
+  aprovação, cobrança. Existe trava em `src/shell/boundary.test.ts`.
 - **Não** escreva CSS que possa alcançar a UI do produto. Todo seletor é
   prefixado com `ds-`, toda custom property com `--ds-`, e não existe regra em
   elemento nu fora de `.ds-root`.

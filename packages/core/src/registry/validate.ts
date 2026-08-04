@@ -19,7 +19,7 @@ import {
 
 export type ValidationIssue = {
   level: "error" | "warning";
-  /** Onde o problema está: `scenario:finance.insurance-denied`. */
+  /** Onde o problema está: `scenario:requests.approve-blocked`. */
   where: string;
   message: string;
 };
@@ -47,7 +47,7 @@ export function validateScenario(scenario: Scenario, index?: number): Validation
     err("`id` é obrigatório.");
   } else if (!ID_PATTERN.test(scenario.id)) {
     err(
-      "`id` deve ser minúsculo em kebab-case, com o módulo como prefixo: `finance.insurance-denied`.",
+      "`id` deve ser minúsculo em kebab-case, com o módulo como prefixo: `requests.approve-blocked`.",
     );
   } else if (!scenario.id.includes(".")) {
     warn("`id` sem prefixo de módulo dificulta a navegação e a busca do agente.");

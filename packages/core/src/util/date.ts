@@ -8,10 +8,9 @@
  *
  * O bug que a originou: `new Date("2011-09-08")` é parseado como meia-noite
  * **UTC**. Formatado em qualquer fuso a oeste de Greenwich — o Brasil inteiro —
- * exibe o dia anterior. No Bloomy isso apareceu como data de nascimento com um dia
- * de atraso, o que também deslocava o cálculo de idade e portanto a regra do
- * paciente menor de idade. Na Finaya, como vencimento de cobrança errado por um
- * dia.
+ * exibe o dia anterior. Em um produto isso apareceu como data de nascimento
+ * atrasada em um dia, o que deslocava a idade calculada e portanto uma regra que
+ * dependia dela; em outro, como vencimento errado por um dia.
  *
  * Os dois produtos escreveram a mesma correção separadamente. Quando isso
  * acontece, o lugar da correção é o motor — senão o terceiro produto reescreve o

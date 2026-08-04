@@ -38,7 +38,9 @@ URL própria.
 7. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/` — só o que
    for específico deste produto. As decisões do modelo já estão no repositório do
    motor e não devem ser copiadas para cá.
-8. Escolha a hospedagem, se for haver alguma: `pnpm setup:hosting vercel`. O padrão
+8. Se o time do cliente revisa em outro idioma, traduza o chrome do motor em
+   `theme.labels`, em `src/app/product.ts`. O padrão é português.
+9. Escolha a hospedagem, se for haver alguma: `pnpm setup:hosting vercel`. O padrão
    é nenhuma. Ver [Hospedagem](#hospedagem).
 
 ## Estrutura

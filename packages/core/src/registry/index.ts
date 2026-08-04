@@ -45,7 +45,7 @@ export type Registry = {
   /** Cenários que abrem a mesma rota. Serve para o seletor de situação. */
   scenariosForRoute: (route: string) => Scenario[];
   /**
-   * Busca por vocabulário de negócio. Um PO precisa achar "convênio recusado"
+   * Busca por vocabulário de negócio. Um PO precisa achar "aprovação bloqueada"
    * sem saber o id nem o nome do arquivo (§15.1 "Compreensão de negócio").
    */
   search: (query: string) => Scenario[];
@@ -141,7 +141,7 @@ export function createRegistry(product: ProductDefinition): Registry {
   };
 }
 
-/** Minúsculas sem acento: "Convênio" acha "convenio". */
+/** Minúsculas sem acento: "Aprovação" acha "aprovacao". */
 function normalize(value: string): string {
   return value
     .toLowerCase()

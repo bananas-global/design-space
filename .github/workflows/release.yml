@@ -4,7 +4,22 @@
 # momento em que uma mudança passa a valer para todos os produtos, e esse momento
 # merece uma decisão humana em vez de um merge na main.
 #
-# Requer o secret `NPM_TOKEN` com permissão de publish em `@brucesantos`.
+# Autentica por **trusted publishing** (OIDC), não por token. O npm troca a
+# identidade que o GitHub emite para este workflow por uma credencial de vida
+# curta, então não existe segredo neste repositório para vazar, expirar ou
+# renovar — e foi um token expirado que travou a publicação da 0.2.0.
+#
+# O que isso exige do lado do npm, uma vez por pacote, em
+# npmjs.com → o pacote → Settings → Trusted publisher:
+#
+#   Organização/usuário: bananas-global
+#   Repositório:         design-space
+#   Workflow:            release.yml
+#   Ações permitidas:    npm publish
+#
+# Se o nome deste arquivo mudar, a publicação para de autenticar até o registro
+# ser atualizado. É o preço de amarrar a credencial ao workflow, e é o que
+# impede outro workflow deste mesmo repositório de publicar em nome dele.
 name: Release do motor
 
 on:
@@ -16,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # provenance no npm
+      id-token: write # a identidade que o npm troca por credencial de publish
     steps:
       - uses: actions/checkout@v4
 
@@ -42,10 +57,18 @@ jobs:
             exit 1
           fi
 
-      # `--filter`, não `-C packages/core`: com `-C` o pnpm repassa a linha inteira
-      # para o `npm publish`, que não conhece `--no-git-checks` e aborta com EUSAGE
-      # antes de tentar publicar.
+      # Trusted publishing é do npm, não do pnpm: o suporte no pnpm ainda é
+      # assunto aberto lá e já quebrou entre versões maiores. Instalar e
+      # publicar não é o mesmo trabalho — o repositório continua com pnpm, e o
+      # publish, que é o passo que precisa da credencial, usa o npm.
+      #
+      # `npm@latest` porque OIDC exige npm 11.5.1 ou mais novo, e o runner vem
+      # com o npm que acompanha o Node.
+      - name: Instalar o npm com suporte a OIDC
+        run: npm install --global npm@latest
+
+      # Sem `--provenance`: publicando por trusted publishing de repositório
+      # público, o npm gera e anexa a procedência sozinho.
       - name: Publicar
-        run: pnpm --filter @brucesantos/design-space publish --access public --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+        working-directory: packages/core

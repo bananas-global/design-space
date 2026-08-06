@@ -9,15 +9,29 @@ publicado como pacote.
 
 ## 1. Publicar o motor no npm
 
-Com o secret `NPM_TOKEN` no repositório, criar a tag `core-v<versão>` dispara
+Criar a tag `core-v<versão>` dispara
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), que roda
 `pnpm check`, confere que a tag casa com a versão do `package.json` e publica com
 provenance.
 
 ```bash
-gh secret set NPM_TOKEN
 git tag core-v<versão> && git push origin core-v<versão>
 ```
+
+A autenticação é por **trusted publishing** (OIDC): não existe token neste
+repositório. O registro é feito uma vez, na sua conta, em npmjs.com → o pacote →
+**Settings → Trusted publisher**:
+
+| Campo | Valor |
+| --- | --- |
+| Organização ou usuário | `bananas-global` |
+| Repositório | `design-space` |
+| Workflow | `release.yml` |
+| Ações permitidas | `npm publish` |
+
+Renomear o arquivo do workflow quebra a autenticação até o registro ser
+atualizado — é o que impede outro workflow do mesmo repositório de publicar em
+nome dele.
 
 ## 2. Produto apontando para a versão publicada
 

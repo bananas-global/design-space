@@ -15,6 +15,7 @@ import type {
   ProductDefinition,
   Scenario,
 } from "./types/index.js";
+import { SCENARIO_STATUSES } from "./types/index.js";
 
 beforeAll(() => {
   const environment = globalThis as typeof globalThis & {
@@ -114,6 +115,12 @@ describe("ported visibility in the shell", () => {
     expect(markup).not.toContain(portedScenario.title);
     expect(markup.match(/ds-home__empty/g)).toHaveLength(1);
     expect(markup).not.toContain("Empty module");
+    expect(markup).toContain(DEFAULT_LABELS.home.statusLegend);
+    for (const status of SCENARIO_STATUSES) {
+      expect(markup).toContain(`data-status="${status}"`);
+      expect(markup).toContain(DEFAULT_LABELS.status[status]);
+      expect(markup).toContain(DEFAULT_LABELS.statusMeaning[status]);
+    }
   });
 
   it("shows one navigation empty state instead of empty module rows", () => {

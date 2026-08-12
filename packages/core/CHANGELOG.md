@@ -6,6 +6,15 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.5.1 (2026-08-12)
+
+### Adicionado
+
+- A home agora traz uma legenda dos sete status com o mesmo marcador colorido da
+  navegação, o rótulo e o significado completo. A informação permanece textual
+  e compreensível sem depender apenas de cor, responde em duas ou uma coluna e
+  continua sobrescrevível por `theme.labels`.
+
 ## 0.5.0 (2026-08-12)
 
 ### Adicionado

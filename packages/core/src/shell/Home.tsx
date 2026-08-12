@@ -12,7 +12,13 @@
  */
 
 import type { Registry } from "../registry/index.js";
-import type { Flow, Module, Scenario, ScenarioView } from "../types/index.js";
+import {
+  SCENARIO_STATUSES,
+  type Flow,
+  type Module,
+  type Scenario,
+  type ScenarioView,
+} from "../types/index.js";
 import { useLabels } from "./labels.js";
 
 export type HomeProps = {
@@ -80,6 +86,21 @@ export function Home({
           </button>
         )}
       </header>
+
+      <section className="ds-home__legend" aria-labelledby="ds-status-legend-title">
+        <h2 id="ds-status-legend-title">{labels.home.statusLegend}</h2>
+        <ul>
+          {SCENARIO_STATUSES.map((status) => (
+            <li key={status}>
+              <span className="ds-status-dot" data-status={status} aria-hidden="true" />
+              <span>
+                <strong>{labels.status[status]}</strong>
+                <small>{labels.statusMeaning[status]}</small>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {total === 0 && (
         <section className="ds-home__empty" aria-label={labels.sidebar.currentView(viewLabel)}>

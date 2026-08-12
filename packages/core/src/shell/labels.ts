@@ -161,6 +161,7 @@ export type Labels = {
   };
   home: {
     lead: (total: number) => string;
+    statusLegend: string;
     withoutModule: string;
     withoutModuleHint: string;
     emptyModule: string;
@@ -360,6 +361,7 @@ export const DEFAULT_LABELS: Labels = {
       `Especificação executável: cada situação abaixo abre por link, com persona, dados e regras próprios. ${total} ${
         total === 1 ? "situação registrada" : "situações registradas"
       }.`,
+    statusLegend: "Legenda dos status",
     withoutModule: "Sem módulo",
     withoutModuleHint:
       "O prefixo do id não corresponde a nenhum módulo registrado, então estas situações não aparecem na navegação por módulo.",
@@ -561,6 +563,7 @@ export const EN_US_LABELS: Labels = {
       `Executable specification: each state below opens from a link with its own persona, data, and rules. ${total} ${
         total === 1 ? "state registered" : "states registered"
       }.`,
+    statusLegend: "Status legend",
     withoutModule: "No module",
     withoutModuleHint:
       "The ID prefix does not match a registered module, so these states do not appear in module navigation.",

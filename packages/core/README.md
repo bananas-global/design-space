@@ -82,6 +82,8 @@ Busca, home, módulos e contagens seguem a visão atual, sem renderizar módulos
 vazios. Um deep link direto para um portado infere a visão de referências mesmo
 sem o parâmetro. Links 0.4.0 com `showPorted=1` continuam sendo lidos e são
 normalizados para a nova visão. O diagnóstico sempre avalia o catálogo completo.
+A home também apresenta uma legenda estável com a cor, o rótulo e o significado
+de cada status; os chips de contagem continuam mostrando apenas a visão atual.
 
 ## A URL é o estado
 

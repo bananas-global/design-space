@@ -38,7 +38,7 @@ um Design Space que roda só local é caso suportado, não pendência.
 | `src/app/product.ts` | O catálogo mais rotas, tema e contexto de deployment. É o que o motor recebe. |
 | `src/scenarios/` | Cenários registráveis, um arquivo por módulo. |
 | `src/screens/` | Composições de tela. Recebem `params` e `context` do motor. |
-| `src/components/` | Componentes exclusivos deste produto. |
+| `src/components/` | Componentes exclusivos e previews do catálogo visual deste produto. |
 | `src/fixtures/` | Dados sintéticos e determinísticos. |
 | `src/personas/` | Papéis, objetivos e permissões. |
 | `src/rules/` | Regras de negócio, separadas por domínio, com a implementação. |
@@ -82,7 +82,8 @@ mesma situação.
 - **Não** modificar `@brucesantos/design-space` (o motor) para resolver uma
   necessidade específica deste produto. Se parecer necessário, pare e pergunte.
 - **Não** traduzir o chrome do motor editando o pacote. O idioma do chrome é
-  `theme.labels` em `src/app/product.ts`; o padrão é português.
+  `theme.labels` em `src/app/product.ts`; o template usa `EN_US_LABELS` e o padrão
+  do motor é português.
 - **Não** introduzir componente global quando a necessidade é local. Reuso de UI
   é decisão local deste produto.
 - **Não** remover foco visível, rótulo acessível, ordem de tabulação ou contraste
@@ -107,29 +108,15 @@ da ação bloqueada. Preserve todas as regras existentes.
 Crie o cenário "requests.duplicate-submission" para a persona solicitante,
 com fixture sintética e URL direta.
 
-Aplique este backlog do coletor. Cada item tem arquivo e linha.
-Não mude token nem regra: se um item exigir isso, pare e pergunte.
+Aplique este backlog. Não mude token nem regra: se um item exigir isso, pare e
+pergunte.
 ```
-
-## Coletor de feedback
-
-`feedback-collector` está instalado e ativo em desenvolvimento. Segure `ALT`
-para destacar, `ALT` + clique para capturar o elemento e escrever a instrução, e
-use "Copiar backlog" para gerar o markdown numerado com `arquivo:linha`.
-
-O `arquivo:linha` vem do `@react-dev-inspector/babel-plugin` no
-`vite.config.ts`. Em React 19 não existe fallback pelo fiber: **sem o plugin não
-há source mapping**. Não remova.
-
-O `feedback-collector` traz uma skill de setup para agentes de código, em
-`skills/feedback-collector-setup/SKILL.md` do seu repositório. Ela cobre as
-receitas por bundler, o caveat do React 19 e como remover a instalação — use-a em
-vez de reconstruir a configuração do zero.
 
 ## Atalhos do ambiente
 
 | Atalho | Efeito |
 | --- | --- |
-| `Shift` + `C` | Mostra ou oculta o chrome do Design Space (revisão limpa) |
+| `Command/Ctrl` + `K` ou `F` | Foca a busca da lateral |
+| `↑` / `↓` | Percorre os resultados filtrados |
 | `Shift` + `K` | Liga ou desliga o modo teclado |
 | `Shift` + `P` | Mostra ou oculta o painel de contexto |

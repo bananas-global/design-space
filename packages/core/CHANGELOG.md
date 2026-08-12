@@ -6,6 +6,56 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.3.0 (não publicado)
+
+### Adicionado
+
+- **Estado de ciclo de vida `ported` (`Portado — não validado`).** Identifica um
+  cenário trazido do sistema existente que ainda não foi validado e não representa
+  proposta, aprovação ou compromisso de implementação. É uma adição compatível:
+  os seis estados anteriores preservam valor, rótulo e comportamento.
+- `ported` passa a fazer parte de `ScenarioStatus` e `SCENARIO_STATUSES`, da
+  validação em runtime, de `Registry.byStatus()` e da cobertura por status. O mapa,
+  a navegação e o diagnóstico mostram o estado com rótulo, significado, chip
+  neutro e indicador visual próprio.
+- `scenariosUnderTest()` não inclui cenários portados no recorte padrão. Um produto
+  ainda pode testá-los explicitamente com `scenariosUnderTest(product, ["ported"])`,
+  sem transformar a importação em compromisso de manutenção de jornada E2E.
+- **Catálogo opcional de componentes.** `ProductDefinition.components` recebe
+  referências visuais implementadas pelo produto (`id`, nome, grupo, descrição e
+  componente React). O motor organiza a aba, busca, deep link `?component=…` e
+  painel de contexto sem incorporar UI, tokens ou domínio do produto.
+- **Navegação por teclado na lateral.** `Command/Ctrl + K` e `Command/Ctrl + F`
+  focam a busca; setas percorrem os resultados filtrados.
+- **Light mode do chrome.** A topbar alterna entre `dark` e `light`, e o estado
+  fica no deep link como `?appearance=light`. Os tokens claros preservam contraste
+  WCAG AA e não alcançam a UI do produto no palco.
+- **Dicionário `EN_US_LABELS`.** Tradução integral do vocabulário do motor —
+  navegação, controles, status, significados, diagnóstico, acessibilidade e
+  estados vazios — pronta para uso em `theme.labels`.
+
+### Alterado
+
+- O botão que ocultava a lateral foi removido; a navegação permanece como parte
+  estrutural da mesa de revisão e se reorganiza acima do palco em telas estreitas.
+- “Revisão limpa” abre uma nova aba com `chrome=0`, preservando a mesa de revisão
+  original. O controle invisível de retorno continua disponível em deep links
+  recebidos diretamente nesse modo.
+- O seletor global de fixtures saiu da barra inferior. Dados, persona e rede do
+  cenário ativo aparecem juntos como escopo na lateral; overrides explícitos por
+  URL continuam compatíveis.
+- A seção temporária de controles de acessibilidade saiu da barra inferior. O
+  contrato obrigatório, o painel de inspeção e os parâmetros de URL continuam
+  disponíveis.
+- Presets de viewport usam ícones derivados do [Lucide](https://lucide.dev/), sob
+  licença MIT, incorporados como SVG para não adicionar dependência de runtime.
+- O inspetor ganhou largura, espaçamento e cartões para separar situação,
+  reprodução, permissões, ações e critérios.
+
+Migração: nenhuma para produtos que usam os seis estados anteriores. Ao trazer
+cenários de um sistema existente sem validação, declare `status: "ported"` e só os
+promova para outro estado quando houver a decisão correspondente.
+
 ## 0.2.0
 
 Hospedagem deixa de ser suposição do motor. Um Design Space que roda só na

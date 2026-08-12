@@ -1,8 +1,12 @@
 # 0005 — Source mapping só em desenvolvimento
 
 **Data:** 2026-07-30
-**Status:** aceita, revisável
+**Status:** superada em 2026-08-12
 **Alcance:** todos os Design Spaces
+
+> O template deixou de incluir `feedback-collector` e
+> `@react-dev-inspector/babel-plugin`. Esta decisão permanece apenas como registro
+> do desenho anterior e volta a ser relevante se o coletor for reintroduzido.
 
 ## Contexto
 

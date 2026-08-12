@@ -6,15 +6,17 @@
  * vez a partir da `ProductDefinition`.
  */
 
-import type {
-  Fixture,
-  Flow,
-  Module,
-  Persona,
-  ProductDefinition,
-  Rule,
-  Scenario,
-  ScenarioStatus,
+import {
+  SCENARIO_STATUSES,
+  type ComponentPreview,
+  type Fixture,
+  type Flow,
+  type Module,
+  type Persona,
+  type ProductDefinition,
+  type Rule,
+  type Scenario,
+  type ScenarioStatus,
 } from "../types/index.js";
 import { validateProduct, type ValidationIssue } from "./validate.js";
 
@@ -32,6 +34,7 @@ export type Registry = {
   issues: ValidationIssue[];
 
   scenario: (id: string | undefined) => Scenario | undefined;
+  component: (id: string | undefined) => ComponentPreview | undefined;
   persona: (id: string | undefined) => Persona | undefined;
   fixture: (id: string | undefined) => Fixture | undefined;
   rule: (id: string | undefined) => Rule | undefined;
@@ -56,6 +59,9 @@ export type Registry = {
 
 export function createRegistry(product: ProductDefinition): Registry {
   const scenarios = new Map(product.scenarios.map((s) => [s.id, s]));
+  const components = new Map(
+    (product.components ?? []).map((component) => [component.id, component]),
+  );
   const personas = new Map(product.personas.map((p) => [p.id, p]));
   const fixtures = new Map(product.fixtures.map((f) => [f.id, f]));
   const rules = new Map((product.rules ?? []).map((r) => [r.id, r]));
@@ -88,6 +94,7 @@ export function createRegistry(product: ProductDefinition): Registry {
     issues: validateProduct(product),
 
     scenario,
+    component: (id) => (id ? components.get(id) : undefined),
     persona,
     fixture: (id) => (id ? fixtures.get(id) : undefined),
     rule: (id) => (id ? rules.get(id) : undefined),
@@ -127,14 +134,9 @@ export function createRegistry(product: ProductDefinition): Registry {
     byStatus: (status) => product.scenarios.filter((s) => s.status === status),
 
     coverage: () => {
-      const counts = {
-        proposed: 0,
-        "in-review": 0,
-        approved: 0,
-        "in-implementation": 0,
-        implemented: 0,
-        superseded: 0,
-      } satisfies Record<ScenarioStatus, number>;
+      const counts = Object.fromEntries(
+        SCENARIO_STATUSES.map((status) => [status, 0]),
+      ) as Record<ScenarioStatus, number>;
       for (const s of product.scenarios) counts[s.status] += 1;
       return counts;
     },

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createRegistry } from "./index.js";
 import { hasErrors, validateProduct, validateScenario } from "./validate.js";
-import type { ProductDefinition, RouteDefinition, Scenario } from "../types/index.js";
+import {
+  SCENARIO_STATUSES,
+  type ProductDefinition,
+  type RouteDefinition,
+  type Scenario,
+} from "../types/index.js";
 
 const screen = (() => null) as unknown as RouteDefinition["screen"];
 
@@ -37,6 +42,11 @@ function product(overrides: Partial<ProductDefinition> = {}): ProductDefinition 
 describe("validateScenario", () => {
   it("aceita um cenário completo", () => {
     expect(validateScenario(scenario()).filter((i) => i.level === "error")).toEqual([]);
+  });
+
+  it("aceita cenário portado sem tratá-lo como proposta ou compromisso", () => {
+    expect(validateScenario(scenario({ status: "ported" })).filter((i) => i.level === "error"))
+      .toEqual([]);
   });
 
   it("exige o contrato de acessibilidade", () => {
@@ -109,6 +119,15 @@ describe("validateProduct", () => {
     );
     expect(issues.some((i) => i.level === "warning" && i.message.includes("D-05"))).toBe(true);
   });
+
+  it("valida e indexa o catálogo opcional de componentes", () => {
+    const preview = () => null;
+    const definition = product({
+      components: [{ id: "actions.button", name: "Botão", group: "Ações", preview }],
+    });
+    expect(validateProduct(definition).filter((issue) => issue.level === "error")).toEqual([]);
+    expect(createRegistry(definition).component("actions.button")?.preview).toBe(preview);
+  });
 });
 
 describe("createRegistry", () => {
@@ -145,5 +164,31 @@ describe("createRegistry", () => {
   it("conta cobertura por status", () => {
     expect(registry.coverage()["in-review"]).toBe(1);
     expect(registry.coverage().approved).toBe(0);
+  });
+
+  it("conta cenários portados separadamente dos seis estados existentes", () => {
+    const custom = createRegistry(
+      product({ scenarios: [scenario({ status: "ported" }), scenario({ id: "requests.review" })] }),
+    );
+
+    expect(custom.coverage()).toEqual({
+      ported: 1,
+      proposed: 0,
+      "in-review": 1,
+      approved: 0,
+      "in-implementation": 0,
+      implemented: 0,
+      superseded: 0,
+    });
+    expect(custom.byStatus("ported")).toHaveLength(1);
+    expect(SCENARIO_STATUSES).toEqual([
+      "ported",
+      "proposed",
+      "in-review",
+      "approved",
+      "in-implementation",
+      "implemented",
+      "superseded",
+    ]);
   });
 });

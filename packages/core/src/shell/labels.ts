@@ -36,6 +36,7 @@ export type Labels = {
   /** Rótulo de viewport por id: `fit`, `mobile`, `tablet`, `desktop`, `custom`. */
   viewport: Record<string, string>;
   topbar: {
+    homeTitle: (product: string) => string;
     toggleNav: string;
     copyLink: string;
     copied: string;
@@ -43,18 +44,32 @@ export type Labels = {
     cleanReview: string;
     cleanReviewTitle: string;
     panel: string;
+    lightMode: string;
+    darkMode: string;
     branchTitle: (branch: string) => string;
     commitTitle: (commit: string) => string;
     envTitle: (env: string) => string;
   };
   sidebar: {
     region: string;
+    flowsTab: string;
+    componentsTab: string;
     searchPlaceholder: string;
     searchLabel: string;
+    componentSearchPlaceholder: string;
+    componentSearchLabel: string;
+    searchShortcut: string;
     noMatch: (query: string) => string;
     matchCount: (total: number) => string;
+    noComponentMatch: (query: string) => string;
+    componentMatchCount: (total: number) => string;
     emptyModule: string;
+    emptyComponents: string;
     withoutModule: string;
+    scope: string;
+    scopeData: string;
+    scopePersona: string;
+    scopeNetwork: string;
   };
   controls: {
     region: string;
@@ -82,6 +97,8 @@ export type Labels = {
     tabDiagnostics: string;
     diagnosticsWithErrors: (count: number) => string;
     noScenario: string;
+    componentReference: string;
+    componentGroup: string;
     situation: string;
     reproduction: string;
     id: string;
@@ -143,6 +160,7 @@ export type Labels = {
 /** Português. É o padrão, não uma obrigação. */
 export const DEFAULT_LABELS: Labels = {
   status: {
+    ported: "Portado — não validado",
     proposed: "Proposta",
     "in-review": "Em revisão",
     approved: "Aprovado",
@@ -152,6 +170,8 @@ export const DEFAULT_LABELS: Labels = {
   },
 
   statusMeaning: {
+    ported:
+      "Veio do sistema existente, mas não foi validado e não representa compromisso de implementação.",
     proposed: "Exploração ainda não aprovada.",
     "in-review": "Aberto para validação de design, negócio ou cliente.",
     approved: "Referência autorizada, registrada por URL de commit.",
@@ -183,13 +203,16 @@ export const DEFAULT_LABELS: Labels = {
   },
 
   topbar: {
+    homeTitle: (product) => `Ir para a página inicial de ${product}`,
     toggleNav: "Mostrar ou ocultar a navegação",
     copyLink: "Copiar link",
     copied: "Link copiado",
     copyPrompt: "Copie o link do cenário:",
     cleanReview: "Revisão limpa",
-    cleanReviewTitle: "Ocultar o chrome do Design Space para revisão limpa e captura de tela",
+    cleanReviewTitle: "Abrir a situação em uma nova aba, sem o chrome do Design Space",
     panel: "Painel",
+    lightMode: "Modo claro",
+    darkMode: "Modo escuro",
     branchTitle: (branch) => `Branch: ${branch}`,
     commitTitle: (commit) => `Commit: ${commit}`,
     envTitle: (env) => `Ambiente: ${env}`,
@@ -197,12 +220,24 @@ export const DEFAULT_LABELS: Labels = {
 
   sidebar: {
     region: "Cenários do produto",
+    flowsTab: "Fluxos",
+    componentsTab: "Componentes",
     searchPlaceholder: "Buscar situação…",
     searchLabel: "Buscar cenário pelo vocabulário do produto",
+    componentSearchPlaceholder: "Buscar componente…",
+    componentSearchLabel: "Buscar componente do produto",
+    searchShortcut: "⌘K",
     noMatch: (query) => `Nenhuma situação para "${query}".`,
     matchCount: (total) => `${total} ${total === 1 ? "situação" : "situações"}.`,
+    noComponentMatch: (query) => `Nenhum componente para "${query}".`,
+    componentMatchCount: (total) => `${total} ${total === 1 ? "componente" : "componentes"}.`,
     emptyModule: "Nenhum cenário ainda.",
+    emptyComponents: "O produto ainda não registrou componentes.",
     withoutModule: "Sem módulo",
+    scope: "Escopo ativo",
+    scopeData: "Dados",
+    scopePersona: "Persona",
+    scopeNetwork: "Rede",
   },
 
   controls: {
@@ -234,6 +269,8 @@ export const DEFAULT_LABELS: Labels = {
     diagnosticsWithErrors: (count) => `Diagnóstico (${count})`,
     noScenario:
       "Nenhum cenário ativo. Escolha uma situação na navegação para ver contexto, regras e critérios.",
+    componentReference: "Componente",
+    componentGroup: "Grupo",
     situation: "Situação",
     reproduction: "Reprodução",
     id: "Id",
@@ -301,6 +338,191 @@ export const DEFAULT_LABELS: Labels = {
     restoreChrome: "Mostrar controles",
     noRoute: "Nenhuma rota para este endereço",
     noRouteHint: "não casa com nenhuma rota declarada. Escolha uma situação na navegação.",
+  },
+};
+
+/** English (United States), selectable by the product through `theme.labels`. */
+export const EN_US_LABELS: Labels = {
+  status: {
+    ported: "Ported — not validated",
+    proposed: "Proposed",
+    "in-review": "In review",
+    approved: "Approved",
+    "in-implementation": "In implementation",
+    implemented: "Implemented",
+    superseded: "Superseded",
+  },
+
+  statusMeaning: {
+    ported:
+      "Imported from the existing system, but not validated and not an implementation commitment.",
+    proposed: "Exploration that has not been approved yet.",
+    "in-review": "Open for design, business, or client validation.",
+    approved: "Authorized reference, recorded with a commit URL.",
+    "in-implementation": "Linked to active engineering work.",
+    implemented: "Available in the real product and validated.",
+    superseded: "Kept for history or replaced by another decision.",
+  },
+
+  network: {
+    success: "Success",
+    loading: "Loading",
+    empty: "Empty",
+    error: "Error",
+    slow: "Slow",
+  },
+
+  keyboard: {
+    full: "Journey can be completed with keyboard only",
+    partial: "Partially operable with keyboard",
+    "not-applicable": "Not applicable",
+  },
+
+  viewport: {
+    fit: "Fit",
+    mobile: "Mobile",
+    tablet: "Tablet",
+    desktop: "Desktop",
+    custom: "Custom",
+  },
+
+  topbar: {
+    homeTitle: (product) => `Go to ${product} home`,
+    toggleNav: "Show or hide navigation",
+    copyLink: "Copy link",
+    copied: "Link copied",
+    copyPrompt: "Copy the scenario link:",
+    cleanReview: "Clean review",
+    cleanReviewTitle: "Open this state in a new tab without the Design Space chrome",
+    panel: "Panel",
+    lightMode: "Light mode",
+    darkMode: "Dark mode",
+    branchTitle: (branch) => `Branch: ${branch}`,
+    commitTitle: (commit) => `Commit: ${commit}`,
+    envTitle: (env) => `Environment: ${env}`,
+  },
+
+  sidebar: {
+    region: "Product scenarios",
+    flowsTab: "Flows",
+    componentsTab: "Components",
+    searchPlaceholder: "Search scenarios…",
+    searchLabel: "Search scenarios using product language",
+    componentSearchPlaceholder: "Search components…",
+    componentSearchLabel: "Search product components",
+    searchShortcut: "⌘K",
+    noMatch: (query) => `No scenarios found for "${query}".`,
+    matchCount: (total) => `${total} ${total === 1 ? "scenario" : "scenarios"}.`,
+    noComponentMatch: (query) => `No components found for "${query}".`,
+    componentMatchCount: (total) => `${total} ${total === 1 ? "component" : "components"}.`,
+    emptyModule: "No scenarios yet.",
+    emptyComponents: "The product has not registered any components yet.",
+    withoutModule: "No module",
+    scope: "Active scope",
+    scopeData: "Data",
+    scopePersona: "Persona",
+    scopeNetwork: "Network",
+  },
+
+  controls: {
+    region: "Scenario controls",
+    persona: "Persona",
+    fixture: "Data",
+    network: "Network",
+    viewport: "Viewport",
+    customWidth: "Custom width in pixels",
+    theme: "Theme",
+    locale: "Language",
+    dataSource: "Source",
+    fixturesOption: "Fixtures",
+    a11y: "Accessibility",
+    keyboardMode: "Keyboard",
+    keyboardModeTitle:
+      "Complete the journey with keyboard only, showing focus and tab order",
+    reducedMotion: "Motion",
+    reducedMotionTitle: "Reduce motion inside the stage",
+    textScale: "Text size",
+    none: "—",
+  },
+
+  inspector: {
+    region: "Context panel",
+    tabScenario: "Scenario",
+    tabA11y: "Accessibility",
+    tabDiagnostics: "Diagnostics",
+    diagnosticsWithErrors: (count) => `Diagnostics (${count})`,
+    noScenario:
+      "No active scenario. Choose a state in the navigation to see its context, rules, and criteria.",
+    componentReference: "Component",
+    componentGroup: "Group",
+    situation: "State",
+    reproduction: "Reproduction",
+    id: "ID",
+    route: "Route",
+    persona: "Persona",
+    personaSwapped: "changed",
+    data: "Data",
+    network: "Network",
+    goal: (goal) => `Goal: ${goal}`,
+    permissions: "Effective permissions",
+    preconditions: "Preconditions",
+    rules: "Rules",
+    actions: "Available actions",
+    expected: "Acceptance criteria",
+    approval: "Approval",
+    openApproved: "Open approved version",
+    engineering: "Engineering",
+    a11yContract: "Scenario contract",
+    keyboard: "Keyboard",
+    contrast: "Contrast",
+    contrastTarget: (target) => `WCAG 2.2 ${target}`,
+    announces: "Must be announced:",
+    focusedElement: "Focused element",
+    keyboardModeOff:
+      "Turn on keyboard mode in the controls to inspect the accessibility tree.",
+    pressTab: (tabStops) =>
+      `Press Tab inside the stage. ${tabStops} tab ${tabStops === 1 ? "stop was" : "stops were"} found.`,
+    role: "Role",
+    name: "Name",
+    noAccessibleName: "no accessible name",
+    nameFrom: "Name source",
+    description: "Description",
+    selector: "Selector",
+    focusableButHidden:
+      "This element is focusable but hidden from assistive technology. A screen reader receives focus without receiving content.",
+    tabStopsInStage: (tabStops) =>
+      `${tabStops} tab ${tabStops === 1 ? "stop" : "stops"} in the stage.`,
+    tokenContrast: "Token contrast",
+    noContrastPairs:
+      "The product has not declared contrast pairs in theme.contrastPairs. Contrast belongs to a pair of colors; declaring pairs here validates them once, at the source.",
+    pair: "Pair",
+    ratio: "Ratio",
+    pairsFailing: (count) =>
+      `${count} ${count === 1 ? "pair is" : "pairs are"} below the target. The product token test fails the build for this.`,
+    automatedIsFloor:
+      "Automated checks are a floor, not a ceiling. Confusing reading order, technically present but meaningless labels, and journeys that cannot be completed with a screen reader can still pass automated tools.",
+    coverage: "Coverage by status",
+    scenariosRegistered: (count) => `${count} ${count === 1 ? "scenario" : "scenarios"} registered.`,
+    scenarioContract: "Scenario contract",
+    noIssues: "No issues found.",
+  },
+
+  home: {
+    lead: (total) =>
+      `Executable specification: each state below opens from a link with its own persona, data, and rules. ${total} ${
+        total === 1 ? "state registered" : "states registered"
+      }.`,
+    withoutModule: "No module",
+    withoutModuleHint:
+      "The ID prefix does not match a registered module, so these states do not appear in module navigation.",
+    emptyModule: "No states have been registered in this module yet.",
+    keyboardBadge: "keyboard",
+  },
+
+  shell: {
+    restoreChrome: "Show controls",
+    noRoute: "No route for this address",
+    noRouteHint: "does not match any declared route. Choose a state from the navigation.",
   },
 };
 

@@ -138,6 +138,22 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
     push("error", "product", "`routes` está vazio: nenhum cenário conseguirá renderizar.");
   }
 
+  const componentIds = new Set<string>();
+  for (const [index, component] of (product.components ?? []).entries()) {
+    const where = `component:${component?.id ?? index}`;
+    if (!isNonEmptyString(component?.id)) {
+      push("error", where, "`id` é obrigatório.");
+    } else if (!ID_PATTERN.test(component.id)) {
+      push("error", where, "`id` deve ser minúsculo em kebab-case ou usar pontos para agrupamento.");
+    } else if (componentIds.has(component.id)) {
+      push("error", where, `\`id\` duplicado: ${component.id}.`);
+    } else {
+      componentIds.add(component.id);
+    }
+    if (!isNonEmptyString(component?.name)) push("error", where, "`name` é obrigatório.");
+    if (typeof component?.preview !== "function") push("error", where, "`preview` é obrigatório.");
+  }
+
   for (const [index, scenario] of (product.scenarios ?? []).entries()) {
     issues.push(...validateScenario(scenario, index));
 

@@ -12,6 +12,7 @@ import type { ControlsState } from "../types/index.js";
 /** Nomes curtos: a URL é colada em Slack, em ticket e em thread de revisão. */
 export const PARAM = {
   scenario: "scenario",
+  component: "component",
   persona: "persona",
   fixture: "fixture",
   network: "network",
@@ -20,6 +21,7 @@ export const PARAM = {
   themeMode: "theme",
   locale: "locale",
   dataSource: "source",
+  chromeTheme: "appearance",
   chrome: "chrome",
   keyboardMode: "kb",
   reducedMotion: "motion",

@@ -24,6 +24,7 @@ import type { LabelsOverride } from "../shell/labels.js";
  * referência envelheça em silêncio quando o produto real muda.
  */
 export type ScenarioStatus =
+  | "ported"
   | "proposed"
   | "in-review"
   | "approved"
@@ -32,6 +33,7 @@ export type ScenarioStatus =
   | "superseded";
 
 export const SCENARIO_STATUSES: readonly ScenarioStatus[] = [
+  "ported",
   "proposed",
   "in-review",
   "approved",
@@ -250,6 +252,24 @@ export type ScreenProps = {
   context: ScenarioContext;
 };
 
+/**
+ * Componente do produto exposto no catálogo do Design Space.
+ *
+ * O motor só organiza e renderiza a referência. Implementação, aparência e
+ * conteúdo continuam no repositório do produto.
+ */
+export type ComponentPreview = {
+  /** Identificador estável usado no deep link: `button.primary`. */
+  id: string;
+  /** Nome legível no vocabulário do produto. */
+  name: string;
+  /** Grupo de navegação: `Ações`, `Formulários`, `Feedback`. */
+  group?: string;
+  description?: string;
+  /** Composição visual fornecida e mantida pelo produto. */
+  preview: ComponentType;
+};
+
 /* ------------------------------------------------------------------ *
  * Adapters de dados (§7)
  * ------------------------------------------------------------------ */
@@ -338,6 +358,8 @@ export type ProductDefinition = {
   fixtures: Fixture[];
   rules?: Rule[];
   routes: RouteDefinition[];
+  /** Catálogo visual opcional, implementado integralmente pelo produto. */
+  components?: ComponentPreview[];
   theme?: ProductTheme;
   /**
    * Adapters de dados disponíveis. `fixtures` é o padrão (D-05); qualquer
@@ -446,12 +468,17 @@ export type ViewportSetting = {
   height?: number;
 };
 
+/** Aparência do chrome do Design Space. Não altera o tema da UI do produto. */
+export type ChromeTheme = "dark" | "light";
+
 /* ------------------------------------------------------------------ *
  * Estado dos controles — serializado na URL (deep link)
  * ------------------------------------------------------------------ */
 
 export type ControlsState = {
   scenario: string | undefined;
+  /** Referência visual ativa. Opcional para preservar objetos do contrato anterior. */
+  component?: string;
   persona: string | undefined;
   fixture: string | undefined;
   network: NetworkState;
@@ -460,6 +487,8 @@ export type ControlsState = {
   themeMode: string | undefined;
   locale: string | undefined;
   dataSource: string | undefined;
+  /** Tema visual do chrome; independente de `themeMode` do produto. */
+  chromeTheme?: ChromeTheme;
   /** Chrome do Design Space oculto: revisão limpa e captura de tela. */
   chrome: boolean;
   keyboardMode: boolean;

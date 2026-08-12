@@ -11,7 +11,7 @@ import { useState } from "react";
 import type { Registry } from "../registry/index.js";
 import type { AccessibleNode } from "../a11y/accessible-tree.js";
 import { checkContrastPairs } from "../a11y/contrast.js";
-import type { ControlsState, Scenario } from "../types/index.js";
+import type { ComponentPreview, ControlsState, Scenario, ScenarioStatus } from "../types/index.js";
 import { useLabels } from "./labels.js";
 
 type Tab = "scenario" | "a11y" | "diagnostics";
@@ -19,6 +19,7 @@ type Tab = "scenario" | "a11y" | "diagnostics";
 export type InspectorProps = {
   registry: Registry;
   scenario: Scenario | undefined;
+  component?: ComponentPreview;
   controls: ControlsState;
   focusedNode: AccessibleNode | undefined;
   tabStopCount: number;
@@ -27,6 +28,7 @@ export type InspectorProps = {
 export function Inspector({
   registry,
   scenario,
+  component,
   controls,
   focusedNode,
   tabStopCount,
@@ -39,7 +41,7 @@ export function Inspector({
     <aside className="ds-chrome ds-inspector" aria-label={labels.region}>
       <div className="ds-inspector__tabs" role="tablist">
         <TabButton id="scenario" current={tab} onSelect={setTab}>
-          {labels.tabScenario}
+          {component ? labels.componentReference : labels.tabScenario}
         </TabButton>
         <TabButton id="a11y" current={tab} onSelect={setTab}>
           {labels.tabA11y}
@@ -51,7 +53,7 @@ export function Inspector({
 
       <div className="ds-inspector__body" role="tabpanel">
         {tab === "scenario" && (
-          <ScenarioPanel registry={registry} scenario={scenario} controls={controls} />
+          <ScenarioPanel registry={registry} scenario={scenario} component={component} controls={controls} />
         )}
         {tab === "a11y" && (
           <A11yPanel
@@ -98,17 +100,31 @@ function TabButton({
 function ScenarioPanel({
   registry,
   scenario,
+  component,
   controls,
 }: {
   registry: Registry;
   scenario: Scenario | undefined;
+  component: ComponentPreview | undefined;
   controls: ControlsState;
 }) {
   const all = useLabels();
   const labels = all.inspector;
 
   if (!scenario) {
-    return <p className="ds-block">{labels.noScenario}</p>;
+    if (!component) return <p className="ds-block">{labels.noScenario}</p>;
+    return (
+      <div className="ds-block">
+        <h2 className="ds-block__title">{labels.componentReference}</h2>
+        <p style={{ color: "var(--ds-fg)", fontSize: 15, fontWeight: 600 }}>{component.name}</p>
+        {component.description && <p>{component.description}</p>}
+        <dl className="ds-kv" style={{ marginTop: 14 }}>
+          <dt>{labels.id}</dt>
+          <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>{component.id}</dd>
+          {component.group && <><dt>{labels.componentGroup}</dt><dd>{component.group}</dd></>}
+        </dl>
+      </div>
+    );
   }
 
   const persona = registry.persona(controls.persona ?? scenario.persona);
@@ -448,8 +464,16 @@ function DiagnosticsPanel({ registry }: { registry: Registry }) {
   );
 }
 
-function statusTone(status: Scenario["status"]): string | undefined {
-  if (status === "approved" || status === "implemented") return "ok";
-  if (status === "in-review" || status === "proposed") return "warn";
-  return undefined;
+const STATUS_TONES = {
+  ported: undefined,
+  proposed: "warn",
+  "in-review": "warn",
+  approved: "ok",
+  "in-implementation": undefined,
+  implemented: "ok",
+  superseded: undefined,
+} satisfies Record<ScenarioStatus, "ok" | "warn" | undefined>;
+
+function statusTone(status: ScenarioStatus): "ok" | "warn" | undefined {
+  return STATUS_TONES[status];
 }

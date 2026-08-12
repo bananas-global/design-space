@@ -99,14 +99,15 @@ fazer.
 GitHub → Settings → Collaborators, permissão **Read**. É gratuito e não consome
 seat de hospedagem. Quem revisa não precisa de conta no provedor — só do link.
 
-O `feedback-collector` não exige conta nenhuma, mas roda em desenvolvimento (ver a
-decisão [`0005`](decisions/0005-source-mapping-so-em-desenvolvimento.md)).
-
 ## 7. Primeira revisão com uma pessoa de negócio
 
-É o que falta para os cenários saírem de `em revisão`. Escolha os três cenários que
-mais rendem conversa — normalmente uma recusa, um conflito e um bloqueio por
-permissão — e leve uma pergunta por cenário, não uma apresentação.
+Se os cenários vieram do sistema existente sem validação, registre-os primeiro com
+`status: "ported"`. Isso os mantém visíveis sem tratá-los como proposta, aprovação
+ou compromisso de implementação.
+
+É o que falta para os cenários saírem de `ported` ou `em revisão`. Escolha os três
+cenários que mais rendem conversa — normalmente uma recusa, um conflito e um
+bloqueio por permissão — e leve uma pergunta por cenário, não uma apresentação.
 
 Depois da revisão, para cada cenário aprovado: mude `status` para `"approved"` e
 preencha `approvedAt` com a **URL de commit**, não a de branch. O validador avisa se

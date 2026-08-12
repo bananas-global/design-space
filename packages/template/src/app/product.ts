@@ -1,9 +1,10 @@
-import type { ProductDefinition } from "@brucesantos/design-space";
+import { EN_US_LABELS, type ProductDefinition } from "@brucesantos/design-space";
 
 import { fixtures, modules, personas, rules, scenarios } from "./catalog.js";
 import { contrastPairs } from "../tokens/contrast.js";
 import { RequestList } from "../screens/RequestList.js";
 import { RequestDetail } from "../screens/RequestDetail.js";
+import { components } from "../components/catalog.js";
 
 /**
  * A única coisa que o produto entrega ao motor.
@@ -15,13 +16,14 @@ import { RequestDetail } from "../screens/RequestDetail.js";
 export const productDefinition: ProductDefinition = {
   id: "template",
   name: "Design Space",
-  tagline: "Template — troque por seu produto",
+  tagline: "Template — replace with your product",
 
   modules,
   scenarios,
   personas,
   fixtures,
   rules,
+  components,
 
   // Não existe rota para `/`: a raiz é o mapa de situações do motor.
   routes: [
@@ -46,15 +48,10 @@ export const productDefinition: ProductDefinition = {
   theme: {
     contrastPairs,
     locales: ["pt-BR"],
+    labels: EN_US_LABELS,
 
-    // O chrome do motor vem em português. Se o time do cliente revisa em outro
-    // idioma, sobrescreva por grupo — o que não for declarado fica no padrão.
-    // Ver `DEFAULT_LABELS` no motor para a lista completa.
-    //
-    // labels: {
-    //   status: { approved: "Approved", "in-review": "In review" },
-    //   topbar: { copyLink: "Copy link" },
-    // },
+    // O chrome é configurado em en-US com o dicionário completo do motor. Isso
+    // é independente do locale da UI do produto, que neste exemplo é pt-BR.
   },
 
   // Fixture é o padrão (D-05). Um adapter remoto entra aqui como opção

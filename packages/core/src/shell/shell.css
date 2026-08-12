@@ -245,6 +245,22 @@
   pointer-events: none;
 }
 
+.ds-sidebar__option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--ds-border);
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ds-sidebar__option input {
+  margin: 0;
+  accent-color: var(--ds-accent);
+}
+
 .ds-sidebar__tree {
   flex: 1;
   overflow-y: auto;
@@ -333,6 +349,19 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-scenario__flag {
+  flex: none;
+  max-width: 72px;
+  overflow: hidden;
+  color: var(--ds-status-ported);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -1040,6 +1069,16 @@
 .ds-home__lead {
   max-width: 68ch;
   margin: 12px 0;
+  color: var(--ds-fg-dim);
+  font-size: 14px;
+}
+
+.ds-home__empty {
+  max-width: 68ch;
+  margin: 28px 0 0;
+  padding: 16px;
+  border: 1px dashed var(--ds-border-strong);
+  border-radius: var(--ds-r-lg);
   color: var(--ds-fg-dim);
   font-size: 14px;
 }

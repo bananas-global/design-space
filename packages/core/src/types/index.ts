@@ -258,7 +258,33 @@ export type ScreenProps = {
  * O motor só organiza e renderiza a referência. Implementação, aparência e
  * conteúdo continuam no repositório do produto.
  */
-export type ComponentPreview = {
+export type ComponentPreviewFixture<T = unknown> = {
+  /** Identificador estável, com escopo apenas dentro deste componente. */
+  id: string;
+  /** Rótulo legível para o seletor de dados do componente. */
+  label: string;
+  description?: string;
+  /** Valor sintético determinístico, ou factory pura que o produz. */
+  data: T | (() => T);
+};
+
+/** Controles e dados que o motor entrega a um preview isolado. */
+export type ComponentPreviewProps<T = unknown> = {
+  fixture?: ComponentPreviewFixture<T>;
+  data: T | undefined;
+  viewport: ViewportSetting;
+  /** `default` quando o produto não declara modos de tema. */
+  themeMode: string;
+  /** `default` quando o produto não declara idiomas. */
+  locale: string;
+  a11y: {
+    keyboardMode: boolean;
+    reducedMotion: boolean;
+    textScale: number;
+  };
+};
+
+export type ComponentPreview<T = unknown> = {
   /** Identificador estável usado no deep link: `button.primary`. */
   id: string;
   /** Nome legível no vocabulário do produto. */
@@ -267,7 +293,11 @@ export type ComponentPreview = {
   group?: string;
   description?: string;
   /** Composição visual fornecida e mantida pelo produto. */
-  preview: ComponentType;
+  preview: ComponentType<ComponentPreviewProps<T>>;
+  /** Dados sintéticos exclusivos deste componente; não usam o catálogo de cenários. */
+  fixtures?: ComponentPreviewFixture<T>[];
+  /** Id da fixture selecionada quando o deep link não informa outra. */
+  defaultFixture?: string;
 };
 
 /* ------------------------------------------------------------------ *
@@ -359,7 +389,8 @@ export type ProductDefinition = {
   rules?: Rule[];
   routes: RouteDefinition[];
   /** Catálogo visual opcional, implementado integralmente pelo produto. */
-  components?: ComponentPreview[];
+  /** Cada item pode ter seu próprio tipo de dados; o registry os trata como opacos. */
+  components?: ComponentPreview<any>[];
   theme?: ProductTheme;
   /**
    * Adapters de dados disponíveis. `fixtures` é o padrão (D-05); qualquer
@@ -477,6 +508,8 @@ export type ChromeTheme = "dark" | "light";
 
 export type ControlsState = {
   scenario: string | undefined;
+  /** Inclui referências portadas nas áreas de trabalho ativo. Padrão: `false`. */
+  showPorted?: boolean;
   /** Referência visual ativa. Opcional para preservar objetos do contrato anterior. */
   component?: string;
   persona: string | undefined;

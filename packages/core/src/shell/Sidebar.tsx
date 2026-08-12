@@ -14,6 +14,7 @@ export type SidebarProps = {
   controls: ControlsState;
   onOpenScenario: (scenarioId: string) => void;
   onOpenComponent: (componentId: string) => void;
+  onShowPortedChange: (showPorted: boolean) => void;
 };
 
 export function Sidebar({
@@ -23,6 +24,7 @@ export function Sidebar({
   controls,
   onOpenScenario,
   onOpenComponent,
+  onShowPortedChange,
 }: SidebarProps) {
   const labels = useLabels();
   const [mode, setMode] = useState<SidebarMode>(activeComponent ? "components" : "flows");
@@ -49,8 +51,10 @@ export function Sidebar({
 
   const scenarioMatches = useMemo(() => {
     if (!query.trim()) return undefined;
-    return new Set(registry.search(query).map((scenario) => scenario.id));
-  }, [query, registry]);
+    return new Set(
+      registry.search(query, { includePorted: controls.showPorted }).map((scenario) => scenario.id),
+    );
+  }, [controls.showPorted, query, registry]);
 
   const componentMatches = useMemo(() => {
     const needle = normalize(query);
@@ -64,10 +68,14 @@ export function Sidebar({
   const visible = (scenarios: Scenario[]) =>
     scenarioMatches ? scenarios.filter((scenario) => scenarioMatches.has(scenario.id)) : scenarios;
 
-  const nodes = registry.tree
+  const navigationOptions = {
+    includePorted: controls.showPorted,
+    activeScenario: query.trim() ? undefined : activeScenario?.id,
+  };
+  const nodes = registry.treeFor(navigationOptions)
     .map((node) => ({ ...node, scenarios: visible(node.scenarios) }))
     .filter((node) => (scenarioMatches ? node.scenarios.length > 0 : true));
-  const orphans = visible(registry.orphans);
+  const orphans = visible(registry.orphansFor(navigationOptions));
   const scenarioTotal =
     nodes.reduce((sum, node) => sum + node.scenarios.length, 0) + orphans.length;
 
@@ -158,6 +166,17 @@ export function Sidebar({
         <kbd>{labels.sidebar.searchShortcut}</kbd>
       </div>
 
+      {mode === "flows" && (
+        <label className="ds-sidebar__option">
+          <input
+            type="checkbox"
+            checked={controls.showPorted ?? false}
+            onChange={(event) => onShowPortedChange(event.target.checked)}
+          />
+          <span>{labels.sidebar.showPorted}</span>
+        </label>
+      )}
+
       <div className="ds-sidebar__tree" role="tabpanel">
         {query.trim() !== "" && (
           <p className="ds-sidebar__empty" role="status">
@@ -178,6 +197,8 @@ export function Sidebar({
             matches={scenarioMatches}
             collapsed={collapsed}
             activeScenario={activeScenario?.id}
+            showPorted={controls.showPorted ?? false}
+            activePortedLabel={labels.sidebar.activePorted}
             emptyModuleLabel={labels.sidebar.emptyModule}
             withoutModuleLabel={labels.sidebar.withoutModule}
             onToggle={toggle}
@@ -236,6 +257,8 @@ type ScenarioTreeProps = {
   matches: Set<string> | undefined;
   collapsed: Set<string>;
   activeScenario: string | undefined;
+  showPorted: boolean;
+  activePortedLabel: string;
   emptyModuleLabel: string;
   withoutModuleLabel: string;
   onToggle: (id: string) => void;
@@ -288,8 +311,18 @@ function ScenarioTree(props: ScenarioTreeProps) {
   );
 }
 
-function ScenarioItem({ scenario, activeScenario, onOpen, onKeyDown, setItemRef }: ScenarioTreeProps & { scenario: Scenario }) {
+function ScenarioItem({
+  scenario,
+  activeScenario,
+  showPorted,
+  activePortedLabel,
+  onOpen,
+  onKeyDown,
+  setItemRef,
+}: ScenarioTreeProps & { scenario: Scenario }) {
   const status = useLabels().status[scenario.status];
+  const isActiveHiddenReference =
+    scenario.status === "ported" && scenario.id === activeScenario && !showPorted;
   return (
     <li>
       <button
@@ -303,6 +336,9 @@ function ScenarioItem({ scenario, activeScenario, onOpen, onKeyDown, setItemRef 
         <span className="ds-status-dot" data-status={scenario.status} title={status} />
         <span className="ds-scenario__title">{scenario.title}</span>
         <span className="ds-visually-hidden">{status}</span>
+        {isActiveHiddenReference && (
+          <span className="ds-scenario__flag" title={activePortedLabel}>{status}</span>
+        )}
       </button>
     </li>
   );

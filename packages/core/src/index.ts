@@ -25,7 +25,13 @@ export {
 } from "./shell/labels.js";
 
 /* ---------------------------------- registry */
-export { createRegistry, type ModuleNode, type Registry } from "./registry/index.js";
+export {
+  createRegistry,
+  type ComponentFixtureResolution,
+  type ModuleNode,
+  type Registry,
+  type ScenarioQueryOptions,
+} from "./registry/index.js";
 export {
   formatIssues,
   hasErrors,
@@ -63,6 +69,7 @@ export { useScenarioData, type ScenarioData } from "./adapters/useScenarioData.j
 /* ------------------------------------ deploy */
 export {
   commitUrl,
+  componentUrl,
   getDeployContext,
   scenarioUrl,
   type DeployContext,
@@ -108,6 +115,8 @@ export {
   type ContrastPair,
   type ContrastTarget,
   type ComponentPreview,
+  type ComponentPreviewFixture,
+  type ComponentPreviewProps,
   type ChromeTheme,
   type ControlsState,
   type DeployOverrides,

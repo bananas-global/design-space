@@ -3,12 +3,24 @@ import type { Scenario } from "@brucesantos/design-space";
 /**
  * Cenários do módulo de solicitações.
  *
- * Cinco situações, não cinco telas: a fila cheia, a fila vazia, a decisão
+ * Seis situações, não seis telas: a fila cheia, a fila vazia, a decisão
  * permitida, a decisão bloqueada por regra e a decisão bloqueada por permissão.
  * A última é a que costuma faltar em protótipo, e é a que a engenharia mais
  * pergunta.
  */
 export const scenarios: Scenario[] = [
+  {
+    id: "requests.imported-reference",
+    title: "Referência importada ainda não validada",
+    intent: "Preservar material trazido do sistema existente sem tratá-lo como trabalho ativo.",
+    route: "/requests/REQ-2041",
+    persona: "approver",
+    fixture: "requests-standard",
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "ported",
+    expected: ["A referência continua acessível por deep link enquanto aguarda validação."],
+    tags: ["importado"],
+  },
   {
     id: "requests.queue",
     title: "Fila de solicitações",

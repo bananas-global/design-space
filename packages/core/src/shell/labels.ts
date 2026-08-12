@@ -63,6 +63,8 @@ export type Labels = {
     matchCount: (total: number) => string;
     noComponentMatch: (query: string) => string;
     componentMatchCount: (total: number) => string;
+    showPorted: string;
+    activePorted: string;
     emptyModule: string;
     emptyComponents: string;
     withoutModule: string;
@@ -75,6 +77,7 @@ export type Labels = {
     region: string;
     persona: string;
     fixture: string;
+    componentFixture: string;
     network: string;
     viewport: string;
     customWidth: string;
@@ -99,6 +102,9 @@ export type Labels = {
     noScenario: string;
     componentReference: string;
     componentGroup: string;
+    componentFixture: string;
+    componentFixtureDescription: string;
+    componentFixtureFallback: (requested: string, fallback: string) => string;
     situation: string;
     reproduction: string;
     id: string;
@@ -149,6 +155,7 @@ export type Labels = {
     withoutModuleHint: string;
     emptyModule: string;
     keyboardBadge: string;
+    noActiveWork: string;
   };
   shell: {
     restoreChrome: string;
@@ -231,6 +238,8 @@ export const DEFAULT_LABELS: Labels = {
     matchCount: (total) => `${total} ${total === 1 ? "situação" : "situações"}.`,
     noComponentMatch: (query) => `Nenhum componente para "${query}".`,
     componentMatchCount: (total) => `${total} ${total === 1 ? "componente" : "componentes"}.`,
+    showPorted: "Mostrar portados",
+    activePorted: "Aberto por link direto; oculto do trabalho ativo",
     emptyModule: "Nenhum cenário ainda.",
     emptyComponents: "O produto ainda não registrou componentes.",
     withoutModule: "Sem módulo",
@@ -244,6 +253,7 @@ export const DEFAULT_LABELS: Labels = {
     region: "Controles do cenário",
     persona: "Persona",
     fixture: "Dados",
+    componentFixture: "Dados do componente",
     network: "Rede",
     viewport: "Viewport",
     customWidth: "Largura personalizada em pixels",
@@ -271,6 +281,10 @@ export const DEFAULT_LABELS: Labels = {
       "Nenhum cenário ativo. Escolha uma situação na navegação para ver contexto, regras e critérios.",
     componentReference: "Componente",
     componentGroup: "Grupo",
+    componentFixture: "Fixture ativa",
+    componentFixtureDescription: "Descrição da fixture",
+    componentFixtureFallback: (requested, fallback) =>
+      `A fixture \`${requested}\` não existe neste componente. Exibindo \`${fallback}\` como fallback.`,
     situation: "Situação",
     reproduction: "Reprodução",
     id: "Id",
@@ -332,6 +346,8 @@ export const DEFAULT_LABELS: Labels = {
       "O prefixo do id não corresponde a nenhum módulo registrado, então estas situações não aparecem na navegação por módulo.",
     emptyModule: "Nenhuma situação registrada neste módulo ainda.",
     keyboardBadge: "teclado",
+    noActiveWork:
+      "Não há trabalho ativo. As referências portadas continuam registradas e podem ser exibidas com “Mostrar portados”.",
   },
 
   shell: {
@@ -415,6 +431,8 @@ export const EN_US_LABELS: Labels = {
     matchCount: (total) => `${total} ${total === 1 ? "scenario" : "scenarios"}.`,
     noComponentMatch: (query) => `No components found for "${query}".`,
     componentMatchCount: (total) => `${total} ${total === 1 ? "component" : "components"}.`,
+    showPorted: "Show ported",
+    activePorted: "Opened by direct link; hidden from active work",
     emptyModule: "No scenarios yet.",
     emptyComponents: "The product has not registered any components yet.",
     withoutModule: "No module",
@@ -428,6 +446,7 @@ export const EN_US_LABELS: Labels = {
     region: "Scenario controls",
     persona: "Persona",
     fixture: "Data",
+    componentFixture: "Component data",
     network: "Network",
     viewport: "Viewport",
     customWidth: "Custom width in pixels",
@@ -455,6 +474,10 @@ export const EN_US_LABELS: Labels = {
       "No active scenario. Choose a state in the navigation to see its context, rules, and criteria.",
     componentReference: "Component",
     componentGroup: "Group",
+    componentFixture: "Active fixture",
+    componentFixtureDescription: "Fixture description",
+    componentFixtureFallback: (requested, fallback) =>
+      `Fixture \`${requested}\` does not exist for this component. Showing \`${fallback}\` as fallback.`,
     situation: "State",
     reproduction: "Reproduction",
     id: "ID",
@@ -517,6 +540,8 @@ export const EN_US_LABELS: Labels = {
       "The ID prefix does not match a registered module, so these states do not appear in module navigation.",
     emptyModule: "No states have been registered in this module yet.",
     keyboardBadge: "keyboard",
+    noActiveWork:
+      "There is no active work. Ported references remain registered and can be included with “Show ported”.",
   },
 
   shell: {

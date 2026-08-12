@@ -48,15 +48,22 @@ export function parseControls(search: string, registry: Registry): ControlsState
   const component = registry.component(componentId);
   const scenarioId = params.get(PARAM.scenario) ?? undefined;
   const scenario = component ? undefined : registry.scenario(scenarioId);
+  const requestedFixture = params.get(PARAM.fixture) ?? undefined;
+  const componentFixture = component
+    ? requestedFixture ??
+      registry.componentFixture(component.id, component.defaultFixture)?.id ??
+      component.fixtures?.[0]?.id
+    : undefined;
 
   const network = params.get(PARAM.network);
   const scale = Number(params.get(PARAM.textScale));
 
   return {
     scenario: scenario?.id,
+    showPorted: params.get(PARAM.showPorted) === "1",
     component: component?.id,
     persona: params.get(PARAM.persona) ?? scenario?.persona,
-    fixture: params.get(PARAM.fixture) ?? scenario?.fixture,
+    fixture: component ? componentFixture : requestedFixture ?? scenario?.fixture,
     network: isNetworkState(network) ? network : (scenario?.network ?? "success"),
     viewport: params.get(PARAM.viewport) ?? "fit",
     customWidth: positiveInt(params.get(PARAM.customWidth)),
@@ -87,13 +94,17 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   if (state.component) params.set(PARAM.component, state.component);
   else if (state.scenario) params.set(PARAM.scenario, state.scenario);
 
+  if (state.showPorted) params.set(PARAM.showPorted, "1");
+
   // Persona e fixture só entram quando divergem do cenário: um link com a
   // combinação declarada não precisa repeti-la, e um link com combinação
   // deliberadamente diferente precisa carregá-la.
   if (state.persona && state.persona !== scenario?.persona) {
     params.set(PARAM.persona, state.persona);
   }
-  if (state.fixture && state.fixture !== scenario?.fixture) {
+  if (state.component && state.fixture) {
+    params.set(PARAM.fixture, state.fixture);
+  } else if (state.fixture && state.fixture !== scenario?.fixture) {
     params.set(PARAM.fixture, state.fixture);
   }
   if (state.network !== (scenario?.network ?? "success")) {
@@ -200,6 +211,7 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
       const next: ControlsState = {
         ...controls,
         scenario: scenario.id,
+        showPorted: controls.showPorted,
         component: undefined,
         persona: scenario.persona,
         fixture: scenario.fixture,
@@ -223,6 +235,9 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
         fixture: undefined,
         network: "success",
       };
+      next.fixture =
+        registry.componentFixture(component.id, component.defaultFixture)?.id ??
+        component.fixtures?.[0]?.id;
       push("/", serializeControls(next, registry), false);
     },
     [controls, push, registry],

@@ -18,13 +18,17 @@ import { useLabels } from "./labels.js";
 export type HomeProps = {
   registry: Registry;
   onOpenScenario: (scenarioId: string) => void;
+  showPorted?: boolean;
 };
 
-export function Home({ registry, onOpenScenario }: HomeProps) {
+export function Home({ registry, onOpenScenario, showPorted = false }: HomeProps) {
   const labels = useLabels();
   const { product } = registry;
-  const coverage = registry.coverage();
-  const total = product.scenarios.length;
+  const options = { includePorted: showPorted };
+  const coverage = registry.coverage(options);
+  const total = registry.activeScenarios(options).length;
+  const nodes = registry.treeFor(options).filter((node) => node.scenarios.length > 0);
+  const orphans = registry.orphansFor(options);
 
   return (
     <div className="ds-chrome ds-home">
@@ -43,22 +47,25 @@ export function Home({ registry, onOpenScenario }: HomeProps) {
         </div>
       </header>
 
-      {registry.tree.map(({ module, scenarios }) => (
+      {total === 0 && <p className="ds-home__empty">{labels.home.noActiveWork}</p>}
+
+      {nodes.map(({ module, scenarios }) => (
         <ModuleCard
           key={module.id}
           module={module}
           scenarios={scenarios}
           registry={registry}
+          showPorted={showPorted}
           onOpenScenario={onOpenScenario}
         />
       ))}
 
-      {registry.orphans.length > 0 && (
+      {orphans.length > 0 && (
         <section className="ds-home__module">
           <h2>{labels.home.withoutModule}</h2>
           <p className="ds-home__hint">{labels.home.withoutModuleHint}</p>
           <ScenarioGrid
-            scenarios={registry.orphans}
+            scenarios={orphans}
             registry={registry}
             onOpenScenario={onOpenScenario}
           />
@@ -72,11 +79,13 @@ function ModuleCard({
   module,
   scenarios,
   registry,
+  showPorted,
   onOpenScenario,
 }: {
   module: Module;
   scenarios: Scenario[];
   registry: Registry;
+  showPorted: boolean;
   onOpenScenario: (id: string) => void;
 }) {
   return (
@@ -85,7 +94,13 @@ function ModuleCard({
       {module.description && <p className="ds-home__hint">{module.description}</p>}
 
       {(module.flows ?? []).map((flow) => (
-        <FlowOutline key={flow.id} flow={flow} registry={registry} onOpenScenario={onOpenScenario} />
+        <FlowOutline
+          key={flow.id}
+          flow={flow}
+          registry={registry}
+          showPorted={showPorted}
+          onOpenScenario={onOpenScenario}
+        />
       ))}
 
       <ScenarioGrid scenarios={scenarios} registry={registry} onOpenScenario={onOpenScenario} />
@@ -96,20 +111,31 @@ function ModuleCard({
 function FlowOutline({
   flow,
   registry,
+  showPorted,
   onOpenScenario,
 }: {
   flow: Flow;
   registry: Registry;
+  showPorted: boolean;
   onOpenScenario: (id: string) => void;
 }) {
+  const visibleSteps = flow.steps.filter((step) => {
+    const scenario = registry.scenario(step.scenario);
+    return scenario && (showPorted || scenario.status !== "ported");
+  });
+  if (visibleSteps.length === 0) return null;
+
   return (
     <div className="ds-flow">
       <h3>{flow.title}</h3>
       {flow.description && <p className="ds-home__hint">{flow.description}</p>}
       <ol className="ds-flow__steps">
-        {flow.steps.map((step, index) => {
+        {visibleSteps.map((step, index) => {
           const scenario = registry.scenario(step.scenario);
-          const branches = Object.entries(step.branches ?? {});
+          const branches = Object.entries(step.branches ?? {}).filter(([, target]) => {
+            const branchScenario = registry.scenario(target);
+            return branchScenario && (showPorted || branchScenario.status !== "ported");
+          });
           return (
             <li key={`${step.scenario}-${index}`}>
               <button type="button" className="ds-flow__step" onClick={() => onOpenScenario(step.scenario)}>

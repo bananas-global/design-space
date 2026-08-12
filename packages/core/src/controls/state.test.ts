@@ -31,7 +31,20 @@ const registry = createRegistry({
     { id: "request-approved", label: "Aprovada", data: {} },
   ],
   routes: [{ path: "/requests/:id", screen }],
-  components: [{ id: "actions.button", name: "Botão", group: "Ações", preview }],
+  components: [
+    { id: "feedback.notice", name: "Aviso", preview },
+    {
+      id: "actions.button",
+      name: "Botão",
+      group: "Ações",
+      preview,
+      fixtures: [
+        { id: "default", label: "Padrão", data: { label: "Continuar" } },
+        { id: "disabled", label: "Desabilitado", data: { disabled: true } },
+      ],
+      defaultFixture: "disabled",
+    },
+  ],
 } satisfies ProductDefinition);
 
 describe("parseControls", () => {
@@ -83,7 +96,44 @@ describe("parseControls", () => {
     );
     expect(controls.component).toBe("actions.button");
     expect(controls.scenario).toBeUndefined();
-    expect(serializeControls(controls, registry)).toBe("?component=actions.button");
+    expect(serializeControls(controls, registry)).toBe(
+      "?component=actions.button&fixture=disabled",
+    );
+  });
+
+  it("resolve a fixture padrão do componente e a mantém no deep link", () => {
+    const controls = parseControls("?component=actions.button", registry);
+    expect(controls.fixture).toBe("disabled");
+    expect(serializeControls(controls, registry)).toBe(
+      "?component=actions.button&fixture=disabled",
+    );
+  });
+
+  it("restaura fixture de componente e preserva id inexistente para fallback explícito", () => {
+    const selected = parseControls("?component=actions.button&fixture=default", registry);
+    expect(selected.fixture).toBe("default");
+    expect(serializeControls(selected, registry)).toBe(
+      "?component=actions.button&fixture=default",
+    );
+
+    const missing = parseControls("?component=actions.button&fixture=missing", registry);
+    expect(missing.fixture).toBe("missing");
+    expect(serializeControls(missing, registry)).toBe(
+      "?component=actions.button&fixture=missing",
+    );
+  });
+
+  it("mantém componente sem fixture compatível", () => {
+    const controls = parseControls("?component=feedback.notice", registry);
+    expect(controls.fixture).toBeUndefined();
+    expect(serializeControls(controls, registry)).toBe("?component=feedback.notice");
+  });
+
+  it("desliga portados por padrão e restaura a opção pela URL", () => {
+    expect(parseControls("", registry).showPorted).toBe(false);
+    const controls = parseControls("?showPorted=1", registry);
+    expect(controls.showPorted).toBe(true);
+    expect(serializeControls(controls, registry)).toBe("?showPorted=1");
   });
 });
 

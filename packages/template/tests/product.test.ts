@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { assertValidProduct, validateProduct } from "@brucesantos/design-space/testing";
 import { productDefinition } from "../src/app/product.js";
+import { createRegistry, parseControls, serializeControls } from "@brucesantos/design-space";
 import { canApprove, HIGH_VALUE_THRESHOLD_CENTS } from "../src/rules/requests.js";
 import type { PurchaseRequest } from "../src/contracts/index.js";
 
@@ -34,6 +35,32 @@ describe("contrato de cenário", () => {
       expect(scenario.a11y.contrast, scenario.id).toBeDefined();
       expect(scenario.a11y.keyboard, scenario.id).toBeDefined();
     }
+  });
+});
+
+describe("referências portadas e fixtures de componente", () => {
+  const registry = createRegistry(productDefinition);
+
+  it("mantém portados fora do trabalho ativo por padrão", () => {
+    expect(productDefinition.scenarios.some((scenario) => scenario.status === "ported")).toBe(true);
+    expect(registry.activeScenarios().some((scenario) => scenario.status === "ported")).toBe(false);
+    expect(registry.activeScenarios({ includePorted: true }).some((scenario) => scenario.status === "ported"))
+      .toBe(true);
+  });
+
+  it("cobre componente legado sem fixture e componente com múltiplas fixtures", () => {
+    expect(registry.component("feedback.status")?.fixtures).toBeUndefined();
+    expect(registry.component("actions.buttons")?.fixtures?.length).toBeGreaterThan(1);
+    expect(registry.component("actions.buttons")?.defaultFixture).toBe("default");
+  });
+
+  it("restaura component + fixture pelo deep link", () => {
+    const controls = parseControls("?component=actions.buttons&fixture=error", registry);
+    expect(controls.component).toBe("actions.buttons");
+    expect(controls.fixture).toBe("error");
+    expect(serializeControls(controls, registry)).toBe(
+      "?component=actions.buttons&fixture=error",
+    );
   });
 });
 

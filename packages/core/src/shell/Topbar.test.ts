@@ -23,4 +23,10 @@ describe("retorno para a home", () => {
   it("não serializa o tema escuro padrão", () => {
     expect(buildHomeUrl("https://example.test", "dark")).toBe("https://example.test/");
   });
+
+  it("preserva a inclusão de portados ao voltar para a home", () => {
+    expect(buildHomeUrl("https://example.test", "dark", true)).toBe(
+      "https://example.test/?showPorted=1",
+    );
+  });
 });

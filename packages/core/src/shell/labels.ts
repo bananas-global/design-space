@@ -63,8 +63,18 @@ export type Labels = {
     matchCount: (total: number) => string;
     noComponentMatch: (query: string) => string;
     componentMatchCount: (total: number) => string;
+    activeWork: string;
+    portedReferences: (total: number) => string;
+    viewPorted: (total: number) => string;
+    backToActive: string;
+    currentView: (view: string) => string;
+    noActiveWork: string;
+    noPortedReferences: string;
+    /** @deprecated Mantido para overrides escritos para 0.4.0. */
     showPorted: string;
+    /** @deprecated Deep links portados agora abrem a visão correspondente. */
     activePorted: string;
+    /** @deprecated Grupos vazios não são mais renderizados. */
     emptyModule: string;
     emptyComponents: string;
     withoutModule: string;
@@ -156,6 +166,7 @@ export type Labels = {
     emptyModule: string;
     keyboardBadge: string;
     noActiveWork: string;
+    noPortedReferences: string;
   };
   shell: {
     restoreChrome: string;
@@ -238,6 +249,14 @@ export const DEFAULT_LABELS: Labels = {
     matchCount: (total) => `${total} ${total === 1 ? "situação" : "situações"}.`,
     noComponentMatch: (query) => `Nenhum componente para "${query}".`,
     componentMatchCount: (total) => `${total} ${total === 1 ? "componente" : "componentes"}.`,
+    activeWork: "Trabalho ativo",
+    portedReferences: (total) => `Referências portadas · ${total}`,
+    viewPorted: (total) =>
+      `Ver ${total} ${total === 1 ? "referência portada" : "referências portadas"}`,
+    backToActive: "Voltar ao trabalho ativo",
+    currentView: (view) => `Visão atual: ${view}`,
+    noActiveWork: "Não há cenários no trabalho ativo.",
+    noPortedReferences: "Não há referências portadas.",
     showPorted: "Mostrar portados",
     activePorted: "Aberto por link direto; oculto do trabalho ativo",
     emptyModule: "Nenhum cenário ainda.",
@@ -346,8 +365,8 @@ export const DEFAULT_LABELS: Labels = {
       "O prefixo do id não corresponde a nenhum módulo registrado, então estas situações não aparecem na navegação por módulo.",
     emptyModule: "Nenhuma situação registrada neste módulo ainda.",
     keyboardBadge: "teclado",
-    noActiveWork:
-      "Não há trabalho ativo. As referências portadas continuam registradas e podem ser exibidas com “Mostrar portados”.",
+    noActiveWork: "Não há cenários no trabalho ativo.",
+    noPortedReferences: "Não há referências portadas nesta coleção.",
   },
 
   shell: {
@@ -431,6 +450,13 @@ export const EN_US_LABELS: Labels = {
     matchCount: (total) => `${total} ${total === 1 ? "scenario" : "scenarios"}.`,
     noComponentMatch: (query) => `No components found for "${query}".`,
     componentMatchCount: (total) => `${total} ${total === 1 ? "component" : "components"}.`,
+    activeWork: "Active work",
+    portedReferences: (total) => `Ported references · ${total}`,
+    viewPorted: (total) => `View ${total} ported ${total === 1 ? "reference" : "references"}`,
+    backToActive: "Back to active work",
+    currentView: (view) => `Current view: ${view}`,
+    noActiveWork: "There are no scenarios in active work.",
+    noPortedReferences: "There are no ported references.",
     showPorted: "Show ported",
     activePorted: "Opened by direct link; hidden from active work",
     emptyModule: "No scenarios yet.",
@@ -540,8 +566,8 @@ export const EN_US_LABELS: Labels = {
       "The ID prefix does not match a registered module, so these states do not appear in module navigation.",
     emptyModule: "No states have been registered in this module yet.",
     keyboardBadge: "keyboard",
-    noActiveWork:
-      "There is no active work. Ported references remain registered and can be included with “Show ported”.",
+    noActiveWork: "There are no scenarios in active work.",
+    noPortedReferences: "There are no ported references in this collection.",
   },
 
   shell: {

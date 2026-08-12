@@ -96,6 +96,18 @@ describe("scenarioUrl", () => {
     );
     expect(url.searchParams.get("appearance")).toBe("light");
   });
+
+  it("identifica semanticamente a visão de um cenário portado", () => {
+    const url = new URL(
+      scenarioUrl(
+        { ...scenario, status: "ported" },
+        { origin: "https://acme.example.app" },
+      ),
+    );
+
+    expect(url.searchParams.get("view")).toBe("ported");
+    expect(url.searchParams.has("showPorted")).toBe(false);
+  });
 });
 
 describe("componentUrl", () => {

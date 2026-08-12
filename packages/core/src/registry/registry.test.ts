@@ -214,6 +214,17 @@ describe("createRegistry", () => {
       .toEqual(["requests.review"]);
     expect(custom.coverage().ported).toBe(0);
 
+    expect(custom.activeScenarios({ view: "ported" }).map((item) => item.id)).toEqual([
+      "requests.imported",
+    ]);
+    expect(custom.search("revisão", { view: "ported" })).toEqual([]);
+    expect(custom.search("importada", { view: "ported" })).toHaveLength(1);
+    expect(custom.treeFor({ view: "ported" })[0]?.scenarios.map((item) => item.id)).toEqual([
+      "requests.imported",
+    ]);
+    expect(custom.coverage({ view: "ported" }).ported).toBe(1);
+    expect(custom.coverage({ view: "ported" })["in-review"]).toBe(0);
+
     expect(custom.activeScenarios({ includePorted: true })).toHaveLength(2);
     expect(custom.search("importada", { includePorted: true })).toHaveLength(1);
     expect(custom.treeFor({ includePorted: true })[0]?.scenarios).toHaveLength(2);

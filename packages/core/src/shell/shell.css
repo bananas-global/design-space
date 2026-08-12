@@ -245,26 +245,62 @@
   pointer-events: none;
 }
 
-.ds-sidebar__option {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--ds-border);
-  color: var(--ds-fg-faint);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.ds-sidebar__option input {
-  margin: 0;
-  accent-color: var(--ds-accent);
-}
-
 .ds-sidebar__tree {
   flex: 1;
   overflow-y: auto;
   padding: 8px 6px 20px;
+}
+
+.ds-sidebar__view-header {
+  display: grid;
+  gap: 5px;
+  padding: 5px 8px 12px;
+}
+
+.ds-sidebar__view-header h2 {
+  margin: 0;
+  color: var(--ds-fg-dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ds-sidebar__view-empty {
+  display: grid;
+  gap: 8px;
+  padding: 14px 10px;
+  color: var(--ds-fg-faint);
+}
+
+.ds-sidebar__view-empty p {
+  margin: 0;
+}
+
+.ds-sidebar__view-footer {
+  flex: none;
+  padding: 10px 14px;
+  border-top: 1px solid var(--ds-border);
+}
+
+.ds-text-action {
+  width: fit-content;
+  padding: 1px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ds-accent);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--ds-accent) 45%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ds-text-action:hover {
+  color: var(--ds-fg);
+  text-decoration-color: currentColor;
 }
 
 .ds-module {
@@ -349,19 +385,6 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ds-scenario__flag {
-  flex: none;
-  max-width: 72px;
-  overflow: hidden;
-  color: var(--ds-status-ported);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -1061,6 +1084,19 @@
   letter-spacing: -0.01em;
 }
 
+.ds-home__view {
+  margin: 0 0 8px;
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ds-home__view-action {
+  margin-top: 4px;
+}
+
 .ds-home__tagline {
   margin: 4px 0 0;
   color: var(--ds-fg-dim);
@@ -1081,6 +1117,10 @@
   border-radius: var(--ds-r-lg);
   color: var(--ds-fg-dim);
   font-size: 14px;
+}
+
+.ds-home__empty p {
+  margin: 0 0 8px;
 }
 
 .ds-home__module {

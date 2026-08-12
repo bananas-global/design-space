@@ -75,12 +75,13 @@ proposta nem compromisso de implementação.
 `implemented`. Cenários `ported` ficam fora até serem promovidos, mas podem ser
 selecionados explicitamente pelo segundo argumento.
 
-Na interface, `ported` também fica fora do trabalho ativo por padrão: não aparece
-na home, na árvore de Fluxos, na busca nem nas contagens ativas. A opção discreta
-**Mostrar portados** inclui essas referências e grava `showPorted=1` na URL. Um
-deep link direto continua abrindo um portado com a opção desligada e o mantém
-identificável como item ativo na navegação. O diagnóstico sempre avalia o catálogo
-completo.
+Na interface, `ported` vive numa coleção separada. **Trabalho ativo** mostra apenas
+cenários não portados; **Referências portadas** mostra apenas portados. A entrada
+textual “Ver N referências portadas” troca de coleção e grava `view=ported` na URL.
+Busca, home, módulos e contagens seguem a visão atual, sem renderizar módulos
+vazios. Um deep link direto para um portado infere a visão de referências mesmo
+sem o parâmetro. Links 0.4.0 com `showPorted=1` continuam sendo lidos e são
+normalizados para a nova visão. O diagnóstico sempre avalia o catálogo completo.
 
 ## A URL é o estado
 
@@ -91,10 +92,11 @@ rede declarados no cenário.
 | Parâmetro | Efeito |
 | --- | --- |
 | `scenario` | Cenário ativo. Define os padrões dos demais. |
+| `view=ported` | Abre a coleção de referências portadas. Omitido significa trabalho ativo. |
 | `component` | Referência ativa no catálogo visual do produto. |
 | `persona` | Troca o papel e as permissões. |
 | `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. |
-| `showPorted=1` | Inclui referências portadas na home, navegação, busca e contagens ativas. |
+| `showPorted=1` | Compatibilidade de leitura com links 0.4.0; equivale a `view=ported`. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
 | `viewport` | `fit`, `mobile`, `tablet`, `desktop`, `custom`. |
 | `w` | Largura, quando `viewport=custom`. |
@@ -164,8 +166,10 @@ e a revisão limpa preservam a aparência escolhida.
 - `createRegistry(product)` — índice consultável: busca por vocabulário de
   negócio, árvore de módulos, cobertura por status.
 - `activeScenarios()`, `treeFor()`, `orphansFor()`, `search()` e `coverage()` —
-  consultas de trabalho ativo; recebem `{ includePorted: true }` para incluir
-  material importado ainda não validado. `tree` e `issues` continuam completos.
+  consultam trabalho ativo por padrão e aceitam `{ view: "ported" }` para a
+  biblioteca de referências. `{ includePorted: true }` permanece disponível para
+  diagnóstico e consultas do catálogo completo. `tree` e `issues` continuam
+  completos.
 - `validateProduct(product)` / `validateScenario(scenario)` — validação em runtime
   do contrato. Pega fixture, persona, regra ou rota inexistente, que o TypeScript
   não alcança.

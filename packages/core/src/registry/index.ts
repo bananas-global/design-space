@@ -18,6 +18,7 @@ import {
   type Rule,
   type Scenario,
   type ScenarioStatus,
+  type ScenarioView,
 } from "../types/index.js";
 import { validateProduct, type ValidationIssue } from "./validate.js";
 
@@ -27,9 +28,11 @@ export type ModuleNode = {
 };
 
 export type ScenarioQueryOptions = {
-  /** Inclui material importado ainda não validado. Padrão: `false`. */
+  /** Coleção consultada. Padrão: trabalho ativo. */
+  view?: ScenarioView;
+  /** Inclui o catálogo completo. Reservado a diagnóstico e compatibilidade. */
   includePorted?: boolean;
-  /** Exceção para manter compreensível um portado aberto por deep link. */
+  /** @deprecated Deep links agora inferem `view: "ported"`. */
   activeScenario?: string;
 };
 
@@ -71,7 +74,7 @@ export type Registry = {
   permissionsOf: (scenario: Scenario | undefined) => string[];
   /** Cenários que abrem a mesma rota. Serve para o seletor de situação. */
   scenariosForRoute: (route: string, options?: ScenarioQueryOptions) => Scenario[];
-  /** Cenários que contam como trabalho ativo; portados ficam fora por padrão. */
+  /** Cenários da visão pedida; trabalho ativo é o padrão. */
   activeScenarios: (options?: ScenarioQueryOptions) => Scenario[];
   /** Árvore filtrada para navegação, preservando `tree` como catálogo completo. */
   treeFor: (options?: ScenarioQueryOptions) => ModuleNode[];
@@ -117,8 +120,10 @@ export function createRegistry(product: ProductDefinition): Registry {
     product.scenarios.filter(
       (target) =>
         options.includePorted ||
-        target.status !== "ported" ||
-        target.id === options.activeScenario,
+        (options.view === "ported"
+          ? target.status === "ported"
+          : target.status !== "ported") ||
+        (options.view === undefined && target.id === options.activeScenario),
     );
 
   const permissionsOf = (target: Scenario | undefined): string[] => {

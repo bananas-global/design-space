@@ -136,6 +136,7 @@ export {
   type Scenario,
   type ScenarioContext,
   type ScenarioStatus,
+  type ScenarioView,
   type ScreenProps,
   type ViewportSetting,
 } from "./types/index.js";

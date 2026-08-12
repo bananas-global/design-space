@@ -21,6 +21,15 @@ const registry = createRegistry({
       status: "approved",
       network: "error",
     },
+    {
+      id: "requests.imported",
+      title: "Referência importada",
+      route: "/requests/imported",
+      persona: "analyst",
+      fixture: "request-approved",
+      a11y: { keyboard: "full", contrast: "AA" },
+      status: "ported",
+    },
   ],
   personas: [
     { id: "analyst", name: "Analista", permissions: [] },
@@ -129,11 +138,25 @@ describe("parseControls", () => {
     expect(serializeControls(controls, registry)).toBe("?component=feedback.notice");
   });
 
-  it("desliga portados por padrão e restaura a opção pela URL", () => {
-    expect(parseControls("", registry).showPorted).toBe(false);
+  it("usa trabalho ativo por padrão e restaura a visão semântica pela URL", () => {
+    expect(parseControls("", registry).view).toBe("active");
+    const controls = parseControls("?view=ported", registry);
+    expect(controls.view).toBe("ported");
+    expect(serializeControls(controls, registry)).toBe("?view=ported");
+  });
+
+  it("lê showPorted=1 como compatibilidade e passa a emitir a URL semântica", () => {
     const controls = parseControls("?showPorted=1", registry);
-    expect(controls.showPorted).toBe(true);
-    expect(serializeControls(controls, registry)).toBe("?showPorted=1");
+    expect(controls.view).toBe("ported");
+    expect(serializeControls(controls, registry)).toBe("?view=ported");
+  });
+
+  it("infere referências portadas ao abrir um portado por deep link", () => {
+    const controls = parseControls("?scenario=requests.imported", registry);
+    expect(controls.view).toBe("ported");
+    expect(serializeControls(controls, registry)).toBe(
+      "?scenario=requests.imported&view=ported",
+    );
   });
 });
 

@@ -502,13 +502,18 @@ export type ViewportSetting = {
 /** Aparência do chrome do Design Space. Não altera o tema da UI do produto. */
 export type ChromeTheme = "dark" | "light";
 
+/** Coleção de cenários exibida na navegação, home, busca e contagens. */
+export type ScenarioView = "active" | "ported";
+
 /* ------------------------------------------------------------------ *
  * Estado dos controles — serializado na URL (deep link)
  * ------------------------------------------------------------------ */
 
 export type ControlsState = {
   scenario: string | undefined;
-  /** Inclui referências portadas nas áreas de trabalho ativo. Padrão: `false`. */
+  /** Visão atual. `active` é o padrão e `ported` é a biblioteca de referências. */
+  view?: ScenarioView;
+  /** @deprecated Compatibilidade programática com 0.4.0. Use `view: "ported"`. */
   showPorted?: boolean;
   /** Referência visual ativa. Opcional para preservar objetos do contrato anterior. */
   component?: string;

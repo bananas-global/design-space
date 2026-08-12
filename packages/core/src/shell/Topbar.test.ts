@@ -24,9 +24,9 @@ describe("retorno para a home", () => {
     expect(buildHomeUrl("https://example.test", "dark")).toBe("https://example.test/");
   });
 
-  it("preserva a inclusão de portados ao voltar para a home", () => {
-    expect(buildHomeUrl("https://example.test", "dark", true)).toBe(
-      "https://example.test/?showPorted=1",
+  it("preserva a visão de referências portadas ao voltar para a home", () => {
+    expect(buildHomeUrl("https://example.test", "dark", "ported")).toBe(
+      "https://example.test/?view=ported",
     );
   });
 });

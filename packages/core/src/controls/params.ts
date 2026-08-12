@@ -12,6 +12,7 @@ import type { ControlsState } from "../types/index.js";
 /** Nomes curtos: a URL é colada em Slack, em ticket e em thread de revisão. */
 export const PARAM = {
   scenario: "scenario",
+  view: "view",
   showPorted: "showPorted",
   component: "component",
   persona: "persona",
@@ -51,6 +52,10 @@ export function applyOverrides(
 ): void {
   for (const [key, value] of Object.entries(overrides)) {
     if (value === undefined || value === null) continue;
+    if (key === "showPorted") {
+      if (value === true && overrides.view === undefined) params.set(PARAM.view, "ported");
+      continue;
+    }
     const param = PARAM[key as keyof ControlsState];
     if (!param) continue;
     params.set(param, serializeValue(value));

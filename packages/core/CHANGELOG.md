@@ -6,6 +6,36 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.5.0 (2026-08-12)
+
+### Adicionado
+
+- Visões separadas **Trabalho ativo** e **Referências portadas**. A segunda é
+  reproduzível com `view=ported`, mostra somente cenários `ported` e oferece
+  retorno textual ao trabalho ativo.
+- `ScenarioView` e `ControlsState.view` modelam a coleção atual. As consultas do
+  registry aceitam `{ view: "ported" }`; `{ includePorted: true }` continua
+  representando o catálogo completo para diagnóstico.
+- Estados vazios únicos oferecem “Ver N referências portadas” no próprio
+  contexto. Quando existe trabalho ativo, a mesma entrada fica discreta na
+  navegação e na home.
+
+### Alterado
+
+- Módulos sem cenários na visão ou busca atual deixam de ser renderizados. Não há
+  mais contador zero, chevron ou mensagem vazia por módulo.
+- Home, busca, jornadas, árvore e contagens operam somente sobre a visão atual.
+  O diagnóstico continua avaliando todo o catálogo.
+- O checkbox aditivo “Mostrar portados” foi removido. A troca de visão usa botão
+  textual semântico, com foco visível e nome da visão anunciado na região.
+- Deep links diretos para portados inferem a visão de referências. Links antigos
+  com `showPorted=1` continuam aceitos na leitura e passam a ser serializados como
+  `view=ported`.
+
+Migração: nenhuma obrigatória. Produtos que montam links ou controles próprios
+com `showPorted` podem migrar para `view: "ported"`; links existentes continuam
+funcionando. Nenhuma mudança é necessária no catálogo de cenários.
+
 ## 0.4.0 (2026-08-12)
 
 ### Adicionado

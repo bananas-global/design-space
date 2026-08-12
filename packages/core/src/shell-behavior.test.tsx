@@ -25,6 +25,7 @@ beforeAll(() => {
 
 const controls: ControlsState = {
   scenario: undefined,
+  view: "active",
   component: undefined,
   persona: undefined,
   fixture: undefined,
@@ -52,11 +53,25 @@ const portedScenario: Scenario = {
   status: "ported",
 };
 
+const activeScenario: Scenario = {
+  id: "billing.review",
+  title: "Active review",
+  route: "/billing/review",
+  persona: "reviewer",
+  fixture: "request-imported",
+  a11y: { keyboard: "full", contrast: "AA" },
+  status: "in-review",
+};
+
 function product(overrides: Partial<ProductDefinition> = {}): ProductDefinition {
   return {
     id: "reference",
     name: "Reference",
-    modules: [{ id: "requests", name: "Requests" }],
+    modules: [
+      { id: "requests", name: "Requests" },
+      { id: "billing", name: "Billing" },
+      { id: "empty", name: "Empty module" },
+    ],
     scenarios: [portedScenario],
     personas: [{ id: "reviewer", name: "Reviewer", permissions: [] }],
     fixtures: [{ id: "request-imported", label: "Imported", data: {} }],
@@ -71,47 +86,209 @@ function withLabels(node: React.ReactNode): string {
   );
 }
 
+function setInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
   window.history.replaceState(null, "", "/");
 });
 
 describe("ported visibility in the shell", () => {
-  it("shows an active-work empty state for a product containing only ported scenarios", () => {
-    const registry = createRegistry(product());
-    const markup = withLabels(<Home registry={registry} onOpenScenario={() => undefined} />);
-
-    expect(markup).toContain(DEFAULT_LABELS.home.noActiveWork);
-    expect(markup).not.toContain(portedScenario.title);
-  });
-
-  it("includes ported scenarios on the home page when explicitly enabled", () => {
+  it("shows one active-work empty state with the references action for a ported-only product", () => {
     const registry = createRegistry(product());
     const markup = withLabels(
-      <Home registry={registry} showPorted onOpenScenario={() => undefined} />,
+      <Home
+        registry={registry}
+        view="active"
+        onViewChange={() => undefined}
+        onOpenScenario={() => undefined}
+      />,
     );
 
-    expect(markup).toContain(portedScenario.title);
-    expect(markup).not.toContain(DEFAULT_LABELS.home.noActiveWork);
+    expect(markup).toContain(DEFAULT_LABELS.home.noActiveWork);
+    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
+    expect(markup).not.toContain(portedScenario.title);
+    expect(markup.match(/ds-home__empty/g)).toHaveLength(1);
+    expect(markup).not.toContain("Empty module");
   });
 
-  it("keeps a ported deep link active and explained in navigation", () => {
+  it("shows one navigation empty state instead of empty module rows", () => {
     const registry = createRegistry(product());
     const markup = withLabels(
       <Sidebar
         registry={registry}
-        activeScenario={portedScenario}
+        activeScenario={undefined}
         activeComponent={undefined}
-        controls={{ ...controls, scenario: portedScenario.id }}
+        controls={controls}
         onOpenScenario={() => undefined}
         onOpenComponent={() => undefined}
-        onShowPortedChange={() => undefined}
+        onViewChange={() => undefined}
+      />,
+    );
+
+    expect(markup.match(/ds-sidebar__view-empty/g)).toHaveLength(1);
+    expect(markup).toContain(DEFAULT_LABELS.sidebar.noActiveWork);
+    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
+    expect(markup).not.toContain(DEFAULT_LABELS.sidebar.emptyModule);
+    expect(markup).not.toContain("ds-module__count");
+    expect(markup).not.toContain("ds-module__chevron");
+  });
+
+  it("renders only ported scenarios in the references view", () => {
+    const registry = createRegistry(product());
+    const markup = withLabels(
+      <Home
+        registry={registry}
+        view="ported"
+        onViewChange={() => undefined}
+        onOpenScenario={() => undefined}
       />,
     );
 
     expect(markup).toContain(portedScenario.title);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.activePorted);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.showPorted);
+    expect(markup).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
+    expect(markup).toContain(DEFAULT_LABELS.sidebar.backToActive);
+    expect(markup).not.toContain(DEFAULT_LABELS.home.noActiveWork);
+    expect(markup).not.toContain("Billing");
+    expect(markup).not.toContain("Empty module");
+  });
+
+  it("keeps active and ported scenarios separate in a mixed product home", () => {
+    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
+    const markup = withLabels(
+      <Home
+        registry={registry}
+        view="active"
+        onViewChange={() => undefined}
+        onOpenScenario={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain(activeScenario.title);
+    expect(markup).not.toContain(portedScenario.title);
+    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
+    expect(markup).not.toContain("Requests");
+    expect(markup).not.toContain("Empty module");
+  });
+
+  it("removes empty modules and exposes an accessible textual view selector", () => {
+    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
+    const container = document.createElement("div");
+    const root = createRoot(container);
+
+    act(() => root.render(
+      <Sidebar
+        registry={registry}
+        activeScenario={activeScenario}
+        activeComponent={undefined}
+        controls={{ ...controls, scenario: activeScenario.id }}
+        onOpenScenario={() => undefined}
+        onOpenComponent={() => undefined}
+        onViewChange={() => undefined}
+      />,
+    ));
+
+    expect(container.textContent).toContain(activeScenario.title);
+    expect(container.textContent).not.toContain(portedScenario.title);
+    expect(container.textContent).not.toContain("Requests");
+    expect(container.textContent).not.toContain("Empty module");
+    const switcher = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === DEFAULT_LABELS.sidebar.viewPorted(1),
+    );
+    expect(switcher).toBeDefined();
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(container.querySelector('[aria-label*="Trabalho ativo"]')).not.toBeNull();
+    act(() => root.unmount());
+  });
+
+  it("scopes search to the selected view", () => {
+    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    act(() => root.render(
+      <LabelsContext.Provider value={DEFAULT_LABELS}>
+      <Sidebar
+        registry={registry}
+        activeScenario={undefined}
+        activeComponent={undefined}
+        controls={{ ...controls, view: "ported" }}
+        onOpenScenario={() => undefined}
+        onOpenComponent={() => undefined}
+        onViewChange={() => undefined}
+      />
+      </LabelsContext.Provider>,
+    ));
+
+    const input = container.querySelector('input[type="search"]') as HTMLInputElement;
+    act(() => setInputValue(input, "Active review"));
+    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.noMatch("Active review"));
+    expect(container.querySelectorAll(".ds-scenario")).toHaveLength(0);
+
+    act(() => setInputValue(input, "Imported reference"));
+    expect(container.textContent).toContain(portedScenario.title);
+    expect(container.textContent).not.toContain(activeScenario.title);
+    expect(container.textContent).not.toContain("Empty module");
+    act(() => root.unmount());
+  });
+
+  it("restores view=ported on load and returns to active work without mixing the open collection", async () => {
+    const definition = product({ scenarios: [activeScenario, portedScenario] });
+    window.history.replaceState(null, "", "/?view=ported");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => root.render(<DesignSpace product={definition} />));
+
+    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
+    expect(container.textContent).toContain(portedScenario.title);
+    expect(container.textContent).not.toContain(activeScenario.title);
+    expect(window.location.search).toBe("?view=ported");
+
+    const back = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === DEFAULT_LABELS.sidebar.backToActive,
+    );
+    await act(async () => back?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    expect(window.location.pathname).toBe("/");
+    expect(window.location.search).toBe("");
+    expect(container.textContent).toContain(activeScenario.title);
+    expect(container.textContent).not.toContain(portedScenario.title);
+    await act(async () => root.unmount());
+  });
+
+  it("opens legacy showPorted=1 links in the references view", async () => {
+    window.history.replaceState(null, "", "/?showPorted=1");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => root.render(<DesignSpace product={product()} />));
+
+    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
+    expect(container.textContent).toContain(portedScenario.title);
+    await act(async () => root.unmount());
+  });
+
+  it("infers the references view for a direct ported scenario deep link", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/requests/imported?scenario=${portedScenario.id}`,
+    );
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => root.render(<DesignSpace product={product()} />));
+
+    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
+    expect(container.textContent).toContain(portedScenario.title);
+    expect(container.querySelector('[aria-current="true"]')?.textContent).toContain(
+      portedScenario.title,
+    );
+    await act(async () => root.unmount());
   });
 });
 

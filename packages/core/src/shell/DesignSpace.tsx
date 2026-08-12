@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { ProductDefinition, ScenarioContext } from "../types/index.js";
 import { createRegistry } from "../registry/index.js";
-import { useDesignSpaceState } from "../controls/state.js";
+import { scenarioView, useDesignSpaceState } from "../controls/state.js";
 import { resolveRoute } from "../router/index.js";
 import { fixtureAdapter } from "../adapters/index.js";
 import { useScenarioData } from "../adapters/useScenarioData.js";
@@ -32,8 +32,17 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   const registry = useMemo(() => createRegistry(product), [product]);
   const labels = useMemo(() => resolveLabels(product.theme?.labels), [product.theme?.labels]);
   const deploy = useMemo(() => getDeployContext(product.deploy), [product.deploy]);
-  const { location, controls, viewport, setControls, navigate, openScenario, openComponent } =
-    useDesignSpaceState(registry);
+  const {
+    location,
+    controls,
+    viewport,
+    setControls,
+    setScenarioView,
+    navigate,
+    openScenario,
+    openComponent,
+  } = useDesignSpaceState(registry);
+  const view = scenarioView(controls);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const { focused, tabStops } = useKeyboardMode(controls.keyboardMode, stageRef);
@@ -191,7 +200,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             deploy={deploy}
             inspectorOpen={controls.inspector}
             chromeTheme={controls.chromeTheme ?? "dark"}
-            showPorted={controls.showPorted ?? false}
+            view={view}
             onToggleInspector={() => setControls({ inspector: !controls.inspector })}
             onToggleChromeTheme={() =>
               setControls({ chromeTheme: controls.chromeTheme === "light" ? "dark" : "light" })
@@ -207,7 +216,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             controls={controls}
             onOpenScenario={openScenario}
             onOpenComponent={openComponent}
-            onShowPortedChange={(showPorted) => setControls({ showPorted })}
+            onViewChange={setScenarioView}
           />
         )}
 
@@ -216,7 +225,8 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             <div className="ds-stage-scroll">
               <Home
                 registry={registry}
-                showPorted={controls.showPorted ?? false}
+                view={view}
+                onViewChange={setScenarioView}
                 onOpenScenario={openScenario}
               />
             </div>

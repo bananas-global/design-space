@@ -27,6 +27,12 @@ import type {
 import type { Registry } from "../registry/index.js";
 import { NETWORK_STATES } from "../types/index.js";
 import { PARAM } from "./params.js";
+import {
+  applyHandoffScope,
+  handoffAllowsComponent,
+  handoffAllowsScenario,
+  parseHandoffScope,
+} from "../handoff/index.js";
 
 export const VIEWPORTS: readonly ViewportSetting[] = [
   { id: "fit", label: "Ajustar" },
@@ -50,10 +56,15 @@ export type DesignSpaceLocation = {
  */
 export function parseControls(search: string, registry: Registry): ControlsState {
   const params = new URLSearchParams(search);
+  const handoff = parseHandoffScope(params);
   const componentId = params.get(PARAM.component) ?? undefined;
-  const component = registry.component(componentId);
+  const component = handoffAllowsComponent(handoff, componentId)
+    ? registry.component(componentId)
+    : undefined;
   const scenarioId = params.get(PARAM.scenario) ?? undefined;
-  const scenario = component ? undefined : registry.scenario(scenarioId);
+  const scenario = component || !handoffAllowsScenario(handoff, scenarioId)
+    ? undefined
+    : registry.scenario(scenarioId);
   const requestedFixture = params.get(PARAM.fixture) ?? undefined;
   const componentFixture = component
     ? requestedFixture ??
@@ -73,6 +84,7 @@ export function parseControls(search: string, registry: Registry): ControlsState
 
   return {
     scenario: scenario?.id,
+    handoff,
     view,
     showPorted: view === "ported",
     component: component?.id,
@@ -149,6 +161,7 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   if (state.reducedMotion) params.set(PARAM.reducedMotion, "1");
   if (state.textScale !== 1) params.set(PARAM.textScale, String(state.textScale));
   if (!state.inspector) params.set(PARAM.inspector, "0");
+  applyHandoffScope(params, state.handoff);
 
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -245,16 +258,21 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
       const [rawPath, rawSearch] = to.split("?");
       const path = rawPath || "/";
       // Uma rota com query própria manda; sem query, os controles seguem.
-      const search = rawSearch ? `?${rawSearch}` : location.search;
+      const targetParams = new URLSearchParams(rawSearch ?? location.search);
+      // Uma navegação iniciada pela UI do produto não pode apagar o recorte do
+      // handoff ao fornecer sua própria query string.
+      if (controls.handoff) applyHandoffScope(targetParams, controls.handoff);
+      const targetQuery = targetParams.toString();
+      const search = targetQuery ? `?${targetQuery}` : "";
       push(path, search, options?.replace ?? false);
     },
-    [location.search, push],
+    [controls.handoff, location.search, push],
   );
 
   const openScenario = useCallback(
     (scenarioId: string) => {
       const scenario = registry.scenario(scenarioId);
-      if (!scenario) return;
+      if (!scenario || !handoffAllowsScenario(controls.handoff, scenarioId)) return;
 
       const next: ControlsState = {
         ...controls,
@@ -274,7 +292,7 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
   const openComponent = useCallback(
     (componentId: string) => {
       const component = registry.component(componentId);
-      if (!component) return;
+      if (!component || !handoffAllowsComponent(controls.handoff, componentId)) return;
 
       const next: ControlsState = {
         ...controls,

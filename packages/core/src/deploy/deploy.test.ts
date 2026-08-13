@@ -108,6 +108,27 @@ describe("scenarioUrl", () => {
     expect(url.searchParams.get("view")).toBe("ported");
     expect(url.searchParams.has("showPorted")).toBe(false);
   });
+
+  it("serializa o recorte de handoff junto do cenário", () => {
+    const url = new URL(scenarioUrl(scenario, {
+      origin: "https://acme.example.app",
+      overrides: {
+        handoff: {
+          scenarios: [scenario.id, "orders.approved"],
+          routes: ["/help/:topic"],
+          components: ["feedback.notice"],
+        },
+      },
+    }));
+
+    expect(url.searchParams.get("handoff")).toBe("1");
+    expect(url.searchParams.getAll("allowScenario")).toEqual([
+      "orders.approved",
+      scenario.id,
+    ]);
+    expect(url.searchParams.getAll("allowRoute")).toEqual(["/help/:topic"]);
+    expect(url.searchParams.getAll("allowComponent")).toEqual(["feedback.notice"]);
+  });
 });
 
 describe("componentUrl", () => {
@@ -127,6 +148,17 @@ describe("componentUrl", () => {
     expect(url.pathname).toBe("/");
     expect(url.searchParams.get("component")).toBe("feedback.notice");
     expect(url.searchParams.get("fixture")).toBe("long-content");
+  });
+
+  it("serializa um handoff de componente sem autorizar o catálogo inteiro", () => {
+    const url = new URL(componentUrl(component, {
+      origin: "https://acme.example.app",
+      overrides: { handoff: { components: [component.id] } },
+    }));
+
+    expect(url.searchParams.get("handoff")).toBe("1");
+    expect(url.searchParams.getAll("allowComponent")).toEqual([component.id]);
+    expect(url.searchParams.has("allowScenario")).toBe(false);
   });
 });
 

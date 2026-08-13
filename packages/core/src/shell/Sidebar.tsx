@@ -39,8 +39,9 @@ export function Sidebar({
   const searchRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef(new Map<string, HTMLButtonElement>());
   const view = scenarioView(controls);
-  const portedTotal = registry.byStatus("ported").length;
-  const viewTotal = registry.activeScenarios({ view }).length;
+  const handoff = controls.handoff;
+  const portedTotal = registry.byStatus("ported", { handoff }).length;
+  const viewTotal = registry.activeScenarios({ view, handoff }).length;
   const viewLabel =
     view === "ported" ? labels.sidebar.portedReferences(portedTotal) : labels.sidebar.activeWork;
 
@@ -63,24 +64,25 @@ export function Sidebar({
   const scenarioMatches = useMemo(() => {
     if (!query.trim()) return undefined;
     return new Set(
-      registry.search(query, { view }).map((scenario) => scenario.id),
+      registry.search(query, { view, handoff }).map((scenario) => scenario.id),
     );
-  }, [query, registry, view]);
+  }, [handoff, query, registry, view]);
 
   const componentMatches = useMemo(() => {
     const needle = normalize(query);
-    return (registry.product.components ?? []).filter((component) =>
+    return registry.componentsFor(handoff).filter((component) =>
       normalize([component.name, component.id, component.group, component.description].join(" ")).includes(
         needle,
       ),
     );
-  }, [query, registry.product.components]);
+  }, [handoff, query, registry]);
 
   const visible = (scenarios: Scenario[]) =>
     scenarioMatches ? scenarios.filter((scenario) => scenarioMatches.has(scenario.id)) : scenarios;
 
   const navigationOptions = {
     view,
+    handoff,
   };
   const nodes = registry.treeFor(navigationOptions)
     .map((node) => ({ ...node, scenarios: visible(node.scenarios) }))
@@ -358,7 +360,11 @@ function ScenarioItem({
   onKeyDown,
   setItemRef,
 }: ScenarioTreeProps & { scenario: Scenario }) {
-  const status = useLabels().status[scenario.status];
+  const labels = useLabels();
+  const approvalIncomplete = scenario.status === "approved" && !scenario.approvedAt;
+  const status = approvalIncomplete
+    ? labels.inspector.approvalPendingStatus
+    : labels.status[scenario.status];
   return (
     <li>
       <button
@@ -369,7 +375,12 @@ function ScenarioItem({
         onClick={() => onOpen(scenario.id)}
         onKeyDown={(event) => onKeyDown(scenario.id, event)}
       >
-        <span className="ds-status-dot" data-status={scenario.status} title={status} />
+        <span
+          className="ds-status-dot"
+          data-status={scenario.status}
+          data-approval={approvalIncomplete ? "incomplete" : undefined}
+          title={status}
+        />
         <span className="ds-scenario__title">{scenario.title}</span>
         <span className="ds-visually-hidden">{status}</span>
       </button>

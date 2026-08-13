@@ -104,7 +104,7 @@ export function validateScenario(scenario: Scenario, index?: number): Validation
 
   if (scenario?.status === "approved" && !scenario.approvedAt) {
     warn(
-      "Cenário aprovado sem `approvedAt`. A aprovação deve ser registrada por URL de commit (§10.2), senão muda de conteúdo debaixo de quem aprovou.",
+      "Aprovação incompleta: cenário `approved` sem `approvedAt`. Registre a URL imutável do commit aprovado (§10.2); sem ela, a versão autorizada não é rastreável.",
     );
   }
 

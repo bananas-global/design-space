@@ -12,6 +12,7 @@ import {
   type ComponentPreviewFixture,
   type Fixture,
   type Flow,
+  type HandoffScope,
   type Module,
   type Persona,
   type ProductDefinition,
@@ -21,6 +22,7 @@ import {
   type ScenarioView,
 } from "../types/index.js";
 import { validateProduct, type ValidationIssue } from "./validate.js";
+import { handoffAllowsComponent, handoffAllowsScenario } from "../handoff/index.js";
 
 export type ModuleNode = {
   module: Module;
@@ -34,6 +36,8 @@ export type ScenarioQueryOptions = {
   includePorted?: boolean;
   /** @deprecated Deep links agora inferem `view: "ported"`. */
   activeScenario?: string;
+  /** Recorte de handoff aplicado depois da visão ativa/portada. */
+  handoff?: HandoffScope;
 };
 
 export type ComponentFixtureResolution = {
@@ -84,7 +88,9 @@ export type Registry = {
    * sem saber o id nem o nome do arquivo (§15.1 "Compreensão de negócio").
    */
   search: (query: string, options?: ScenarioQueryOptions) => Scenario[];
-  byStatus: (status: ScenarioStatus) => Scenario[];
+  byStatus: (status: ScenarioStatus, options?: ScenarioQueryOptions) => Scenario[];
+  /** Componentes permitidos pelo recorte; sem handoff devolve o catálogo. */
+  componentsFor: (handoff?: HandoffScope) => ComponentPreview[];
   /** Contagem por status, para o cabeçalho de cobertura. */
   coverage: (options?: ScenarioQueryOptions) => Record<ScenarioStatus, number>;
 };
@@ -119,11 +125,12 @@ export function createRegistry(product: ProductDefinition): Registry {
   const visibleScenarios = (options: ScenarioQueryOptions = {}) =>
     product.scenarios.filter(
       (target) =>
-        options.includePorted ||
-        (options.view === "ported"
-          ? target.status === "ported"
-          : target.status !== "ported") ||
-        (options.view === undefined && target.id === options.activeScenario),
+        handoffAllowsScenario(options.handoff, target.id) &&
+        (options.includePorted ||
+          (options.view === "ported"
+            ? target.status === "ported"
+            : target.status !== "ported") ||
+          (options.view === undefined && target.id === options.activeScenario)),
     );
 
   const permissionsOf = (target: Scenario | undefined): string[] => {
@@ -202,7 +209,12 @@ export function createRegistry(product: ProductDefinition): Registry {
       });
     },
 
-    byStatus: (status) => product.scenarios.filter((s) => s.status === status),
+    byStatus: (status, options) =>
+      visibleScenarios({ ...options, includePorted: true }).filter((s) => s.status === status),
+    componentsFor: (handoff) =>
+      (product.components ?? []).filter((component) =>
+        handoffAllowsComponent(handoff, component.id),
+      ),
 
     coverage: (options) => {
       const counts = Object.fromEntries(

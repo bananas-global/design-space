@@ -6,6 +6,38 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.6.0 (2026-08-13)
+
+### Adicionado
+
+- **Escopo explícito de handoff por URL.** `HandoffScope` traz allowlists neutras
+  de cenários, padrões de rota e componentes. O formato legível usa `handoff=1`
+  com parâmetros repetíveis `allowScenario`, `allowRoute` e `allowComponent`.
+- Home, árvore, busca, flows, referências portadas e catálogo de componentes
+  respeitam o recorte. Navegação interna e links de Home/revisão limpa o
+  preservam; tentativas fora do escopo recebem mensagem clara sem montar a tela
+  solicitada.
+- Helpers públicos `applyHandoffScope`, `parseHandoffScope`,
+  `normalizeHandoffScope`, `handoffAllowsScenario`, `handoffAllowsPath` e
+  `handoffAllowsComponent` permitem construir e verificar o mesmo contrato fora
+  do shell. `scenarioUrl()` e `componentUrl()` aceitam o recorte em
+  `overrides.handoff`.
+
+### Alterado
+
+- O Inspector agrupa visual e semanticamente dados da tarefa e contexto herdado
+  do produto/persona. A aba Acessibilidade distingue contrato da tarefa,
+  inspeção ao vivo da tela e verificações gerais do produto; Diagnóstico declara
+  que continua avaliando o catálogo inteiro.
+- Cenário `approved` sem `approvedAt` aparece como **Aprovado — registro
+  pendente**, com alerta no painel e warning equivalente no validador. O status
+  e o marcador só recebem tratamento completo de aprovação quando existe uma URL
+  de commit registrada.
+
+O handoff é bloqueio de foco/UX, não controle de acesso. Preview que exige
+isolamento real precisa de build separado ou autenticação/autorização no produto.
+Não há mudança obrigatória no schema de `Scenario` nem nos catálogos existentes.
+
 ## 0.5.1 (2026-08-12)
 
 ### Adicionado

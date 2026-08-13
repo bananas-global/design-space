@@ -22,6 +22,13 @@ import { Inspector } from "./Inspector.js";
 import { Stage, StageEmpty, TabOrderOverlay } from "./Stage.js";
 import { Home } from "./Home.js";
 import { LabelsContext, resolveLabels } from "./labels.js";
+import {
+  applyHandoffScope,
+  handoffAllowsComponent,
+  handoffAllowsPath,
+  handoffAllowsScenario,
+} from "../handoff/index.js";
+import { PARAM } from "../controls/params.js";
 import "./shell.css";
 
 export type DesignSpaceProps = {
@@ -47,8 +54,63 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const { focused, tabStops } = useKeyboardMode(controls.keyboardMode, stageRef);
 
+  // Links comuns da UI do produto não passam por `context.navigate`. Reescrever
+  // os destinos internos no palco mantém a allowlist em navegação normal, nova
+  // aba e "copiar endereço", sem alcançar links externos nem âncoras locais.
+  useEffect(() => {
+    const root = stageRef.current;
+    if (!root || !controls.handoff) return;
+
+    const preserveScope = () => {
+      for (const anchor of root.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+        const raw = anchor.getAttribute("href");
+        if (!raw || raw.startsWith("#")) continue;
+
+        let url: URL;
+        try {
+          url = new URL(raw, window.location.href);
+        } catch {
+          continue;
+        }
+        if (url.origin !== window.location.origin) continue;
+
+        applyHandoffScope(url.searchParams, controls.handoff);
+        const scoped = `${url.pathname}${url.search}${url.hash}`;
+        if (raw !== scoped) anchor.setAttribute("href", scoped);
+      }
+    };
+
+    preserveScope();
+    const observer = new MutationObserver(preserveScope);
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["href"],
+    });
+    return () => observer.disconnect();
+  }, [controls.handoff]);
+
   const scenario = registry.scenario(controls.scenario);
   const component = registry.component(controls.component);
+  const requested = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      scenario: params.get(PARAM.scenario) ?? undefined,
+      component: params.get(PARAM.component) ?? undefined,
+    };
+  }, [location.search]);
+  const handoffBlocked = Boolean(
+    controls.handoff && (
+      (requested.scenario && !handoffAllowsScenario(controls.handoff, requested.scenario)) ||
+      (requested.component && !handoffAllowsComponent(controls.handoff, requested.component)) ||
+      (!requested.component && !handoffAllowsPath(
+        controls.handoff,
+        location.path,
+        product.scenarios,
+      ))
+    ),
+  );
   const componentFixture = useMemo(
     () => registry.resolveComponentFixture(component?.id, component ? controls.fixture : undefined),
     [component, controls.fixture, registry],
@@ -150,14 +212,18 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   // A raiz sem cenário ativo é o mapa de situações, não uma tela do produto.
   // Quem recebe o link cru precisa ver o que existe antes de escolher; cair no
   // meio de um fluxo — ou num estado sem permissão — se lê como defeito.
-  const isHome = !scenario && !component && location.path === "/";
+  const isHome = !handoffBlocked && !scenario && !component && location.path === "/";
 
   const match = resolveRoute(product.routes, location.path);
   const Wrapper = product.wrapper;
   const NotFound = product.notFound;
 
   const Preview = component?.preview;
-  const screen = Preview ? (
+  const screen = handoffBlocked ? (
+    <StageEmpty title={labels.shell.outsideHandoff}>
+      <p>{labels.shell.outsideHandoffHint}</p>
+    </StageEmpty>
+  ) : Preview ? (
     <Preview
       fixture={componentFixture.fixture}
       data={componentData}
@@ -182,7 +248,9 @@ export function DesignSpace({ product }: DesignSpaceProps) {
     </StageEmpty>
   );
 
-  const stageContent = Wrapper ? <Wrapper context={context}>{screen}</Wrapper> : screen;
+  const stageContent = Wrapper && !handoffBlocked
+    ? <Wrapper context={context}>{screen}</Wrapper>
+    : screen;
 
   return (
     <LabelsContext.Provider value={labels}>
@@ -201,6 +269,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             inspectorOpen={controls.inspector}
             chromeTheme={controls.chromeTheme ?? "dark"}
             view={view}
+            handoff={controls.handoff}
             onToggleInspector={() => setControls({ inspector: !controls.inspector })}
             onToggleChromeTheme={() =>
               setControls({ chromeTheme: controls.chromeTheme === "light" ? "dark" : "light" })
@@ -226,6 +295,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
               <Home
                 registry={registry}
                 view={view}
+                handoff={controls.handoff}
                 onViewChange={setScenarioView}
                 onOpenScenario={openScenario}
               />

@@ -505,12 +505,30 @@ export type ChromeTheme = "dark" | "light";
 /** Coleção de cenários exibida na navegação, home, busca e contagens. */
 export type ScenarioView = "active" | "ported";
 
+/**
+ * Recorte de revisão/handoff transportado pela URL.
+ *
+ * As três listas são allowlists independentes. Um cenário permitido autoriza
+ * também a própria rota; `routes` cobre páginas que não têm cenário; componentes
+ * precisam ser autorizados explicitamente.
+ *
+ * Este recorte reduz distração no preview. Não é controle de acesso: isolamento
+ * real exige build separado ou autenticação no produto que publica o preview.
+ */
+export type HandoffScope = {
+  scenarios?: string[];
+  routes?: string[];
+  components?: string[];
+};
+
 /* ------------------------------------------------------------------ *
  * Estado dos controles — serializado na URL (deep link)
  * ------------------------------------------------------------------ */
 
 export type ControlsState = {
   scenario: string | undefined;
+  /** Allowlist de foco ativa, serializada na URL quando presente. */
+  handoff?: HandoffScope;
   /** Visão atual. `active` é o padrão e `ported` é a biblioteca de referências. */
   view?: ScenarioView;
   /** @deprecated Compatibilidade programática com 0.4.0. Use `view: "ported"`. */

@@ -7,6 +7,7 @@ import { createRegistry } from "./registry/index.js";
 import { Controls } from "./shell/Controls.js";
 import { DesignSpace } from "./shell/DesignSpace.js";
 import { Home } from "./shell/Home.js";
+import { Inspector } from "./shell/Inspector.js";
 import { LabelsContext, DEFAULT_LABELS } from "./shell/labels.js";
 import { Sidebar } from "./shell/Sidebar.js";
 import type {
@@ -406,6 +407,221 @@ describe("component preview fixtures in the shell", () => {
     expect(container.textContent).toContain("missing");
     expect(container.textContent).toContain("fallback");
     expect(window.location.search).toContain("fixture=missing");
+    await act(async () => root.unmount());
+  });
+});
+
+describe("handoff focado no shell", () => {
+  const hiddenScenario: Scenario = {
+    ...activeScenario,
+    id: "billing.hidden",
+    title: "Hidden review",
+    route: "/billing/hidden",
+  };
+
+  function scopedProduct(): ProductDefinition {
+    return product({
+      modules: [{
+        id: "billing",
+        name: "Billing",
+        flows: [{
+          id: "review",
+          title: "Review flow",
+          steps: [
+            { scenario: activeScenario.id, label: "Allowed step" },
+            { scenario: hiddenScenario.id, label: "Hidden step" },
+          ],
+        }],
+      }, { id: "requests", name: "Requests" }],
+      scenarios: [activeScenario, hiddenScenario, portedScenario],
+      routes: [
+        { path: "/billing/:id", screen: () => createElement("span", null, "SENSITIVE SCREEN") },
+        { path: "/requests/:id", screen: () => null },
+      ],
+      components: [
+        { id: "feedback.allowed", name: "Allowed component", preview: () => null },
+        { id: "feedback.hidden", name: "Hidden component", preview: () => null },
+      ],
+    });
+  }
+
+  it("filtra Home, flows, portados e componentes pela allowlist", async () => {
+    const registry = createRegistry(scopedProduct());
+    const handoff = {
+      scenarios: [activeScenario.id, portedScenario.id],
+      components: ["feedback.allowed"],
+    };
+    const home = withLabels(
+      <Home
+        registry={registry}
+        view="active"
+        handoff={handoff}
+        onOpenScenario={() => undefined}
+      />,
+    );
+    expect(home).toContain(activeScenario.title);
+    expect(home).toContain("Allowed step");
+    expect(home).not.toContain(hiddenScenario.title);
+    expect(home).not.toContain("Hidden step");
+    expect(home).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
+
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => root.render(
+      <LabelsContext.Provider value={DEFAULT_LABELS}>
+        <Sidebar
+          registry={registry}
+          activeScenario={activeScenario}
+          activeComponent={undefined}
+          controls={{ ...controls, handoff }}
+          onOpenScenario={() => undefined}
+          onOpenComponent={() => undefined}
+          onViewChange={() => undefined}
+        />
+      </LabelsContext.Provider>,
+    ));
+    const componentsTab = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === DEFAULT_LABELS.sidebar.componentsTab,
+    );
+    await act(async () => componentsTab?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(container.textContent).toContain("Allowed component");
+    expect(container.textContent).not.toContain("Hidden component");
+    await act(async () => root.unmount());
+  });
+
+  it("mostra bloqueio claro para URL fora do escopo e aceita rota autorizada", async () => {
+    const definition = scopedProduct();
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+
+    window.history.replaceState(
+      null,
+      "",
+      "/billing/hidden?scenario=billing.hidden&handoff=1&allowScenario=billing.review",
+    );
+    await act(async () => root.render(<DesignSpace product={definition} />));
+    expect(container.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
+    expect(container.textContent).not.toContain("SENSITIVE SCREEN");
+
+    await act(async () => {
+      window.history.replaceState(
+        null,
+        "",
+        "/billing/hidden?handoff=1&allowRoute=%2Fbilling%2F%3Aid",
+      );
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(container.textContent).toContain("SENSITIVE SCREEN");
+    expect(container.textContent).not.toContain(DEFAULT_LABELS.shell.outsideHandoff);
+    await act(async () => root.unmount());
+  });
+
+  it("preserva a allowlist quando a tela navega com query própria", async () => {
+    const navigable = scopedProduct();
+    navigable.routes = [{
+      path: "/billing/:id",
+      screen: ({ context }) => createElement(
+        "button",
+        { onClick: () => context.navigate("/billing/hidden?panel=0") },
+        "LEAVE SCOPE",
+      ),
+    }];
+    window.history.replaceState(
+      null,
+      "",
+      "/billing/review?scenario=billing.review&handoff=1&allowScenario=billing.review",
+    );
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => root.render(<DesignSpace product={navigable} />));
+
+    const leave = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "LEAVE SCOPE",
+    );
+    await act(async () => leave?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    expect(window.location.pathname).toBe("/billing/hidden");
+    expect(window.location.search).toContain("handoff=1");
+    expect(window.location.search).toContain("allowScenario=billing.review");
+    expect(window.location.search).toContain("panel=0");
+    expect(container.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
+    await act(async () => root.unmount());
+  });
+
+  it("acrescenta o handoff a links internos da UI do produto", async () => {
+    const linked = scopedProduct();
+    linked.routes = [{
+      path: "/billing/:id",
+      screen: () => createElement(
+        "div",
+        null,
+        createElement("a", { href: "/billing/hidden?tab=details" }, "INTERNAL LINK"),
+        createElement("a", { href: "https://docs.example.test/guide" }, "EXTERNAL LINK"),
+      ),
+    }];
+    window.history.replaceState(
+      null,
+      "",
+      "/billing/review?scenario=billing.review&handoff=1&allowScenario=billing.review",
+    );
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => root.render(<DesignSpace product={linked} />));
+
+    const anchors = [...container.querySelectorAll("a")];
+    const internal = anchors.find((anchor) => anchor.textContent === "INTERNAL LINK");
+    const external = anchors.find((anchor) => anchor.textContent === "EXTERNAL LINK");
+    expect(internal?.getAttribute("href")).toContain("tab=details");
+    expect(internal?.getAttribute("href")).toContain("handoff=1");
+    expect(internal?.getAttribute("href")).toContain("allowScenario=billing.review");
+    expect(external?.getAttribute("href")).toBe("https://docs.example.test/guide");
+    await act(async () => root.unmount());
+  });
+});
+
+describe("escopos autoexplicativos do Inspector", () => {
+  it("separa tarefa, contexto herdado, tela e produto e sinaliza aprovação incompleta", async () => {
+    const approvedWithoutRecord: Scenario = {
+      ...activeScenario,
+      status: "approved",
+      permissions: ["requests.read"],
+      expected: ["A decisão fica registrada."],
+    };
+    const registry = createRegistry(product({ scenarios: [approvedWithoutRecord] }));
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => root.render(
+      <LabelsContext.Provider value={DEFAULT_LABELS}>
+        <Inspector
+          registry={registry}
+          scenario={approvedWithoutRecord}
+          controls={{ ...controls, scenario: approvedWithoutRecord.id }}
+          focusedNode={undefined}
+          tabStopCount={0}
+        />
+      </LabelsContext.Provider>,
+    ));
+
+    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.taskScope);
+    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.inheritedScope);
+    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.approvalPendingStatus);
+    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.approvalMissing);
+
+    const a11y = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === DEFAULT_LABELS.inspector.tabA11y,
+    );
+    await act(async () => a11y?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.screenScope);
+    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.productScope);
+
+    const diagnostics = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.startsWith(DEFAULT_LABELS.inspector.tabDiagnostics),
+    );
+    await act(async () => diagnostics?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.diagnosticsProductNotice);
     await act(async () => root.unmount());
   });
 });

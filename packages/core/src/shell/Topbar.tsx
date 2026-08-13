@@ -13,8 +13,10 @@ import { useState } from "react";
 import type { DeployContext } from "../deploy/index.js";
 import { scenarioUrl } from "../deploy/index.js";
 import { PARAM } from "../controls/params.js";
+import { applyHandoffScope } from "../handoff/index.js";
 import type {
   ChromeTheme,
+  HandoffScope,
   ProductDefinition,
   Scenario,
   ScenarioView,
@@ -28,6 +30,7 @@ export type TopbarProps = {
   inspectorOpen: boolean;
   chromeTheme: ChromeTheme;
   view: ScenarioView;
+  handoff?: HandoffScope;
   onToggleInspector: () => void;
   onToggleChromeTheme: () => void;
 };
@@ -39,6 +42,7 @@ export function Topbar({
   inspectorOpen,
   chromeTheme,
   view,
+  handoff,
   onToggleInspector,
   onToggleChromeTheme,
 }: TopbarProps) {
@@ -54,6 +58,7 @@ export function Topbar({
           overrides: {
             ...(chromeTheme === "light" ? { chromeTheme } : {}),
             ...(view === "ported" ? { view } : {}),
+            ...(handoff ? { handoff } : {}),
           },
         })
       : `${deploy.origin}${window.location.pathname}${window.location.search}`;
@@ -73,7 +78,7 @@ export function Topbar({
   const cleanReviewUrl = buildCleanReviewUrl(
     typeof window === "undefined" ? `${deploy.origin}/` : window.location.href,
   );
-  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme, view);
+  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme, view, handoff);
 
   return (
     <header className="ds-chrome ds-topbar">
@@ -150,10 +155,12 @@ export function buildHomeUrl(
   origin: string,
   chromeTheme: ChromeTheme,
   view: ScenarioView = "active",
+  handoff?: HandoffScope,
 ): string {
   const url = new URL("/", origin);
   if (chromeTheme === "light") url.searchParams.set(PARAM.chromeTheme, chromeTheme);
   if (view === "ported") url.searchParams.set(PARAM.view, "ported");
+  applyHandoffScope(url.searchParams, handoff);
   return url.toString();
 }
 

@@ -115,6 +115,14 @@ export type Labels = {
     componentFixture: string;
     componentFixtureDescription: string;
     componentFixtureFallback: (requested: string, fallback: string) => string;
+    taskScope: string;
+    taskScopeDescription: string;
+    inheritedScope: string;
+    inheritedScopeDescription: string;
+    screenScope: string;
+    screenScopeDescription: string;
+    productScope: string;
+    productScopeDescription: string;
     situation: string;
     reproduction: string;
     id: string;
@@ -130,6 +138,9 @@ export type Labels = {
     actions: string;
     expected: string;
     approval: string;
+    approvalPendingStatus: string;
+    approvalPendingMeaning: string;
+    approvalMissing: string;
     openApproved: string;
     engineering: string;
     a11yContract: string;
@@ -158,6 +169,7 @@ export type Labels = {
     scenariosRegistered: (count: number) => string;
     scenarioContract: string;
     noIssues: string;
+    diagnosticsProductNotice: string;
   };
   home: {
     lead: (total: number) => string;
@@ -173,6 +185,8 @@ export type Labels = {
     restoreChrome: string;
     noRoute: string;
     noRouteHint: string;
+    outsideHandoff: string;
+    outsideHandoffHint: string;
   };
 };
 
@@ -305,6 +319,15 @@ export const DEFAULT_LABELS: Labels = {
     componentFixtureDescription: "Descrição da fixture",
     componentFixtureFallback: (requested, fallback) =>
       `A fixture \`${requested}\` não existe neste componente. Exibindo \`${fallback}\` como fallback.`,
+    taskScope: "Dados desta tarefa",
+    taskScopeDescription: "Contrato e estado autorizados para a situação ativa.",
+    inheritedScope: "Contexto herdado do produto e da persona",
+    inheritedScopeDescription:
+      "Informações compartilhadas que ajudam a interpretar a tarefa, mas não pertencem só a ela.",
+    screenScope: "Inspeção da tela atual",
+    screenScopeDescription: "Leitura ao vivo do que está renderizado no palco agora.",
+    productScope: "Verificações gerais do produto",
+    productScopeDescription: "Resultados compartilhados por todo o catálogo, não só por esta tarefa.",
     situation: "Situação",
     reproduction: "Reprodução",
     id: "Id",
@@ -320,6 +343,11 @@ export const DEFAULT_LABELS: Labels = {
     actions: "Ações disponíveis",
     expected: "Critérios de aceite",
     approval: "Aprovação",
+    approvalPendingStatus: "Aprovado — registro pendente",
+    approvalPendingMeaning:
+      "O status foi marcado como aprovado, mas ainda não há URL de commit que registre a versão autorizada.",
+    approvalMissing:
+      "A aprovação ainda não está completamente registrada. Preencha approvedAt com a URL imutável do commit aprovado.",
     openApproved: "Abrir a versão aprovada",
     engineering: "Engenharia",
     a11yContract: "Contrato do cenário",
@@ -354,6 +382,8 @@ export const DEFAULT_LABELS: Labels = {
     scenariosRegistered: (count) => `${count} cenários registrados.`,
     scenarioContract: "Contrato de cenário",
     noIssues: "Nenhum problema encontrado.",
+    diagnosticsProductNotice:
+      "Este diagnóstico avalia o catálogo inteiro do produto, inclusive itens fora da tarefa e do handoff ativos.",
   },
 
   home: {
@@ -375,6 +405,9 @@ export const DEFAULT_LABELS: Labels = {
     restoreChrome: "Mostrar controles",
     noRoute: "Nenhuma rota para este endereço",
     noRouteHint: "não casa com nenhuma rota declarada. Escolha uma situação na navegação.",
+    outsideHandoff: "Fora do escopo deste handoff",
+    outsideHandoffHint:
+      "Este link permite revisar somente os cenários, rotas e componentes listados no handoff. Escolha um item disponível na navegação.",
   },
 };
 
@@ -506,6 +539,15 @@ export const EN_US_LABELS: Labels = {
     componentFixtureDescription: "Fixture description",
     componentFixtureFallback: (requested, fallback) =>
       `Fixture \`${requested}\` does not exist for this component. Showing \`${fallback}\` as fallback.`,
+    taskScope: "This task",
+    taskScopeDescription: "The contract and authorized state for the active scenario.",
+    inheritedScope: "Inherited product and persona context",
+    inheritedScopeDescription:
+      "Shared information that helps interpret the task but does not belong only to it.",
+    screenScope: "Current screen inspection",
+    screenScopeDescription: "A live reading of what is rendered in the stage now.",
+    productScope: "Product-wide checks",
+    productScopeDescription: "Results shared across the catalog, not only this task.",
     situation: "State",
     reproduction: "Reproduction",
     id: "ID",
@@ -521,6 +563,11 @@ export const EN_US_LABELS: Labels = {
     actions: "Available actions",
     expected: "Acceptance criteria",
     approval: "Approval",
+    approvalPendingStatus: "Approved — record pending",
+    approvalPendingMeaning:
+      "The status is approved, but there is no commit URL recording the authorized version yet.",
+    approvalMissing:
+      "Approval is not fully recorded yet. Fill approvedAt with the immutable URL of the approved commit.",
     openApproved: "Open approved version",
     engineering: "Engineering",
     a11yContract: "Scenario contract",
@@ -556,6 +603,8 @@ export const EN_US_LABELS: Labels = {
     scenariosRegistered: (count) => `${count} ${count === 1 ? "scenario" : "scenarios"} registered.`,
     scenarioContract: "Scenario contract",
     noIssues: "No issues found.",
+    diagnosticsProductNotice:
+      "These diagnostics evaluate the entire product catalog, including items outside the active task and handoff.",
   },
 
   home: {
@@ -577,6 +626,9 @@ export const EN_US_LABELS: Labels = {
     restoreChrome: "Show controls",
     noRoute: "No route for this address",
     noRouteHint: "does not match any declared route. Choose a state from the navigation.",
+    outsideHandoff: "Outside this handoff scope",
+    outsideHandoffHint:
+      "This link only allows review of the scenarios, routes, and components listed in the handoff. Choose an available item from the navigation.",
   },
 };
 

@@ -29,4 +29,15 @@ describe("retorno para a home", () => {
       "https://example.test/?view=ported",
     );
   });
+
+  it("preserva o escopo de handoff ao voltar para a Home filtrada", () => {
+    const url = new URL(buildHomeUrl("https://example.test", "dark", "active", {
+      scenarios: ["requests.queue"],
+      components: ["feedback.notice"],
+    }));
+
+    expect(url.searchParams.get("handoff")).toBe("1");
+    expect(url.searchParams.getAll("allowScenario")).toEqual(["requests.queue"]);
+    expect(url.searchParams.getAll("allowComponent")).toEqual(["feedback.notice"]);
+  });
 });

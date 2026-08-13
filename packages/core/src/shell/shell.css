@@ -406,6 +406,10 @@
 .ds-status-dot[data-status="proposed"] { background: var(--ds-status-proposed); }
 .ds-status-dot[data-status="in-review"] { background: var(--ds-warn); }
 .ds-status-dot[data-status="approved"] { background: var(--ds-ok); }
+.ds-status-dot[data-status="approved"][data-approval="incomplete"] {
+  background: var(--ds-warn);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-warn) 18%, transparent);
+}
 .ds-status-dot[data-status="in-implementation"] { background: var(--ds-accent); }
 .ds-status-dot[data-status="implemented"] { background: var(--ds-status-implemented); }
 .ds-status-dot[data-status="superseded"] {
@@ -796,6 +800,45 @@
   padding: 16px;
 }
 
+.ds-scope-group {
+  margin-bottom: 18px;
+  padding-left: 10px;
+  border-left: 2px solid var(--ds-border-strong);
+}
+
+.ds-scope-group[data-scope="task"] {
+  border-left-color: var(--ds-accent);
+}
+
+.ds-scope-group[data-scope="screen"] {
+  border-left-color: var(--ds-ok);
+}
+
+.ds-scope-group[data-scope="product"] {
+  border-left-style: dashed;
+}
+
+.ds-scope-group__header {
+  margin: 0 0 10px;
+  padding: 0 2px;
+}
+
+.ds-scope-group__header h2 {
+  margin: 0 0 3px;
+  color: var(--ds-fg);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ds-scope-group__header p {
+  margin: 0;
+  color: var(--ds-fg-faint);
+  font-size: 11px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
 .ds-block {
   margin-bottom: 12px;
   padding: 14px;
@@ -805,7 +848,7 @@
   box-shadow: 0 1px 0 var(--ds-card-hairline);
 }
 
-.ds-block:first-child {
+.ds-inspector__body > .ds-block:first-child {
   padding: 16px;
   border-color: color-mix(in srgb, var(--ds-accent) 30%, var(--ds-border));
   background: color-mix(in srgb, var(--ds-accent) 7%, var(--ds-bg-input));

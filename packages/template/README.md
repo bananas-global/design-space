@@ -162,6 +162,13 @@ cobre padrão, preenchido, vazio, carregando, erro, desabilitado e conteúdo lon
 `feedback.status` demonstra que um componente antigo sem fixture continua válido.
 Estado interativo efêmero, como foco ou modal aberto, permanece local ao preview.
 
+Para entrega à engenharia, `HandoffScope` limita por URL os cenários, padrões de
+rota e componentes autorizados. O motor aplica a allowlist à Home, busca,
+navegação, flows, portados e catálogo visual e bloqueia tentativas fora do
+recorte. O modelo está em [`docs/handoff.md`](docs/handoff.md). Esse mecanismo é
+foco de UX, não isolamento: preview que precisa ocultar o catálogo exige build
+separado ou autenticação/autorização próprias.
+
 O chrome do template usa en-US e oferece dark/light mode na topbar. A aparência
 é independente do tema do produto e viaja no deep link como `appearance=light`.
 

@@ -161,6 +161,33 @@ describe("parseControls", () => {
 });
 
 describe("serializeControls", () => {
+  it("restaura e preserva o escopo explícito de handoff", () => {
+    const search =
+      "?handoff=1&allowScenario=requests.approve-blocked&allowRoute=%2Fhelp%2F%3Atopic&allowComponent=actions.button";
+    const controls = parseControls(search, registry);
+
+    expect(controls.handoff).toEqual({
+      scenarios: ["requests.approve-blocked"],
+      routes: ["/help/:topic"],
+      components: ["actions.button"],
+    });
+    expect(parseControls(serializeControls(controls, registry), registry)).toEqual(controls);
+  });
+
+  it("não ativa cenário ou componente fora da allowlist", () => {
+    const scenario = parseControls(
+      "?scenario=requests.approve-blocked&handoff=1&allowScenario=requests.imported",
+      registry,
+    );
+    const component = parseControls(
+      "?component=actions.button&handoff=1&allowComponent=feedback.notice",
+      registry,
+    );
+
+    expect(scenario.scenario).toBeUndefined();
+    expect(component.component).toBeUndefined();
+  });
+
   it("omite o que já é o padrão do cenário, mantendo a URL curta", () => {
     const controls = parseControls("?scenario=requests.approve-blocked", registry);
     expect(serializeControls(controls, registry)).toBe("?scenario=requests.approve-blocked");

@@ -25,6 +25,40 @@ assumir que deve portar o React para o stack real linha por linha.
    eventos que precisam ser anunciados.
 7. **Assets** exclusivos, quando houver.
 
+## URL focada no trabalho autorizado
+
+Monte o endereço entregue à engenharia com um `HandoffScope`. Cenários listados
+aparecem na Home, busca, flows e navegação e autorizam as próprias rotas. Rotas
+sem cenário e componentes isolados entram nas listas correspondentes.
+
+```ts
+import { scenarioUrl, type HandoffScope } from "@brucesantos/design-space";
+
+const handoff = {
+  scenarios: [
+    "requests.approve-blocked-by-rule",
+    "requests.approve-allowed",
+  ],
+  routes: ["/requests/:id/history"],
+  components: ["actions.primary-button"],
+} satisfies HandoffScope;
+
+const implementationUrl = scenarioUrl(approvedScenario, {
+  origin: approvedOrigin,
+  overrides: { handoff },
+});
+```
+
+O link continua reproduzindo viewport, tema, idioma e controles quando eles forem
+incluídos nos overrides. Home, busca, jornadas, referências portadas e catálogo
+visual mostram somente a allowlist. Abrir algo fora dela produz uma mensagem
+explícita em vez de montar a tela solicitada.
+
+Esse recorte reduz ambiguidade e distração; **não é segurança**. O catálogo e o
+bundle completo ainda chegam ao navegador. Se o preview público precisar ocultar
+o restante do produto, publique um build separado contendo somente o handoff ou
+proteja o ambiente com autenticação e autorização próprias.
+
 ## Modelo
 
 ```markdown
@@ -32,7 +66,7 @@ assumir que deve portar o React para o stack real linha por linha.
 `requests.approve-blocked-by-rule` — Aprovação bloqueada por falta de documento
 
 ## Referência aprovada
-https://projeto-<hash>-<escopo>.vercel.app/requests/REQ-2043?scenario=requests.approve-blocked-by-rule
+<URL imutável de commit com o HandoffScope serializado>
 
 Commit: <sha completo>
 Status do cenário: aprovado

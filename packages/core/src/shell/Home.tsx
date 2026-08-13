@@ -15,6 +15,7 @@ import type { Registry } from "../registry/index.js";
 import {
   SCENARIO_STATUSES,
   type Flow,
+  type HandoffScope,
   type Module,
   type Scenario,
   type ScenarioView,
@@ -26,6 +27,7 @@ export type HomeProps = {
   onOpenScenario: (scenarioId: string) => void;
   view?: ScenarioView;
   onViewChange?: (view: ScenarioView) => void;
+  handoff?: HandoffScope;
   /** @deprecated Use `view="ported"`. */
   showPorted?: boolean;
 };
@@ -35,17 +37,18 @@ export function Home({
   onOpenScenario,
   view: requestedView,
   onViewChange,
+  handoff,
   showPorted = false,
 }: HomeProps) {
   const labels = useLabels();
   const { product } = registry;
   const view = requestedView ?? (showPorted ? "ported" : "active");
-  const options = { view };
+  const options = { view, handoff };
   const coverage = registry.coverage(options);
   const total = registry.activeScenarios(options).length;
   const nodes = registry.treeFor(options).filter((node) => node.scenarios.length > 0);
   const orphans = registry.orphansFor(options);
-  const portedTotal = registry.byStatus("ported").length;
+  const portedTotal = registry.byStatus("ported", { handoff }).length;
   const viewLabel =
     view === "ported" ? labels.sidebar.portedReferences(portedTotal) : labels.sidebar.activeWork;
 
@@ -126,6 +129,7 @@ export function Home({
           scenarios={scenarios}
           registry={registry}
           view={view}
+          handoff={handoff}
           onOpenScenario={onOpenScenario}
         />
       ))}
@@ -150,12 +154,14 @@ function ModuleCard({
   scenarios,
   registry,
   view,
+  handoff,
   onOpenScenario,
 }: {
   module: Module;
   scenarios: Scenario[];
   registry: Registry;
   view: ScenarioView;
+  handoff?: HandoffScope;
   onOpenScenario: (id: string) => void;
 }) {
   return (
@@ -169,6 +175,7 @@ function ModuleCard({
           flow={flow}
           registry={registry}
           view={view}
+          handoff={handoff}
           onOpenScenario={onOpenScenario}
         />
       ))}
@@ -182,16 +189,20 @@ function FlowOutline({
   flow,
   registry,
   view,
+  handoff,
   onOpenScenario,
 }: {
   flow: Flow;
   registry: Registry;
   view: ScenarioView;
+  handoff?: HandoffScope;
   onOpenScenario: (id: string) => void;
 }) {
   const visibleSteps = flow.steps.filter((step) => {
     const scenario = registry.scenario(step.scenario);
-    return scenario && (view === "ported" ? scenario.status === "ported" : scenario.status !== "ported");
+    return scenario &&
+      (!handoff || handoff.scenarios?.includes(scenario.id)) &&
+      (view === "ported" ? scenario.status === "ported" : scenario.status !== "ported");
   });
   if (visibleSteps.length === 0) return null;
 
@@ -205,6 +216,7 @@ function FlowOutline({
           const branches = Object.entries(step.branches ?? {}).filter(([, target]) => {
             const branchScenario = registry.scenario(target);
             return branchScenario &&
+              (!handoff || handoff.scenarios?.includes(branchScenario.id)) &&
               (view === "ported" ? branchScenario.status === "ported" : branchScenario.status !== "ported");
           });
           return (
@@ -254,14 +266,22 @@ function ScenarioGrid({
         <li key={scenario.id}>
           <button type="button" className="ds-home__card" onClick={() => onOpenScenario(scenario.id)}>
             <span className="ds-home__card-head">
-              <span className="ds-status-dot" data-status={scenario.status} />
+              <span
+                className="ds-status-dot"
+                data-status={scenario.status}
+                data-approval={
+                  scenario.status === "approved" && !scenario.approvedAt ? "incomplete" : undefined
+                }
+              />
               <span className="ds-home__card-title">{scenario.title}</span>
             </span>
             {scenario.intent && <span className="ds-home__card-intent">{scenario.intent}</span>}
             <span className="ds-home__card-meta">
               {registry.persona(scenario.persona)?.name ?? scenario.persona}
               {" · "}
-              {labels.status[scenario.status]}
+              {scenario.status === "approved" && !scenario.approvedAt
+                ? labels.inspector.approvalPendingStatus
+                : labels.status[scenario.status]}
               {scenario.a11y.keyboard === "full" ? ` · ${labels.home.keyboardBadge}` : ""}
             </span>
           </button>

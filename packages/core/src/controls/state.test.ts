@@ -4,6 +4,7 @@ import { createRegistry } from "../registry/index.js";
 import type { ProductDefinition, RouteDefinition } from "../types/index.js";
 
 const screen = (() => null) as unknown as RouteDefinition["screen"];
+const preview = () => null;
 
 const registry = createRegistry({
   id: "acme",
@@ -30,6 +31,7 @@ const registry = createRegistry({
     { id: "request-approved", label: "Aprovada", data: {} },
   ],
   routes: [{ path: "/requests/:id", screen }],
+  components: [{ id: "actions.button", name: "Botão", group: "Ações", preview }],
 } satisfies ProductDefinition);
 
 describe("parseControls", () => {
@@ -64,6 +66,24 @@ describe("parseControls", () => {
   it("mantém o chrome visível a não ser que a URL peça o contrário", () => {
     expect(parseControls("", registry).chrome).toBe(true);
     expect(parseControls("?chrome=0", registry).chrome).toBe(false);
+  });
+
+  it("usa dark por padrão e persiste light na URL", () => {
+    expect(parseControls("", registry).chromeTheme).toBe("dark");
+    const light = parseControls("?appearance=light", registry);
+    expect(light.chromeTheme).toBe("light");
+    expect(serializeControls(light, registry)).toBe("?appearance=light");
+    expect(parseControls("?appearance=desconhecido", registry).chromeTheme).toBe("dark");
+  });
+
+  it("abre componente por deep link sem manter cenário ativo", () => {
+    const controls = parseControls(
+      "?scenario=requests.approve-blocked&component=actions.button",
+      registry,
+    );
+    expect(controls.component).toBe("actions.button");
+    expect(controls.scenario).toBeUndefined();
+    expect(serializeControls(controls, registry)).toBe("?component=actions.button");
   });
 });
 

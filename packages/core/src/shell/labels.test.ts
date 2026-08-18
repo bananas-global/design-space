@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_LABELS, resolveLabels } from "./labels.js";
+import { DEFAULT_LABELS, EN_US_LABELS, resolveLabels } from "./labels.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -36,6 +36,19 @@ describe("resolveLabels", () => {
     });
 
     expect(labels.home.lead(3)).toBe("3 scenarios");
+  });
+
+  it("explica que cenário portado ainda não foi validado nem assumido como compromisso", () => {
+    expect(DEFAULT_LABELS.status.ported).toBe("Portado — não validado");
+    expect(DEFAULT_LABELS.statusMeaning.ported).toContain("não representa compromisso de implementação");
+  });
+
+  it("oferece um dicionário en-US completo", () => {
+    expect(EN_US_LABELS.status.ported).toBe("Ported — not validated");
+    expect(EN_US_LABELS.topbar.lightMode).toBe("Light mode");
+    expect(EN_US_LABELS.sidebar.componentsTab).toBe("Components");
+    expect(EN_US_LABELS.inspector.noIssues).toBe("No issues found.");
+    expect(resolveLabels(EN_US_LABELS)).toEqual(EN_US_LABELS);
   });
 });
 

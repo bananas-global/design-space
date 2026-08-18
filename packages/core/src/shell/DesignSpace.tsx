@@ -6,7 +6,7 @@
  * aparência, domínio e dados. Essa é a fronteira inteira (§8).
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { ProductDefinition, ScenarioContext } from "../types/index.js";
 import { createRegistry } from "../registry/index.js";
 import { useDesignSpaceState } from "../controls/state.js";
@@ -32,14 +32,14 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   const registry = useMemo(() => createRegistry(product), [product]);
   const labels = useMemo(() => resolveLabels(product.theme?.labels), [product.theme?.labels]);
   const deploy = useMemo(() => getDeployContext(product.deploy), [product.deploy]);
-  const { location, controls, viewport, setControls, navigate, openScenario } =
+  const { location, controls, viewport, setControls, navigate, openScenario, openComponent } =
     useDesignSpaceState(registry);
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const stageRef = useRef<HTMLDivElement>(null);
   const { focused, tabStops } = useKeyboardMode(controls.keyboardMode, stageRef);
 
   const scenario = registry.scenario(controls.scenario);
+  const component = registry.component(controls.component);
   const persona = registry.persona(controls.persona ?? scenario?.persona);
   const fixture = registry.fixture(controls.fixture ?? scenario?.fixture);
 
@@ -51,9 +51,8 @@ export function DesignSpace({ product }: DesignSpaceProps) {
 
   const { data, isLoading, error } = useScenarioData({ scenario, fixture, network: controls.network, adapter });
 
-  // Atalhos globais. Ficam no motor porque são do ambiente, não do produto — e
-  // porque alternar chrome com a mão no teclado é o que torna a revisão limpa
-  // usável de verdade durante uma chamada com cliente.
+  // Atalhos globais do ambiente. Busca vive na Sidebar; aqui ficam apenas os
+  // modos de inspeção que não competem com atalhos conhecidos do navegador.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -61,9 +60,6 @@ export function DesignSpace({ product }: DesignSpaceProps) {
       if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
 
       switch (event.key) {
-        case "C":
-          setControls({ chrome: !controls.chrome });
-          break;
         case "K":
           setControls({ keyboardMode: !controls.keyboardMode });
           break;
@@ -78,7 +74,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [controls.chrome, controls.keyboardMode, controls.inspector, setControls]);
+  }, [controls.keyboardMode, controls.inspector, setControls]);
 
   const permissions = useMemo(() => {
     // Persona escolhida no controle manda sobre a do cenário: é assim que se
@@ -137,13 +133,16 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   // A raiz sem cenário ativo é o mapa de situações, não uma tela do produto.
   // Quem recebe o link cru precisa ver o que existe antes de escolher; cair no
   // meio de um fluxo — ou num estado sem permissão — se lê como defeito.
-  const isHome = !scenario && location.path === "/";
+  const isHome = !scenario && !component && location.path === "/";
 
   const match = resolveRoute(product.routes, location.path);
   const Wrapper = product.wrapper;
   const NotFound = product.notFound;
 
-  const screen = match ? (
+  const Preview = component?.preview;
+  const screen = Preview ? (
+    <Preview />
+  ) : match ? (
     <match.definition.screen params={match.params} context={context} />
   ) : NotFound ? (
     <NotFound path={location.path} />
@@ -162,8 +161,8 @@ export function DesignSpace({ product }: DesignSpaceProps) {
       <div
         className="ds-root"
         data-chrome={controls.chrome ? "visible" : "hidden"}
+        data-appearance={controls.chromeTheme ?? "dark"}
         data-inspector={controls.inspector ? "open" : "closed"}
-        data-sidebar={sidebarOpen ? "open" : "closed"}
         data-viewport={viewport.id}
       >
         {controls.chrome && (
@@ -172,18 +171,22 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             scenario={scenario}
             deploy={deploy}
             inspectorOpen={controls.inspector}
-            sidebarOpen={sidebarOpen}
+            chromeTheme={controls.chromeTheme ?? "dark"}
             onToggleInspector={() => setControls({ inspector: !controls.inspector })}
-            onToggleSidebar={() => setSidebarOpen((open) => !open)}
-            onHideChrome={() => setControls({ chrome: false })}
+            onToggleChromeTheme={() =>
+              setControls({ chromeTheme: controls.chromeTheme === "light" ? "dark" : "light" })
+            }
           />
         )}
 
         {controls.chrome && (
           <Sidebar
             registry={registry}
-            activeScenario={controls.scenario}
+            activeScenario={scenario}
+            activeComponent={controls.component}
+            controls={controls}
             onOpenScenario={openScenario}
+            onOpenComponent={openComponent}
           />
         )}
 
@@ -205,7 +208,12 @@ export function DesignSpace({ product }: DesignSpaceProps) {
           )}
 
           {controls.chrome && (
-            <Controls registry={registry} controls={controls} onChange={setControls} />
+            <Controls
+              registry={registry}
+              controls={controls}
+              scenarioActive={Boolean(scenario)}
+              onChange={setControls}
+            />
           )}
         </div>
 
@@ -213,6 +221,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
           <Inspector
             registry={registry}
             scenario={scenario}
+            component={component}
             controls={controls}
             focusedNode={focused}
             tabStopCount={tabStops.length}

@@ -11,7 +11,7 @@
  * pacote), então o parâmetro tem que morar aqui, onde os arquivos nascem.
  *
  * `none` não é degradação: um Design Space aberto por `pnpm dev`, revisado ao lado
- * de quem desenha e com feedback pelo coletor é um uso completo do modelo. A
+ * de quem desenha ou por chamada com tela compartilhada é um uso completo do modelo. A
  * hospedagem entra quando a revisão passa a ser assíncrona ou com cliente.
  *
  * O script é idempotente: rodar duas vezes com o mesmo alvo não muda nada, e

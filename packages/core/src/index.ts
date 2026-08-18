@@ -13,6 +13,7 @@ export { Stage, StageEmpty, TabOrderOverlay, type StageProps } from "./shell/Sta
 export { Home, type HomeProps } from "./shell/Home.js";
 export {
   DEFAULT_LABELS,
+  EN_US_LABELS,
   KEYBOARD_LABELS,
   NETWORK_LABELS,
   STATUS_LABELS,
@@ -106,6 +107,8 @@ export {
   type A11yContract,
   type ContrastPair,
   type ContrastTarget,
+  type ComponentPreview,
+  type ChromeTheme,
   type ControlsState,
   type DeployOverrides,
   type DataRequest,

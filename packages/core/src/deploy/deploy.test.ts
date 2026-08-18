@@ -86,6 +86,16 @@ describe("scenarioUrl", () => {
     expect(url.searchParams.get("persona")).toBe("analyst");
     expect(url.searchParams.get("fixture")).toBe("order-blocked");
   });
+
+  it("preserva o light mode quando ele faz parte do estado compartilhado", () => {
+    const url = new URL(
+      scenarioUrl(scenario, {
+        origin: "https://acme.example.app",
+        overrides: { chromeTheme: "light" },
+      }),
+    );
+    expect(url.searchParams.get("appearance")).toBe("light");
+  });
 });
 
 describe("commitUrl", () => {

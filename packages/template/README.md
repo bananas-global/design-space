@@ -27,7 +27,7 @@ URL própria.
 1. Copie o diretório para um repositório novo, `<produto>-design-space`.
 2. Troque `name` no `package.json` — isso muda a porta de dev automaticamente.
 3. Troque a dependência do motor de `workspace:*` para a versão publicada
-   (`^0.2.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
+   (`^0.3.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
    `pnpm install` falha.
 4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente e
    atualize `src/tokens/contrast.ts` com os pares reais. O teste de tokens falha
@@ -39,7 +39,8 @@ URL própria.
    for específico deste produto. As decisões do modelo já estão no repositório do
    motor e não devem ser copiadas para cá.
 8. Se o time do cliente revisa em outro idioma, traduza o chrome do motor em
-   `theme.labels`, em `src/app/product.ts`. O padrão é português.
+   `theme.labels`, em `src/app/product.ts`. O template usa `EN_US_LABELS`; o
+   padrão do motor continua em português.
 9. Escolha a hospedagem, se for haver alguma: `pnpm setup:hosting vercel`. O padrão
    é nenhuma. Ver [Hospedagem](#hospedagem).
 
@@ -48,7 +49,7 @@ URL própria.
 ```
 src/
 ├── app/           # catalog.ts (especificação) e product.ts (integração com o motor)
-├── components/    # componentes exclusivos deste produto
+├── components/    # componentes exclusivos e catálogo visual deste produto
 ├── screens/       # composições de tela
 ├── scenarios/     # cenários registráveis
 ├── fixtures/      # dados sintéticos e determinísticos
@@ -96,9 +97,9 @@ pnpm setup:hosting vercel   # publica preview e produção
 ```
 
 Sem hospedagem, o Design Space roda por `pnpm dev` e a revisão acontece ao lado de
-quem desenha ou por chamada com tela compartilhada, com feedback pelo coletor. É um
-uso completo do modelo, não uma versão reduzida: `env` fica `development` e o
-cabeçalho da revisão omite branch e commit, e nada mais muda.
+quem desenha ou por chamada com tela compartilhada. É um uso completo do modelo,
+não uma versão reduzida: `env` fica `development` e o cabeçalho da revisão omite
+branch e commit, e nada mais muda.
 
 O que você perde é a revisão **assíncrona** — e, com ela, a aprovação por URL
 imutável. `approvedAt` continua obrigatório em cenário aprovado, então registre o
@@ -134,18 +135,25 @@ decidir: **Vercel Authentication exige que cada pessoa que revisa seja membro do
 time na Vercel**, e no plano Pro seat é pago. Não é ligar uma chave — é passar a
 administrar acesso, e é o oposto do que este ambiente existe para fazer.
 
-## Feedback
+## Revisão assíncrona
 
-Duas camadas, com laços diferentes:
-
-- **`feedback-collector`** — camada oficial de iteração. `ALT` + clique captura o
-  elemento e abre o campo de instrução; "Copiar backlog" gera markdown numerado
-  com `arquivo:linha` para o agente. Não exige conta.
-- **Vercel Toolbar** — revisão assíncrona com PO e cliente. Thread ancorada na
-  página, com status. Exige conta para comentar.
+Quando o projeto usa Vercel, a Toolbar oferece threads ancoradas na página, com
+status, para revisão assíncrona com PO e cliente. Ela exige conta para comentar.
+O template não inclui, por enquanto, um coletor de feedback próprio no preview.
 
 Comentário resolvido na Toolbar não significa cenário aprovado. Aprovação muda o
 `status` do cenário no repositório, e nada mais.
+
+Cenário trazido do sistema existente sem validação começa como `ported`. Esse
+estado documenta a origem sem tratá-la como proposta ou compromisso de
+implementação; a revisão é que determina sua próxima etapa.
+
+A aba **Componentes** é alimentada por `ProductDefinition.components`. Cada item
+aponta para um preview React local: o motor organiza e cria o deep link, mas
+componente, conteúdo e aparência continuam exclusivos deste produto.
+
+O chrome do template usa en-US e oferece dark/light mode na topbar. A aparência
+é independente do tema do produto e viaja no deep link como `appearance=light`.
 
 ## Ver também
 

@@ -56,6 +56,25 @@ motor.
 projeto: um cenário de ação bloqueada em que o bloqueio não é anunciado para leitor
 de tela está incompleto, não está pronto para aprovação.
 
+### Ciclo de vida
+
+O estado diz o que o cenário representa; importar uma tela existente não a torna
+proposta nem compromisso de implementação.
+
+| Valor | Rótulo padrão | Significado |
+| --- | --- | --- |
+| `ported` | Portado — não validado | Veio do sistema existente, mas não foi validado e não representa compromisso de implementação. |
+| `proposed` | Proposta | Exploração ainda não aprovada. |
+| `in-review` | Em revisão | Aberto para validação de design, negócio ou cliente. |
+| `approved` | Aprovado | Referência autorizada, registrada por URL de commit. |
+| `in-implementation` | Em implementação | Ligado a um trabalho ativo de engenharia. |
+| `implemented` | Implementado | Disponível no produto real e validado. |
+| `superseded` | Superado | Mantido para histórico ou substituído por outra decisão. |
+
+`scenariosUnderTest()` inclui por padrão apenas `approved`, `in-implementation` e
+`implemented`. Cenários `ported` ficam fora até serem promovidos, mas podem ser
+selecionados explicitamente pelo segundo argumento.
+
 ## A URL é o estado
 
 Todo controle é serializado na query string, então a mesma URL sempre produz a
@@ -65,12 +84,14 @@ rede declarados no cenário.
 | Parâmetro | Efeito |
 | --- | --- |
 | `scenario` | Cenário ativo. Define os padrões dos demais. |
+| `component` | Referência ativa no catálogo visual do produto. |
 | `persona` | Troca o papel e as permissões. |
 | `fixture` | Troca o conjunto de dados. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
 | `viewport` | `fit`, `mobile`, `tablet`, `desktop`, `custom`. |
 | `w` | Largura, quando `viewport=custom`. |
 | `theme`, `locale`, `source` | Variações declaradas pelo produto. |
+| `appearance` | Aparência do chrome: omitido para dark, `light` para modo claro. |
 | `chrome=0` | Revisão limpa: oculta o chrome do ambiente. |
 | `kb=1` | Modo teclado, com ordem de tabulação evidenciada. |
 | `motion=1` | Movimento reduzido no palco. |
@@ -102,12 +123,33 @@ theme: {
 ```
 
 - `DEFAULT_LABELS` — o dicionário completo, em português.
+- `EN_US_LABELS` — o dicionário completo em inglês dos Estados Unidos.
 - `resolveLabels(override)` — mescla por grupo. Útil fora de React.
 - `useLabels()` — os rótulos resolvidos, dentro do chrome.
 - `Labels`, `LabelsOverride` — os tipos.
 
 Rótulo de **produto** continua vindo do produto: nome de módulo, título de cenário,
 nome de persona, rótulo de fixture.
+
+Para usar o chrome integralmente em en-US:
+
+```ts
+import { EN_US_LABELS } from "@brucesantos/design-space";
+
+const product = {
+  // ...
+  theme: {
+    locales: ["en-US"],
+    labels: EN_US_LABELS,
+  },
+};
+```
+
+### Aparência do chrome
+
+O seletor na topbar alterna entre dark e light sem alterar tokens ou tema da UI
+do produto. A escolha é serializada como `?appearance=light`, então links copiados
+e a revisão limpa preservam a aparência escolhida.
 
 ### Registry e validação
 
@@ -116,6 +158,29 @@ nome de persona, rótulo de fixture.
 - `validateProduct(product)` / `validateScenario(scenario)` — validação em runtime
   do contrato. Pega fixture, persona, regra ou rota inexistente, que o TypeScript
   não alcança.
+
+### Catálogo de componentes
+
+O catálogo é opcional. O motor fornece navegação, busca e deep link; cada preview
+continua sendo UI do produto:
+
+```tsx
+const product: ProductDefinition = {
+  // ...
+  components: [
+    {
+      id: "actions.primary-button",
+      name: "Botão primário",
+      group: "Ações",
+      description: "Ação principal da página",
+      preview: PrimaryButtonPreview,
+    },
+  ],
+};
+```
+
+Abrir um item produz `?component=actions.primary-button`, compartilhável como os
+deep links de cenário. `ComponentPreview` é o tipo público desse contrato.
 
 ### Deploy e deep links
 
@@ -163,9 +228,17 @@ preview.
 
 | Atalho | Efeito |
 | --- | --- |
-| `Shift` + `C` | Chrome do ambiente |
+| `Command/Ctrl` + `K` ou `F` | Foco na busca da lateral |
+| `↑` / `↓` | Percorrer resultados filtrados |
 | `Shift` + `K` | Modo teclado |
 | `Shift` + `P` | Painel de contexto |
+
+## Créditos
+
+Os ícones dos presets de viewport são derivados do
+[Lucide](https://lucide.dev/), disponibilizado sob licença MIT. Obrigado às
+pessoas mantenedoras e contribuidoras do projeto. Os SVGs necessários são
+incorporados ao motor, portanto não existe dependência de runtime do Lucide.
 
 ## Fronteira
 

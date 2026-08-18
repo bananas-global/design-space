@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { SCENARIO_STATUSES } from "../types/index.js";
+import { contrastRatio } from "../a11y/contrast.js";
+
 /**
  * Trava da fronteira visual do motor.
  *
@@ -86,6 +89,41 @@ describe("fronteira visual", () => {
       .map((match) => match[1]!)
       .filter((name) => !name.startsWith("ds-"));
     expect([...new Set(classes)]).toEqual([]);
+  });
+
+  it("todo estado de cenário tem indicador visual próprio", () => {
+    const missing = SCENARIO_STATUSES.filter(
+      (status) => !css.includes(`.ds-status-dot[data-status="${status}"]`),
+    );
+
+    expect(missing).toEqual([]);
+  });
+
+  it("o light mode redefine os tokens do chrome sem alcançar o palco", () => {
+    const light = ruleBody('.ds-root[data-appearance="light"]');
+    expect(light).toContain("--ds-bg: #eef1f6");
+    expect(light).toContain("--ds-fg: #172033");
+    expect(light).not.toMatch(/(?:^|;)\s*(?:color|font|background)\s*:/);
+  });
+
+  it("texto e ações do light mode preservam contraste AA", () => {
+    const canvas = "#eef1f6";
+    expect(contrastRatio("#172033", canvas)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#536078", canvas)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#626d80", canvas)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#ffffff", "#4f67d8")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("controles compactos compartilham uma única altura", () => {
+    expect(ruleBody(".ds-root")).toContain("--ds-control-h: 32px");
+    expect(ruleBody(".ds-btn")).toContain("height: var(--ds-control-h)");
+    expect(ruleBody(".ds-segmented button")).toContain("height: var(--ds-control-h)");
+    expect(ruleBody(".ds-select,\n.ds-input")).toContain("height: var(--ds-control-h)");
+  });
+
+  it("listas do inspector exibem marcadores próprios", () => {
+    expect(ruleBody(".ds-list")).toContain("list-style: none");
+    expect(ruleBody(".ds-list li::before")).toContain('content: "•"');
   });
 
   it("não existe regra em elemento nu sem escopo do chrome", () => {

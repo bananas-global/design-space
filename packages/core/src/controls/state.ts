@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ControlsState, NetworkState, ViewportSetting } from "../types/index.js";
+import type { ChromeTheme, ControlsState, NetworkState, ViewportSetting } from "../types/index.js";
 import type { Registry } from "../registry/index.js";
 import { NETWORK_STATES } from "../types/index.js";
 import { PARAM } from "./params.js";
@@ -44,14 +44,17 @@ export type DesignSpaceLocation = {
  */
 export function parseControls(search: string, registry: Registry): ControlsState {
   const params = new URLSearchParams(search);
+  const componentId = params.get(PARAM.component) ?? undefined;
+  const component = registry.component(componentId);
   const scenarioId = params.get(PARAM.scenario) ?? undefined;
-  const scenario = registry.scenario(scenarioId);
+  const scenario = component ? undefined : registry.scenario(scenarioId);
 
   const network = params.get(PARAM.network);
   const scale = Number(params.get(PARAM.textScale));
 
   return {
     scenario: scenario?.id,
+    component: component?.id,
     persona: params.get(PARAM.persona) ?? scenario?.persona,
     fixture: params.get(PARAM.fixture) ?? scenario?.fixture,
     network: isNetworkState(network) ? network : (scenario?.network ?? "success"),
@@ -60,6 +63,9 @@ export function parseControls(search: string, registry: Registry): ControlsState
     themeMode: params.get(PARAM.themeMode) ?? registry.product.theme?.modes?.[0],
     locale: params.get(PARAM.locale) ?? registry.product.theme?.locales?.[0],
     dataSource: params.get(PARAM.dataSource) ?? registry.product.dataSources?.default ?? "fixtures",
+    chromeTheme: isChromeTheme(params.get(PARAM.chromeTheme))
+      ? (params.get(PARAM.chromeTheme) as ChromeTheme)
+      : "dark",
     // Chrome visível por padrão. `?chrome=0` é o modo de revisão limpa e captura
     // de tela, então precisa ser explícito para não sumir sem pedido.
     chrome: params.get(PARAM.chrome) !== "0",
@@ -78,7 +84,8 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   const params = new URLSearchParams();
   const scenario = registry.scenario(state.scenario);
 
-  if (state.scenario) params.set(PARAM.scenario, state.scenario);
+  if (state.component) params.set(PARAM.component, state.component);
+  else if (state.scenario) params.set(PARAM.scenario, state.scenario);
 
   // Persona e fixture só entram quando divergem do cenário: um link com a
   // combinação declarada não precisa repeti-la, e um link com combinação
@@ -110,6 +117,7 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   if (state.dataSource && state.dataSource !== defaultSource) {
     params.set(PARAM.dataSource, state.dataSource);
   }
+  if (state.chromeTheme === "light") params.set(PARAM.chromeTheme, "light");
 
   if (!state.chrome) params.set(PARAM.chrome, "0");
   if (state.keyboardMode) params.set(PARAM.keyboardMode, "1");
@@ -136,6 +144,8 @@ export type DesignSpaceState = {
    * voltar ao desktop a cada troca de situação.
    */
   openScenario: (scenarioId: string) => void;
+  /** Abre uma referência do catálogo de componentes. */
+  openComponent: (componentId: string) => void;
 };
 
 /**
@@ -190,6 +200,7 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
       const next: ControlsState = {
         ...controls,
         scenario: scenario.id,
+        component: undefined,
         persona: scenario.persona,
         fixture: scenario.fixture,
         network: scenario.network ?? "success",
@@ -199,9 +210,27 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
     [controls, push, registry],
   );
 
+  const openComponent = useCallback(
+    (componentId: string) => {
+      const component = registry.component(componentId);
+      if (!component) return;
+
+      const next: ControlsState = {
+        ...controls,
+        scenario: undefined,
+        component: component.id,
+        persona: undefined,
+        fixture: undefined,
+        network: "success",
+      };
+      push("/", serializeControls(next, registry), false);
+    },
+    [controls, push, registry],
+  );
+
   const viewport = useMemo(() => resolveViewport(controls), [controls]);
 
-  return { location, controls, viewport, setControls, navigate, openScenario };
+  return { location, controls, viewport, setControls, navigate, openScenario, openComponent };
 }
 
 export function resolveViewport(controls: ControlsState): ViewportSetting {
@@ -219,6 +248,10 @@ function currentLocation(): DesignSpaceLocation {
 
 function isNetworkState(value: string | null): value is NetworkState {
   return value !== null && (NETWORK_STATES as readonly string[]).includes(value);
+}
+
+function isChromeTheme(value: string | null): value is ChromeTheme {
+  return value === "dark" || value === "light";
 }
 
 function positiveInt(value: string | null): number | undefined {

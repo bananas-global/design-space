@@ -60,10 +60,10 @@ export function pathFor(
 /**
  * Cenários que valem uma jornada automatizada.
  *
- * Deliberadamente não é "todos": rodar Playwright em cenário `proposed`
- * transforma exploração em trabalho de manutenção de teste, que é o oposto de
- * "governança proporcional" (Princípio 9). O piso é o cenário que já foi
- * aprovado ou já existe em produção.
+ * Deliberadamente não é "todos": rodar Playwright em cenário `ported` ou
+ * `proposed` transforma importação ou exploração em trabalho de manutenção de
+ * teste, que é o oposto de "governança proporcional" (Princípio 9). O piso é o
+ * cenário que já foi aprovado ou já existe em produção.
  */
 export function scenariosUnderTest(
   product: ProductDefinition,

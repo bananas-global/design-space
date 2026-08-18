@@ -2,23 +2,24 @@
  * Barra de controles (§6).
  *
  * Cada controle troca uma variável da situação sem refazer o fluxo. Persona,
- * conjunto de dados, viewport, tema, idioma, estado de rede e acessibilidade
- * estão no mesmo nível de hierarquia de propósito: acessibilidade é dimensão de
- * primeira classe (D-15), não uma aba escondida.
+ * viewport, tema, idioma e estado de rede podem ser alterados sem refazer o
+ * fluxo. O escopo de dados do cenário ativo fica junto da navegação, onde a
+ * pessoa escolhe o que revisar.
  */
 
 import type { Registry } from "../registry/index.js";
 import { NETWORK_STATES, type ControlsState } from "../types/index.js";
-import { TEXT_SCALES, VIEWPORTS } from "../controls/state.js";
+import { VIEWPORTS } from "../controls/state.js";
 import { useLabels } from "./labels.js";
 
 export type ControlsProps = {
   registry: Registry;
   controls: ControlsState;
+  scenarioActive: boolean;
   onChange: (patch: Partial<ControlsState>) => void;
 };
 
-export function Controls({ registry, controls, onChange }: ControlsProps) {
+export function Controls({ registry, controls, scenarioActive, onChange }: ControlsProps) {
   const all = useLabels();
   const labels = all.controls;
   const { product } = registry;
@@ -28,7 +29,7 @@ export function Controls({ registry, controls, onChange }: ControlsProps) {
 
   return (
     <div className="ds-chrome ds-controls" role="group" aria-label={labels.region}>
-      <div className="ds-field">
+      {scenarioActive && <div className="ds-field">
         <label htmlFor="ds-persona">{labels.persona}</label>
         <select
           id="ds-persona"
@@ -43,26 +44,9 @@ export function Controls({ registry, controls, onChange }: ControlsProps) {
             </option>
           ))}
         </select>
-      </div>
+      </div>}
 
-      <div className="ds-field">
-        <label htmlFor="ds-fixture">{labels.fixture}</label>
-        <select
-          id="ds-fixture"
-          className="ds-select"
-          value={controls.fixture ?? ""}
-          onChange={(event) => onChange({ fixture: event.target.value || undefined })}
-        >
-          <option value="">{labels.none}</option>
-          {product.fixtures.map((fixture) => (
-            <option key={fixture.id} value={fixture.id}>
-              {fixture.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="ds-field">
+      {scenarioActive && <div className="ds-field">
         <span className="ds-field__label" id="ds-network-label">
           {labels.network}
         </span>
@@ -78,7 +62,7 @@ export function Controls({ registry, controls, onChange }: ControlsProps) {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       <div className="ds-field">
         <span className="ds-field__label" id="ds-viewport-label">
@@ -89,10 +73,13 @@ export function Controls({ registry, controls, onChange }: ControlsProps) {
             <button
               key={viewport.id}
               type="button"
+              className="ds-icon-button"
               aria-pressed={controls.viewport === viewport.id}
+              aria-label={all.viewport[viewport.id] ?? viewport.label}
+              title={all.viewport[viewport.id] ?? viewport.label}
               onClick={() => onChange({ viewport: viewport.id })}
             >
-              {all.viewport[viewport.id] ?? viewport.label}
+              <ViewportIcon id={viewport.id} />
             </button>
           ))}
         </div>
@@ -168,39 +155,27 @@ export function Controls({ registry, controls, onChange }: ControlsProps) {
         </div>
       )}
 
-      <div className="ds-field">
-        <span className="ds-field__label">{labels.a11y}</span>
-        <button
-          type="button"
-          className="ds-btn"
-          aria-pressed={controls.keyboardMode}
-          onClick={() => onChange({ keyboardMode: !controls.keyboardMode })}
-          title={labels.keyboardModeTitle}
-        >
-          {labels.keyboardMode}
-        </button>
-        <button
-          type="button"
-          className="ds-btn"
-          aria-pressed={controls.reducedMotion}
-          onClick={() => onChange({ reducedMotion: !controls.reducedMotion })}
-          title={labels.reducedMotionTitle}
-        >
-          {labels.reducedMotion}
-        </button>
-        <div className="ds-segmented" role="group" aria-label={labels.textScale}>
-          {TEXT_SCALES.map((scale) => (
-            <button
-              key={scale}
-              type="button"
-              aria-pressed={controls.textScale === scale}
-              onClick={() => onChange({ textScale: scale })}
-            >
-              {scale === 1 ? "100%" : `${scale * 100}%`}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
+}
+
+/** SVGs derivados do conjunto Lucide (MIT), incorporados para manter o core sem dependência runtime. */
+function ViewportIcon({ id }: { id: string }) {
+  const common = {
+    width: 16,
+    height: 16,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (id === "fit") return <svg {...common}><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>;
+  if (id === "mobile") return <svg {...common}><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>;
+  if (id === "tablet") return <svg {...common}><rect width="16" height="20" x="4" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>;
+  if (id === "desktop") return <svg {...common}><rect width="20" height="14" x="2" y="3" rx="2" /><path d="M8 21h8M12 17v4" /></svg>;
+  return <svg {...common}><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>;
 }

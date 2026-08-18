@@ -77,6 +77,11 @@ padrão é compartilhado pela convenção no template; o componente, não.
 - **Não** remova o `a11y` obrigatório do contrato de cenário, nem o torne
   opcional "por conveniência de migração". Ele existe para que acessibilidade não
   volte a ser auditoria de fim de projeto.
+- **Não** faça push direto na `main`. Todo repositório da Bananas exige pull
+  request — existe um ruleset ativo, e quem é admin passa por cima dele sem
+  querer, com um aviso fácil de perder na saída do `git push`. Trabalhe em branch
+  e abra PR. Tag de release é exceção: a regra é de branch, e `core-v*` é outra
+  referência.
 - Rode `pnpm check` antes de concluir qualquer alteração.
 
 ## Onde as decisões vivem

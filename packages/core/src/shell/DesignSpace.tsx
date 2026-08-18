@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { ProductDefinition, ScenarioContext } from "../types/index.js";
 import { createRegistry } from "../registry/index.js";
-import { useDesignSpaceState } from "../controls/state.js";
+import { scenarioView, useDesignSpaceState } from "../controls/state.js";
 import { resolveRoute } from "../router/index.js";
 import { fixtureAdapter } from "../adapters/index.js";
 import { useScenarioData } from "../adapters/useScenarioData.js";
@@ -22,6 +22,13 @@ import { Inspector } from "./Inspector.js";
 import { Stage, StageEmpty, TabOrderOverlay } from "./Stage.js";
 import { Home } from "./Home.js";
 import { LabelsContext, resolveLabels } from "./labels.js";
+import {
+  applyHandoffScope,
+  handoffAllowsComponent,
+  handoffAllowsPath,
+  handoffAllowsScenario,
+} from "../handoff/index.js";
+import { PARAM } from "../controls/params.js";
 import "./shell.css";
 
 export type DesignSpaceProps = {
@@ -32,14 +39,78 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   const registry = useMemo(() => createRegistry(product), [product]);
   const labels = useMemo(() => resolveLabels(product.theme?.labels), [product.theme?.labels]);
   const deploy = useMemo(() => getDeployContext(product.deploy), [product.deploy]);
-  const { location, controls, viewport, setControls, navigate, openScenario, openComponent } =
-    useDesignSpaceState(registry);
+  const {
+    location,
+    controls,
+    viewport,
+    setControls,
+    setScenarioView,
+    navigate,
+    openScenario,
+    openComponent,
+  } = useDesignSpaceState(registry);
+  const view = scenarioView(controls);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const { focused, tabStops } = useKeyboardMode(controls.keyboardMode, stageRef);
 
+  // Links comuns da UI do produto não passam por `context.navigate`. Reescrever
+  // os destinos internos no palco mantém a allowlist em navegação normal, nova
+  // aba e "copiar endereço", sem alcançar links externos nem âncoras locais.
+  useEffect(() => {
+    const root = stageRef.current;
+    if (!root || !controls.handoff) return;
+
+    const preserveScope = () => {
+      for (const anchor of root.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+        const raw = anchor.getAttribute("href");
+        if (!raw || raw.startsWith("#")) continue;
+
+        let url: URL;
+        try {
+          url = new URL(raw, window.location.href);
+        } catch {
+          continue;
+        }
+        if (url.origin !== window.location.origin) continue;
+
+        applyHandoffScope(url.searchParams, controls.handoff);
+        const scoped = `${url.pathname}${url.search}${url.hash}`;
+        if (raw !== scoped) anchor.setAttribute("href", scoped);
+      }
+    };
+
+    preserveScope();
+    const observer = new MutationObserver(preserveScope);
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["href"],
+    });
+    return () => observer.disconnect();
+  }, [controls.handoff]);
+
   const scenario = registry.scenario(controls.scenario);
   const component = registry.component(controls.component);
+  const requested = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      scenario: params.get(PARAM.scenario) ?? undefined,
+      component: params.get(PARAM.component) ?? undefined,
+    };
+  }, [location.search]);
+  const handoffBlocked = Boolean(
+    controls.handoff && (
+      (requested.scenario && !handoffAllowsScenario(controls.handoff, requested.scenario)) ||
+      (requested.component && !handoffAllowsComponent(controls.handoff, requested.component)) ||
+      (!requested.component && !handoffAllowsPath(
+        controls.handoff,
+        location.path,
+        product.scenarios,
+      ))
+    ),
+  );
   const componentFixture = useMemo(
     () => registry.resolveComponentFixture(component?.id, component ? controls.fixture : undefined),
     [component, controls.fixture, registry],
@@ -141,14 +212,18 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   // A raiz sem cenário ativo é o mapa de situações, não uma tela do produto.
   // Quem recebe o link cru precisa ver o que existe antes de escolher; cair no
   // meio de um fluxo — ou num estado sem permissão — se lê como defeito.
-  const isHome = !scenario && !component && location.path === "/";
+  const isHome = !handoffBlocked && !scenario && !component && location.path === "/";
 
   const match = resolveRoute(product.routes, location.path);
   const Wrapper = product.wrapper;
   const NotFound = product.notFound;
 
   const Preview = component?.preview;
-  const screen = Preview ? (
+  const screen = handoffBlocked ? (
+    <StageEmpty title={labels.shell.outsideHandoff}>
+      <p>{labels.shell.outsideHandoffHint}</p>
+    </StageEmpty>
+  ) : Preview ? (
     <Preview
       fixture={componentFixture.fixture}
       data={componentData}
@@ -173,7 +248,9 @@ export function DesignSpace({ product }: DesignSpaceProps) {
     </StageEmpty>
   );
 
-  const stageContent = Wrapper ? <Wrapper context={context}>{screen}</Wrapper> : screen;
+  const stageContent = Wrapper && !handoffBlocked
+    ? <Wrapper context={context}>{screen}</Wrapper>
+    : screen;
 
   return (
     <LabelsContext.Provider value={labels}>
@@ -191,7 +268,8 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             deploy={deploy}
             inspectorOpen={controls.inspector}
             chromeTheme={controls.chromeTheme ?? "dark"}
-            showPorted={controls.showPorted ?? false}
+            view={view}
+            handoff={controls.handoff}
             onToggleInspector={() => setControls({ inspector: !controls.inspector })}
             onToggleChromeTheme={() =>
               setControls({ chromeTheme: controls.chromeTheme === "light" ? "dark" : "light" })
@@ -207,7 +285,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             controls={controls}
             onOpenScenario={openScenario}
             onOpenComponent={openComponent}
-            onShowPortedChange={(showPorted) => setControls({ showPorted })}
+            onViewChange={setScenarioView}
           />
         )}
 
@@ -216,7 +294,9 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             <div className="ds-stage-scroll">
               <Home
                 registry={registry}
-                showPorted={controls.showPorted ?? false}
+                view={view}
+                handoff={controls.handoff}
+                onViewChange={setScenarioView}
                 onOpenScenario={openScenario}
               />
             </div>

@@ -44,6 +44,12 @@ motor.
 
 Tokens são sempre exclusivos. O stack é padronizado; a aparência não.
 
+O motor também oferece um escopo de handoff serializado na URL: uma allowlist
+neutra de cenários, padrões de rota e componentes filtra as superfícies de
+descoberta e bloqueia navegação incidental fora do trabalho entregue. É um
+recorte de foco/UX, não uma fronteira de segurança; isolamento real continua
+responsabilidade do build ou da autenticação do produto.
+
 ## Desenvolvimento
 
 ```bash
@@ -111,8 +117,8 @@ Fases 1 e 2 construídas e verificadas localmente.
 
 | Repositório | Papel | Verificação |
 | --- | --- | --- |
-| `design-space/packages/core` | motor | typecheck, build, 67 testes |
-| `design-space/packages/template` | molde | typecheck, build, 10 testes, 15 jornadas |
+| `design-space/packages/core` | motor | typecheck, build, 131 testes |
+| `design-space/packages/template` | molde | typecheck, build, 13 testes, 17 jornadas |
 | produto piloto | 24 cenários | 45 testes, 75 jornadas com axe |
 | segundo produto | 8 cenários — validação da fronteira | 7 testes, 27 jornadas com axe |
 

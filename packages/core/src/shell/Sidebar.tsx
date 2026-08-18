@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Registry } from "../registry/index.js";
-import type { ComponentPreview, ControlsState, Scenario } from "../types/index.js";
+import type {
+  ComponentPreview,
+  ControlsState,
+  Scenario,
+  ScenarioView,
+} from "../types/index.js";
+import { scenarioView } from "../controls/state.js";
 import { useLabels } from "./labels.js";
 
 type SidebarMode = "flows" | "components";
@@ -14,7 +20,7 @@ export type SidebarProps = {
   controls: ControlsState;
   onOpenScenario: (scenarioId: string) => void;
   onOpenComponent: (componentId: string) => void;
-  onShowPortedChange: (showPorted: boolean) => void;
+  onViewChange: (view: ScenarioView) => void;
 };
 
 export function Sidebar({
@@ -24,7 +30,7 @@ export function Sidebar({
   controls,
   onOpenScenario,
   onOpenComponent,
-  onShowPortedChange,
+  onViewChange,
 }: SidebarProps) {
   const labels = useLabels();
   const [mode, setMode] = useState<SidebarMode>(activeComponent ? "components" : "flows");
@@ -32,6 +38,12 @@ export function Sidebar({
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef(new Map<string, HTMLButtonElement>());
+  const view = scenarioView(controls);
+  const handoff = controls.handoff;
+  const portedTotal = registry.byStatus("ported", { handoff }).length;
+  const viewTotal = registry.activeScenarios({ view, handoff }).length;
+  const viewLabel =
+    view === "ported" ? labels.sidebar.portedReferences(portedTotal) : labels.sidebar.activeWork;
 
   useEffect(() => {
     if (activeComponent) setMode("components");
@@ -52,29 +64,29 @@ export function Sidebar({
   const scenarioMatches = useMemo(() => {
     if (!query.trim()) return undefined;
     return new Set(
-      registry.search(query, { includePorted: controls.showPorted }).map((scenario) => scenario.id),
+      registry.search(query, { view, handoff }).map((scenario) => scenario.id),
     );
-  }, [controls.showPorted, query, registry]);
+  }, [handoff, query, registry, view]);
 
   const componentMatches = useMemo(() => {
     const needle = normalize(query);
-    return (registry.product.components ?? []).filter((component) =>
+    return registry.componentsFor(handoff).filter((component) =>
       normalize([component.name, component.id, component.group, component.description].join(" ")).includes(
         needle,
       ),
     );
-  }, [query, registry.product.components]);
+  }, [handoff, query, registry]);
 
   const visible = (scenarios: Scenario[]) =>
     scenarioMatches ? scenarios.filter((scenario) => scenarioMatches.has(scenario.id)) : scenarios;
 
   const navigationOptions = {
-    includePorted: controls.showPorted,
-    activeScenario: query.trim() ? undefined : activeScenario?.id,
+    view,
+    handoff,
   };
   const nodes = registry.treeFor(navigationOptions)
     .map((node) => ({ ...node, scenarios: visible(node.scenarios) }))
-    .filter((node) => (scenarioMatches ? node.scenarios.length > 0 : true));
+    .filter((node) => node.scenarios.length > 0);
   const orphans = visible(registry.orphansFor(navigationOptions));
   const scenarioTotal =
     nodes.reduce((sum, node) => sum + node.scenarios.length, 0) + orphans.length;
@@ -166,18 +178,26 @@ export function Sidebar({
         <kbd>{labels.sidebar.searchShortcut}</kbd>
       </div>
 
-      {mode === "flows" && (
-        <label className="ds-sidebar__option">
-          <input
-            type="checkbox"
-            checked={controls.showPorted ?? false}
-            onChange={(event) => onShowPortedChange(event.target.checked)}
-          />
-          <span>{labels.sidebar.showPorted}</span>
-        </label>
-      )}
+      <div
+        className="ds-sidebar__tree"
+        role="tabpanel"
+        aria-label={mode === "flows" ? labels.sidebar.currentView(viewLabel) : undefined}
+      >
+        {mode === "flows" && (
+          <header className="ds-sidebar__view-header">
+            <h2>{viewLabel}</h2>
+            {view === "ported" && (
+              <button
+                type="button"
+                className="ds-text-action"
+                onClick={() => onViewChange("active")}
+              >
+                {labels.sidebar.backToActive}
+              </button>
+            )}
+          </header>
+        )}
 
-      <div className="ds-sidebar__tree" role="tabpanel">
         {query.trim() !== "" && (
           <p className="ds-sidebar__empty" role="status">
             {mode === "flows"
@@ -190,16 +210,30 @@ export function Sidebar({
           </p>
         )}
 
-        {mode === "flows" ? (
+        {mode === "flows" && query.trim() === "" && viewTotal === 0 ? (
+          <div className="ds-sidebar__view-empty">
+            <p>
+              {view === "ported"
+                ? labels.sidebar.noPortedReferences
+                : labels.sidebar.noActiveWork}
+            </p>
+            {view === "active" && portedTotal > 0 && (
+              <button
+                type="button"
+                className="ds-text-action"
+                onClick={() => onViewChange("ported")}
+              >
+                {labels.sidebar.viewPorted(portedTotal)}
+              </button>
+            )}
+          </div>
+        ) : mode === "flows" ? (
           <ScenarioTree
             nodes={nodes}
             orphans={orphans}
             matches={scenarioMatches}
             collapsed={collapsed}
             activeScenario={activeScenario?.id}
-            showPorted={controls.showPorted ?? false}
-            activePortedLabel={labels.sidebar.activePorted}
-            emptyModuleLabel={labels.sidebar.emptyModule}
             withoutModuleLabel={labels.sidebar.withoutModule}
             onToggle={toggle}
             onOpen={onOpenScenario}
@@ -234,6 +268,18 @@ export function Sidebar({
         )}
       </div>
 
+      {mode === "flows" && view === "active" && viewTotal > 0 && portedTotal > 0 && (
+        <div className="ds-sidebar__view-footer">
+          <button
+            type="button"
+            className="ds-text-action"
+            onClick={() => onViewChange("ported")}
+          >
+            {labels.sidebar.viewPorted(portedTotal)}
+          </button>
+        </div>
+      )}
+
       {mode === "flows" && activeScenario && (
         <aside className="ds-sidebar__scope" aria-label={labels.sidebar.scope}>
           <h2>{labels.sidebar.scope}</h2>
@@ -257,9 +303,6 @@ type ScenarioTreeProps = {
   matches: Set<string> | undefined;
   collapsed: Set<string>;
   activeScenario: string | undefined;
-  showPorted: boolean;
-  activePortedLabel: string;
-  emptyModuleLabel: string;
   withoutModuleLabel: string;
   onToggle: (id: string) => void;
   onOpen: (id: string) => void;
@@ -289,7 +332,6 @@ function ScenarioTree(props: ScenarioTreeProps) {
                 {node.scenarios.map((scenario) => (
                   <ScenarioItem key={scenario.id} scenario={scenario} {...props} />
                 ))}
-                {node.scenarios.length === 0 && <li className="ds-sidebar__empty">{props.emptyModuleLabel}</li>}
               </ul>
             )}
           </section>
@@ -314,15 +356,15 @@ function ScenarioTree(props: ScenarioTreeProps) {
 function ScenarioItem({
   scenario,
   activeScenario,
-  showPorted,
-  activePortedLabel,
   onOpen,
   onKeyDown,
   setItemRef,
 }: ScenarioTreeProps & { scenario: Scenario }) {
-  const status = useLabels().status[scenario.status];
-  const isActiveHiddenReference =
-    scenario.status === "ported" && scenario.id === activeScenario && !showPorted;
+  const labels = useLabels();
+  const approvalIncomplete = scenario.status === "approved" && !scenario.approvedAt;
+  const status = approvalIncomplete
+    ? labels.inspector.approvalPendingStatus
+    : labels.status[scenario.status];
   return (
     <li>
       <button
@@ -333,12 +375,14 @@ function ScenarioItem({
         onClick={() => onOpen(scenario.id)}
         onKeyDown={(event) => onKeyDown(scenario.id, event)}
       >
-        <span className="ds-status-dot" data-status={scenario.status} title={status} />
+        <span
+          className="ds-status-dot"
+          data-status={scenario.status}
+          data-approval={approvalIncomplete ? "incomplete" : undefined}
+          title={status}
+        />
         <span className="ds-scenario__title">{scenario.title}</span>
         <span className="ds-visually-hidden">{status}</span>
-        {isActiveHiddenReference && (
-          <span className="ds-scenario__flag" title={activePortedLabel}>{status}</span>
-        )}
       </button>
     </li>
   );

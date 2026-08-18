@@ -46,6 +46,11 @@ export const approveBlocked: Scenario = {
     announces: ["request.status", "approval.result"],
   },
   status: "approved",
+  approvedAt: {
+    url: "https://review.example.test/commit/0123456/requests/REQ-2043",
+    commit: "0123456789abcdef",
+    date: "2026-08-13",
+  },
 };
 ```
 
@@ -71,16 +76,25 @@ proposta nem compromisso de implementação.
 | `implemented` | Implementado | Disponível no produto real e validado. |
 | `superseded` | Superado | Mantido para histórico ou substituído por outra decisão. |
 
+`approved` só representa uma aprovação completamente registrada quando
+`approvedAt` contém a URL imutável do commit, o SHA e a data. Sem esse registro, o
+Inspector mostra **Aprovado — registro pendente** e o validador emite o warning
+“Aprovação incompleta”; a referência não é apresentada como plenamente
+autorizada.
+
 `scenariosUnderTest()` inclui por padrão apenas `approved`, `in-implementation` e
 `implemented`. Cenários `ported` ficam fora até serem promovidos, mas podem ser
 selecionados explicitamente pelo segundo argumento.
 
-Na interface, `ported` também fica fora do trabalho ativo por padrão: não aparece
-na home, na árvore de Fluxos, na busca nem nas contagens ativas. A opção discreta
-**Mostrar portados** inclui essas referências e grava `showPorted=1` na URL. Um
-deep link direto continua abrindo um portado com a opção desligada e o mantém
-identificável como item ativo na navegação. O diagnóstico sempre avalia o catálogo
-completo.
+Na interface, `ported` vive numa coleção separada. **Trabalho ativo** mostra apenas
+cenários não portados; **Referências portadas** mostra apenas portados. A entrada
+textual “Ver N referências portadas” troca de coleção e grava `view=ported` na URL.
+Busca, home, módulos e contagens seguem a visão atual, sem renderizar módulos
+vazios. Um deep link direto para um portado infere a visão de referências mesmo
+sem o parâmetro. Links 0.4.0 com `showPorted=1` continuam sendo lidos e são
+normalizados para a nova visão. O diagnóstico sempre avalia o catálogo completo.
+A home também apresenta uma legenda estável com a cor, o rótulo e o significado
+de cada status; os chips de contagem continuam mostrando apenas a visão atual.
 
 ## A URL é o estado
 
@@ -91,10 +105,11 @@ rede declarados no cenário.
 | Parâmetro | Efeito |
 | --- | --- |
 | `scenario` | Cenário ativo. Define os padrões dos demais. |
+| `view=ported` | Abre a coleção de referências portadas. Omitido significa trabalho ativo. |
 | `component` | Referência ativa no catálogo visual do produto. |
 | `persona` | Troca o papel e as permissões. |
 | `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. |
-| `showPorted=1` | Inclui referências portadas na home, navegação, busca e contagens ativas. |
+| `showPorted=1` | Compatibilidade de leitura com links 0.4.0; equivale a `view=ported`. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
 | `viewport` | `fit`, `mobile`, `tablet`, `desktop`, `custom`. |
 | `w` | Largura, quando `viewport=custom`. |
@@ -105,6 +120,60 @@ rede declarados no cenário.
 | `motion=1` | Movimento reduzido no palco. |
 | `scale` | Ampliação de texto: `1`, `1.25`, `1.5`, `2`. |
 | `panel=0` | Oculta o painel de contexto. |
+| `handoff=1` | Ativa um recorte explícito de revisão/handoff. |
+| `allowScenario` | Cenário permitido; pode ser repetido e autoriza também a rota do cenário. |
+| `allowRoute` | Padrão de rota permitido, como `/requests/:id`; pode ser repetido. |
+| `allowComponent` | Componente permitido; pode ser repetido. |
+
+## Handoff focado por URL
+
+O handoff é uma allowlist transportada junto dos demais controles. Ela filtra
+Home, navegação, busca, flows, referências portadas e componentes. A raiz abre a
+Home já filtrada; uma tentativa de abrir cenário, rota ou componente fora da
+lista mostra um bloqueio claro sem montar a tela solicitada.
+
+```ts
+import {
+  scenarioUrl,
+  type HandoffScope,
+} from "@brucesantos/design-space";
+
+const handoff = {
+  scenarios: ["requests.approve-blocked", "requests.approve-allowed"],
+  routes: ["/help/:topic"],
+  components: ["actions.primary-button"],
+} satisfies HandoffScope;
+
+const url = scenarioUrl(approveBlocked, {
+  origin: "https://review.example.test",
+  overrides: { handoff },
+});
+```
+
+O endereço resultante usa parâmetros repetíveis e legíveis:
+
+```text
+?scenario=requests.approve-blocked&persona=approver&fixture=request-without-document&handoff=1&allowScenario=requests.approve-allowed&allowScenario=requests.approve-blocked&allowRoute=%2Fhelp%2F%3Atopic&allowComponent=actions.primary-button
+```
+
+As listas são uma união: cenários tornam suas próprias rotas acessíveis, rotas
+explícitas cobrem páginas sem cenário e componentes precisam ser listados
+separadamente. `applyHandoffScope()` e `parseHandoffScope()` constroem ou leem o
+mesmo contrato em URLs próprias.
+
+Este recorte é um bloqueio de foco/UX, **não segurança**. O bundle e o catálogo
+continuam no navegador. Preview público que precisa ocultar de fato o restante do
+produto exige build separado para o recorte ou autenticação/autorização no
+produto que publica o preview.
+
+### Escopo no Inspector
+
+Na aba Cenário, **Dados desta tarefa** reúne situação, reprodução, regras,
+critérios e aprovação; **Contexto herdado do produto e da persona** reúne objetivo
+e permissões efetivas. Em Acessibilidade, o contrato da tarefa, a inspeção da tela
+atual e os pares globais do produto têm agrupamentos próprios. Diagnóstico
+continua deliberadamente geral e identifica que avalia o catálogo inteiro,
+inclusive fora do handoff.
 
 ## API
 
@@ -164,8 +233,11 @@ e a revisão limpa preservam a aparência escolhida.
 - `createRegistry(product)` — índice consultável: busca por vocabulário de
   negócio, árvore de módulos, cobertura por status.
 - `activeScenarios()`, `treeFor()`, `orphansFor()`, `search()` e `coverage()` —
-  consultas de trabalho ativo; recebem `{ includePorted: true }` para incluir
-  material importado ainda não validado. `tree` e `issues` continuam completos.
+  consultam trabalho ativo por padrão e aceitam `{ view: "ported" }` para a
+  biblioteca de referências. `{ includePorted: true }` permanece disponível para
+  diagnóstico e consultas do catálogo completo. `tree` e `issues` continuam
+  completos. Todas aceitam também `{ handoff }`; `componentsFor(handoff)` aplica
+  o mesmo recorte ao catálogo visual.
 - `validateProduct(product)` / `validateScenario(scenario)` — validação em runtime
   do contrato. Pega fixture, persona, regra ou rota inexistente, que o TypeScript
   não alcança.

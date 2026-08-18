@@ -169,15 +169,22 @@ function ScenarioPanel({
   // que a captura de tela não seja lida como o cenário canônico.
   const personaOverridden = Boolean(controls.persona && controls.persona !== scenario.persona);
 
+  const approvalRecorded = scenario.status !== "approved" || Boolean(scenario.approvedAt);
+
   return (
     <>
+      <ScopeGroup
+        scope="task"
+        title={labels.taskScope}
+        description={labels.taskScopeDescription}
+      >
       <div className="ds-block">
         <h2 className="ds-block__title">{labels.situation}</h2>
         <p style={{ color: "var(--ds-fg)", fontSize: 14, fontWeight: 600 }}>{scenario.title}</p>
         {scenario.intent && <p>{scenario.intent}</p>}
         <div className="ds-chips">
-          <span className="ds-chip" data-tone={statusTone(scenario.status)}>
-            {all.status[scenario.status]}
+          <span className="ds-chip" data-tone={statusTone(scenario)}>
+            {approvalRecorded ? all.status[scenario.status] : labels.approvalPendingStatus}
           </span>
           {(scenario.tags ?? []).map((tag) => (
             <span className="ds-chip" key={tag}>
@@ -185,7 +192,9 @@ function ScenarioPanel({
             </span>
           ))}
         </div>
-        <p style={{ marginTop: 6 }}>{all.statusMeaning[scenario.status]}</p>
+        <p style={{ marginTop: 6 }}>
+          {approvalRecorded ? all.statusMeaning[scenario.status] : labels.approvalPendingMeaning}
+        </p>
       </div>
 
       <div className="ds-block">
@@ -195,35 +204,12 @@ function ScenarioPanel({
           <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>{scenario.id}</dd>
           <dt>{labels.route}</dt>
           <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>{scenario.route}</dd>
-          <dt>{labels.persona}</dt>
-          <dd>
-            {persona?.name ?? "—"}
-            {personaOverridden && (
-              <span className="ds-chip" data-tone="warn" style={{ marginLeft: 6 }}>
-                {labels.personaSwapped}
-              </span>
-            )}
-          </dd>
           <dt>{labels.data}</dt>
           <dd>{fixture?.label ?? "—"}</dd>
           <dt>{labels.network}</dt>
           <dd>{all.network[controls.network]}</dd>
         </dl>
-        {persona?.goal && <p style={{ marginTop: 8 }}>{labels.goal(persona.goal)}</p>}
       </div>
-
-      {permissions.length > 0 && (
-        <div className="ds-block">
-          <h2 className="ds-block__title">{labels.permissions}</h2>
-          <div className="ds-chips">
-            {permissions.map((permission) => (
-              <span className="ds-chip" key={permission}>
-                {permission}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {scenario.preconditions?.length ? (
         <div className="ds-block">
@@ -271,15 +257,23 @@ function ScenarioPanel({
         </div>
       ) : null}
 
-      {scenario.approvedAt && (
+      {(scenario.status === "approved" || scenario.approvedAt) && (
         <div className="ds-block">
           <h2 className="ds-block__title">{labels.approval}</h2>
-          <p>
-            {scenario.approvedAt.date} · <code>{scenario.approvedAt.commit.slice(0, 7)}</code>
-          </p>
-          <a href={scenario.approvedAt.url} target="_blank" rel="noreferrer">
-            {labels.openApproved}
-          </a>
+          {scenario.approvedAt ? (
+            <>
+              <p>
+                {scenario.approvedAt.date} · <code>{scenario.approvedAt.commit.slice(0, 7)}</code>
+              </p>
+              <a href={scenario.approvedAt.url} target="_blank" rel="noreferrer">
+                {labels.openApproved}
+              </a>
+            </>
+          ) : (
+            <p className="ds-note" data-tone="warn" role="alert">
+              {labels.approvalMissing}
+            </p>
+          )}
         </div>
       )}
 
@@ -289,6 +283,39 @@ function ScenarioPanel({
           <p>{scenario.ticket}</p>
         </div>
       )}
+      </ScopeGroup>
+
+      <ScopeGroup
+        scope="inherited"
+        title={labels.inheritedScope}
+        description={labels.inheritedScopeDescription}
+      >
+        <div className="ds-block">
+          <h2 className="ds-block__title">{labels.persona}</h2>
+          <p style={{ color: "var(--ds-fg)", fontWeight: 600 }}>
+            {persona?.name ?? "—"}
+            {personaOverridden && (
+              <span className="ds-chip" data-tone="warn" style={{ marginLeft: 6 }}>
+                {labels.personaSwapped}
+              </span>
+            )}
+          </p>
+          {persona?.goal && <p>{labels.goal(persona.goal)}</p>}
+        </div>
+
+        {permissions.length > 0 && (
+          <div className="ds-block">
+            <h2 className="ds-block__title">{labels.permissions}</h2>
+            <div className="ds-chips">
+              {permissions.map((permission) => (
+                <span className="ds-chip" key={permission}>
+                  {permission}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </ScopeGroup>
     </>
   );
 }
@@ -318,6 +345,11 @@ function A11yPanel({
   return (
     <>
       {scenario && (
+        <ScopeGroup
+          scope="task"
+          title={labels.taskScope}
+          description={labels.taskScopeDescription}
+        >
         <div className="ds-block">
           <h2 className="ds-block__title">{labels.a11yContract}</h2>
           <dl className="ds-kv">
@@ -340,8 +372,14 @@ function A11yPanel({
           ) : null}
           {scenario.a11y.notes && <p style={{ marginTop: 8 }}>{scenario.a11y.notes}</p>}
         </div>
+        </ScopeGroup>
       )}
 
+      <ScopeGroup
+        scope="screen"
+        title={labels.screenScope}
+        description={labels.screenScopeDescription}
+      >
       <div className="ds-block">
         <h2 className="ds-block__title">{labels.focusedElement}</h2>
         {!keyboardMode ? (
@@ -392,7 +430,13 @@ function A11yPanel({
           </>
         )}
       </div>
+      </ScopeGroup>
 
+      <ScopeGroup
+        scope="product"
+        title={labels.productScope}
+        description={labels.productScopeDescription}
+      >
       <div className="ds-block">
         <h2 className="ds-block__title">{labels.tokenContrast}</h2>
         {contrast.length === 0 ? (
@@ -446,6 +490,7 @@ function A11yPanel({
       </div>
 
       <p className="ds-note">{labels.automatedIsFloor}</p>
+      </ScopeGroup>
     </>
   );
 }
@@ -462,6 +507,11 @@ function DiagnosticsPanel({ registry }: { registry: Registry }) {
 
   return (
     <>
+      <ScopeGroup
+        scope="product"
+        title={labels.productScope}
+        description={labels.diagnosticsProductNotice}
+      >
       <div className="ds-block">
         <h2 className="ds-block__title">{labels.coverage}</h2>
         <dl className="ds-kv">
@@ -490,6 +540,7 @@ function DiagnosticsPanel({ registry }: { registry: Registry }) {
           ))
         )}
       </div>
+      </ScopeGroup>
     </>
   );
 }
@@ -504,6 +555,29 @@ const STATUS_TONES = {
   superseded: undefined,
 } satisfies Record<ScenarioStatus, "ok" | "warn" | undefined>;
 
-function statusTone(status: ScenarioStatus): "ok" | "warn" | undefined {
-  return STATUS_TONES[status];
+function statusTone(scenario: Pick<Scenario, "status" | "approvedAt">): "ok" | "warn" | undefined {
+  if (scenario.status === "approved" && !scenario.approvedAt) return "warn";
+  return STATUS_TONES[scenario.status];
+}
+
+function ScopeGroup({
+  scope,
+  title,
+  description,
+  children,
+}: {
+  scope: "task" | "inherited" | "screen" | "product";
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="ds-scope-group" data-scope={scope}>
+      <header className="ds-scope-group__header">
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </header>
+      {children}
+    </section>
+  );
 }

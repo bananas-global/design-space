@@ -8,10 +8,12 @@
  */
 
 import type { ControlsState } from "../types/index.js";
+import { applyHandoffScope } from "../handoff/index.js";
 
 /** Nomes curtos: a URL é colada em Slack, em ticket e em thread de revisão. */
 export const PARAM = {
   scenario: "scenario",
+  view: "view",
   showPorted: "showPorted",
   component: "component",
   persona: "persona",
@@ -28,7 +30,7 @@ export const PARAM = {
   reducedMotion: "motion",
   textScale: "scale",
   inspector: "panel",
-} as const satisfies Record<keyof ControlsState, string>;
+} as const satisfies Record<Exclude<keyof ControlsState, "handoff">, string>;
 
 /**
  * Serializa um valor de controle para a query string.
@@ -51,7 +53,15 @@ export function applyOverrides(
 ): void {
   for (const [key, value] of Object.entries(overrides)) {
     if (value === undefined || value === null) continue;
-    const param = PARAM[key as keyof ControlsState];
+    if (key === "handoff") {
+      applyHandoffScope(params, value as ControlsState["handoff"]);
+      continue;
+    }
+    if (key === "showPorted") {
+      if (value === true && overrides.view === undefined) params.set(PARAM.view, "ported");
+      continue;
+    }
+    const param = PARAM[key as Exclude<keyof ControlsState, "handoff">];
     if (!param) continue;
     params.set(param, serializeValue(value));
   }

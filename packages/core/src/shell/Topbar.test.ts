@@ -24,9 +24,20 @@ describe("retorno para a home", () => {
     expect(buildHomeUrl("https://example.test", "dark")).toBe("https://example.test/");
   });
 
-  it("preserva a inclusão de portados ao voltar para a home", () => {
-    expect(buildHomeUrl("https://example.test", "dark", true)).toBe(
-      "https://example.test/?showPorted=1",
+  it("preserva a visão de referências portadas ao voltar para a home", () => {
+    expect(buildHomeUrl("https://example.test", "dark", "ported")).toBe(
+      "https://example.test/?view=ported",
     );
+  });
+
+  it("preserva o escopo de handoff ao voltar para a Home filtrada", () => {
+    const url = new URL(buildHomeUrl("https://example.test", "dark", "active", {
+      scenarios: ["requests.queue"],
+      components: ["feedback.notice"],
+    }));
+
+    expect(url.searchParams.get("handoff")).toBe("1");
+    expect(url.searchParams.getAll("allowScenario")).toEqual(["requests.queue"]);
+    expect(url.searchParams.getAll("allowComponent")).toEqual(["feedback.notice"]);
   });
 });

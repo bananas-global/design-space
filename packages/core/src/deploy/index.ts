@@ -92,6 +92,7 @@ export function scenarioUrl(
   url.searchParams.set(PARAM.scenario, scenario.id);
   url.searchParams.set(PARAM.persona, scenario.persona);
   url.searchParams.set(PARAM.fixture, scenario.fixture);
+  if (scenario.status === "ported") url.searchParams.set(PARAM.view, "ported");
   if (scenario.network && scenario.network !== "success") {
     url.searchParams.set(PARAM.network, scenario.network);
   }

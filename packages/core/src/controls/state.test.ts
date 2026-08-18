@@ -21,6 +21,15 @@ const registry = createRegistry({
       status: "approved",
       network: "error",
     },
+    {
+      id: "requests.imported",
+      title: "Referência importada",
+      route: "/requests/imported",
+      persona: "analyst",
+      fixture: "request-approved",
+      a11y: { keyboard: "full", contrast: "AA" },
+      status: "ported",
+    },
   ],
   personas: [
     { id: "analyst", name: "Analista", permissions: [] },
@@ -129,15 +138,56 @@ describe("parseControls", () => {
     expect(serializeControls(controls, registry)).toBe("?component=feedback.notice");
   });
 
-  it("desliga portados por padrão e restaura a opção pela URL", () => {
-    expect(parseControls("", registry).showPorted).toBe(false);
+  it("usa trabalho ativo por padrão e restaura a visão semântica pela URL", () => {
+    expect(parseControls("", registry).view).toBe("active");
+    const controls = parseControls("?view=ported", registry);
+    expect(controls.view).toBe("ported");
+    expect(serializeControls(controls, registry)).toBe("?view=ported");
+  });
+
+  it("lê showPorted=1 como compatibilidade e passa a emitir a URL semântica", () => {
     const controls = parseControls("?showPorted=1", registry);
-    expect(controls.showPorted).toBe(true);
-    expect(serializeControls(controls, registry)).toBe("?showPorted=1");
+    expect(controls.view).toBe("ported");
+    expect(serializeControls(controls, registry)).toBe("?view=ported");
+  });
+
+  it("infere referências portadas ao abrir um portado por deep link", () => {
+    const controls = parseControls("?scenario=requests.imported", registry);
+    expect(controls.view).toBe("ported");
+    expect(serializeControls(controls, registry)).toBe(
+      "?scenario=requests.imported&view=ported",
+    );
   });
 });
 
 describe("serializeControls", () => {
+  it("restaura e preserva o escopo explícito de handoff", () => {
+    const search =
+      "?handoff=1&allowScenario=requests.approve-blocked&allowRoute=%2Fhelp%2F%3Atopic&allowComponent=actions.button";
+    const controls = parseControls(search, registry);
+
+    expect(controls.handoff).toEqual({
+      scenarios: ["requests.approve-blocked"],
+      routes: ["/help/:topic"],
+      components: ["actions.button"],
+    });
+    expect(parseControls(serializeControls(controls, registry), registry)).toEqual(controls);
+  });
+
+  it("não ativa cenário ou componente fora da allowlist", () => {
+    const scenario = parseControls(
+      "?scenario=requests.approve-blocked&handoff=1&allowScenario=requests.imported",
+      registry,
+    );
+    const component = parseControls(
+      "?component=actions.button&handoff=1&allowComponent=feedback.notice",
+      registry,
+    );
+
+    expect(scenario.scenario).toBeUndefined();
+    expect(component.component).toBeUndefined();
+  });
+
   it("omite o que já é o padrão do cenário, mantendo a URL curta", () => {
     const controls = parseControls("?scenario=requests.approve-blocked", registry);
     expect(serializeControls(controls, registry)).toBe("?scenario=requests.approve-blocked");

@@ -27,7 +27,7 @@ URL própria.
 1. Copie o diretório para um repositório novo, `<produto>-design-space`.
 2. Troque `name` no `package.json` — isso muda a porta de dev automaticamente.
 3. Troque a dependência do motor de `workspace:*` para a versão publicada
-   (`^0.4.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
+   (`^0.5.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
    `pnpm install` falha.
 4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente e
    atualize `src/tokens/contrast.ts` com os pares reais. O teste de tokens falha
@@ -147,9 +147,10 @@ Comentário resolvido na Toolbar não significa cenário aprovado. Aprovação m
 Cenário trazido do sistema existente sem validação começa como `ported`. Esse
 estado documenta a origem sem tratá-la como proposta ou compromisso de
 implementação; por padrão ele fica fora da home, árvore, busca e contagens de
-trabalho ativo. **Show ported** o inclui e persiste `showPorted=1` no link. Um
-deep link direto continua funcionando, e a revisão é que determina sua próxima
-etapa.
+trabalho ativo. A ação **View N ported references** abre uma coleção separada,
+contendo somente portados, e persiste `view=ported` no link. Um deep link direto
+infere essa visão mesmo sem o parâmetro, e a revisão é que determina sua próxima
+etapa. Links anteriores com `showPorted=1` continuam funcionando.
 
 A aba **Componentes** é alimentada por `ProductDefinition.components`. Cada item
 aponta para um preview React local: o motor organiza e cria o deep link, mas
@@ -160,6 +161,13 @@ se misturam às fixtures de cenário em `src/fixtures/`. O exemplo `actions.butt
 cobre padrão, preenchido, vazio, carregando, erro, desabilitado e conteúdo longo;
 `feedback.status` demonstra que um componente antigo sem fixture continua válido.
 Estado interativo efêmero, como foco ou modal aberto, permanece local ao preview.
+
+Para entrega à engenharia, `HandoffScope` limita por URL os cenários, padrões de
+rota e componentes autorizados. O motor aplica a allowlist à Home, busca,
+navegação, flows, portados e catálogo visual e bloqueia tentativas fora do
+recorte. O modelo está em [`docs/handoff.md`](docs/handoff.md). Esse mecanismo é
+foco de UX, não isolamento: preview que precisa ocultar o catálogo exige build
+separado ou autenticação/autorização próprias.
 
 O chrome do template usa en-US e oferece dark/light mode na topbar. A aparência
 é independente do tema do produto e viaja no deep link como `appearance=light`.

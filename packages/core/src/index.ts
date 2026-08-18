@@ -56,6 +56,17 @@ export {
 } from "./controls/state.js";
 export { PARAM, applyOverrides, serializeValue } from "./controls/params.js";
 
+/* ----------------------------------- handoff */
+export {
+  HANDOFF_PARAM,
+  applyHandoffScope,
+  handoffAllowsComponent,
+  handoffAllowsPath,
+  handoffAllowsScenario,
+  normalizeHandoffScope,
+  parseHandoffScope,
+} from "./handoff/index.js";
+
 /* ---------------------------------- adapters */
 export {
   SLOW_NETWORK_DELAY_MS,
@@ -125,6 +136,7 @@ export {
   type Fixture,
   type Flow,
   type FlowStep,
+  type HandoffScope,
   type KeyboardCoverage,
   type Module,
   type NetworkState,
@@ -136,6 +148,7 @@ export {
   type Scenario,
   type ScenarioContext,
   type ScenarioStatus,
+  type ScenarioView,
   type ScreenProps,
   type ViewportSetting,
 } from "./types/index.js";

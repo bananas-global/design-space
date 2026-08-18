@@ -6,6 +6,77 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.6.0 (2026-08-13)
+
+### Adicionado
+
+- **Escopo explícito de handoff por URL.** `HandoffScope` traz allowlists neutras
+  de cenários, padrões de rota e componentes. O formato legível usa `handoff=1`
+  com parâmetros repetíveis `allowScenario`, `allowRoute` e `allowComponent`.
+- Home, árvore, busca, flows, referências portadas e catálogo de componentes
+  respeitam o recorte. Navegação interna e links de Home/revisão limpa o
+  preservam; tentativas fora do escopo recebem mensagem clara sem montar a tela
+  solicitada.
+- Helpers públicos `applyHandoffScope`, `parseHandoffScope`,
+  `normalizeHandoffScope`, `handoffAllowsScenario`, `handoffAllowsPath` e
+  `handoffAllowsComponent` permitem construir e verificar o mesmo contrato fora
+  do shell. `scenarioUrl()` e `componentUrl()` aceitam o recorte em
+  `overrides.handoff`.
+
+### Alterado
+
+- O Inspector agrupa visual e semanticamente dados da tarefa e contexto herdado
+  do produto/persona. A aba Acessibilidade distingue contrato da tarefa,
+  inspeção ao vivo da tela e verificações gerais do produto; Diagnóstico declara
+  que continua avaliando o catálogo inteiro.
+- Cenário `approved` sem `approvedAt` aparece como **Aprovado — registro
+  pendente**, com alerta no painel e warning equivalente no validador. O status
+  e o marcador só recebem tratamento completo de aprovação quando existe uma URL
+  de commit registrada.
+
+O handoff é bloqueio de foco/UX, não controle de acesso. Preview que exige
+isolamento real precisa de build separado ou autenticação/autorização no produto.
+Não há mudança obrigatória no schema de `Scenario` nem nos catálogos existentes.
+
+## 0.5.1 (2026-08-12)
+
+### Adicionado
+
+- A home agora traz uma legenda dos sete status com o mesmo marcador colorido da
+  navegação, o rótulo e o significado completo. A informação permanece textual
+  e compreensível sem depender apenas de cor, responde em duas ou uma coluna e
+  continua sobrescrevível por `theme.labels`.
+
+## 0.5.0 (2026-08-12)
+
+### Adicionado
+
+- Visões separadas **Trabalho ativo** e **Referências portadas**. A segunda é
+  reproduzível com `view=ported`, mostra somente cenários `ported` e oferece
+  retorno textual ao trabalho ativo.
+- `ScenarioView` e `ControlsState.view` modelam a coleção atual. As consultas do
+  registry aceitam `{ view: "ported" }`; `{ includePorted: true }` continua
+  representando o catálogo completo para diagnóstico.
+- Estados vazios únicos oferecem “Ver N referências portadas” no próprio
+  contexto. Quando existe trabalho ativo, a mesma entrada fica discreta na
+  navegação e na home.
+
+### Alterado
+
+- Módulos sem cenários na visão ou busca atual deixam de ser renderizados. Não há
+  mais contador zero, chevron ou mensagem vazia por módulo.
+- Home, busca, jornadas, árvore e contagens operam somente sobre a visão atual.
+  O diagnóstico continua avaliando todo o catálogo.
+- O checkbox aditivo “Mostrar portados” foi removido. A troca de visão usa botão
+  textual semântico, com foco visível e nome da visão anunciado na região.
+- Deep links diretos para portados inferem a visão de referências. Links antigos
+  com `showPorted=1` continuam aceitos na leitura e passam a ser serializados como
+  `view=ported`.
+
+Migração: nenhuma obrigatória. Produtos que montam links ou controles próprios
+com `showPorted` podem migrar para `view: "ported"`; links existentes continuam
+funcionando. Nenhuma mudança é necessária no catálogo de cenários.
+
 ## 0.4.0 (2026-08-12)
 
 ### Adicionado

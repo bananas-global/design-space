@@ -17,10 +17,22 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChromeTheme, ControlsState, NetworkState, ViewportSetting } from "../types/index.js";
+import type {
+  ChromeTheme,
+  ControlsState,
+  NetworkState,
+  ScenarioView,
+  ViewportSetting,
+} from "../types/index.js";
 import type { Registry } from "../registry/index.js";
 import { NETWORK_STATES } from "../types/index.js";
 import { PARAM } from "./params.js";
+import {
+  applyHandoffScope,
+  handoffAllowsComponent,
+  handoffAllowsScenario,
+  parseHandoffScope,
+} from "../handoff/index.js";
 
 export const VIEWPORTS: readonly ViewportSetting[] = [
   { id: "fit", label: "Ajustar" },
@@ -44,10 +56,15 @@ export type DesignSpaceLocation = {
  */
 export function parseControls(search: string, registry: Registry): ControlsState {
   const params = new URLSearchParams(search);
+  const handoff = parseHandoffScope(params);
   const componentId = params.get(PARAM.component) ?? undefined;
-  const component = registry.component(componentId);
+  const component = handoffAllowsComponent(handoff, componentId)
+    ? registry.component(componentId)
+    : undefined;
   const scenarioId = params.get(PARAM.scenario) ?? undefined;
-  const scenario = component ? undefined : registry.scenario(scenarioId);
+  const scenario = component || !handoffAllowsScenario(handoff, scenarioId)
+    ? undefined
+    : registry.scenario(scenarioId);
   const requestedFixture = params.get(PARAM.fixture) ?? undefined;
   const componentFixture = component
     ? requestedFixture ??
@@ -57,10 +74,19 @@ export function parseControls(search: string, registry: Registry): ControlsState
 
   const network = params.get(PARAM.network);
   const scale = Number(params.get(PARAM.textScale));
+  const requestedView = params.get(PARAM.view);
+  const view: ScenarioView =
+    scenario?.status === "ported" ||
+    requestedView === "ported" ||
+    params.get(PARAM.showPorted) === "1"
+      ? "ported"
+      : "active";
 
   return {
     scenario: scenario?.id,
-    showPorted: params.get(PARAM.showPorted) === "1",
+    handoff,
+    view,
+    showPorted: view === "ported",
     component: component?.id,
     persona: params.get(PARAM.persona) ?? scenario?.persona,
     fixture: component ? componentFixture : requestedFixture ?? scenario?.fixture,
@@ -94,7 +120,7 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   if (state.component) params.set(PARAM.component, state.component);
   else if (state.scenario) params.set(PARAM.scenario, state.scenario);
 
-  if (state.showPorted) params.set(PARAM.showPorted, "1");
+  if (scenarioView(state) === "ported") params.set(PARAM.view, "ported");
 
   // Persona e fixture só entram quando divergem do cenário: um link com a
   // combinação declarada não precisa repeti-la, e um link com combinação
@@ -135,6 +161,7 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   if (state.reducedMotion) params.set(PARAM.reducedMotion, "1");
   if (state.textScale !== 1) params.set(PARAM.textScale, String(state.textScale));
   if (!state.inspector) params.set(PARAM.inspector, "0");
+  applyHandoffScope(params, state.handoff);
 
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -146,6 +173,8 @@ export type DesignSpaceState = {
   viewport: ViewportSetting;
   /** Altera um ou mais controles, preservando a rota. */
   setControls: (patch: Partial<ControlsState>) => void;
+  /** Troca entre trabalho ativo e referências portadas sem misturar coleções. */
+  setScenarioView: (view: ScenarioView) => void;
   /** Navega para uma rota, preservando os controles ativos. */
   navigate: (to: string, options?: { replace?: boolean }) => void;
   /**
@@ -184,10 +213,42 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
 
   const setControls = useCallback(
     (patch: Partial<ControlsState>) => {
-      const next = { ...controls, ...patch };
+      const patchedView =
+        patch.view ??
+        (patch.showPorted === undefined ? undefined : patch.showPorted ? "ported" : "active");
+      const next = {
+        ...controls,
+        ...patch,
+        ...(patchedView
+          ? { view: patchedView, showPorted: patchedView === "ported" }
+          : {}),
+      };
       // Troca de controle é replace, não push: o histórico do navegador deve
       // registrar navegação entre situações, não cada ajuste de viewport.
       push(location.path, serializeControls(next, registry), true);
+    },
+    [controls, location.path, push, registry],
+  );
+
+  const setScenarioView = useCallback(
+    (view: ScenarioView) => {
+      const scenario = registry.scenario(controls.scenario);
+      const scenarioBelongsToView =
+        !scenario || (view === "ported" ? scenario.status === "ported" : scenario.status !== "ported");
+      const next: ControlsState = {
+        ...controls,
+        view,
+        showPorted: view === "ported",
+        ...(scenarioBelongsToView
+          ? {}
+          : {
+              scenario: undefined,
+              persona: undefined,
+              fixture: undefined,
+              network: "success",
+            }),
+      };
+      push(scenarioBelongsToView ? location.path : "/", serializeControls(next, registry), false);
     },
     [controls, location.path, push, registry],
   );
@@ -197,21 +258,27 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
       const [rawPath, rawSearch] = to.split("?");
       const path = rawPath || "/";
       // Uma rota com query própria manda; sem query, os controles seguem.
-      const search = rawSearch ? `?${rawSearch}` : location.search;
+      const targetParams = new URLSearchParams(rawSearch ?? location.search);
+      // Uma navegação iniciada pela UI do produto não pode apagar o recorte do
+      // handoff ao fornecer sua própria query string.
+      if (controls.handoff) applyHandoffScope(targetParams, controls.handoff);
+      const targetQuery = targetParams.toString();
+      const search = targetQuery ? `?${targetQuery}` : "";
       push(path, search, options?.replace ?? false);
     },
-    [location.search, push],
+    [controls.handoff, location.search, push],
   );
 
   const openScenario = useCallback(
     (scenarioId: string) => {
       const scenario = registry.scenario(scenarioId);
-      if (!scenario) return;
+      if (!scenario || !handoffAllowsScenario(controls.handoff, scenarioId)) return;
 
       const next: ControlsState = {
         ...controls,
         scenario: scenario.id,
-        showPorted: controls.showPorted,
+        view: scenario.status === "ported" ? "ported" : "active",
+        showPorted: scenario.status === "ported",
         component: undefined,
         persona: scenario.persona,
         fixture: scenario.fixture,
@@ -225,7 +292,7 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
   const openComponent = useCallback(
     (componentId: string) => {
       const component = registry.component(componentId);
-      if (!component) return;
+      if (!component || !handoffAllowsComponent(controls.handoff, componentId)) return;
 
       const next: ControlsState = {
         ...controls,
@@ -245,7 +312,21 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
 
   const viewport = useMemo(() => resolveViewport(controls), [controls]);
 
-  return { location, controls, viewport, setControls, navigate, openScenario, openComponent };
+  return {
+    location,
+    controls,
+    viewport,
+    setControls,
+    setScenarioView,
+    navigate,
+    openScenario,
+    openComponent,
+  };
+}
+
+/** Resolve objetos 0.4.0 que ainda só carregam `showPorted`. */
+export function scenarioView(state: Pick<ControlsState, "view" | "showPorted">): ScenarioView {
+  return state.view ?? (state.showPorted ? "ported" : "active");
 }
 
 export function resolveViewport(controls: ControlsState): ViewportSetting {

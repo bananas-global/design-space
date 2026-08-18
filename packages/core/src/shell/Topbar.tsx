@@ -13,7 +13,14 @@ import { useState } from "react";
 import type { DeployContext } from "../deploy/index.js";
 import { scenarioUrl } from "../deploy/index.js";
 import { PARAM } from "../controls/params.js";
-import type { ChromeTheme, ProductDefinition, Scenario } from "../types/index.js";
+import { applyHandoffScope } from "../handoff/index.js";
+import type {
+  ChromeTheme,
+  HandoffScope,
+  ProductDefinition,
+  Scenario,
+  ScenarioView,
+} from "../types/index.js";
 import { useLabels } from "./labels.js";
 
 export type TopbarProps = {
@@ -22,7 +29,8 @@ export type TopbarProps = {
   deploy: DeployContext;
   inspectorOpen: boolean;
   chromeTheme: ChromeTheme;
-  showPorted: boolean;
+  view: ScenarioView;
+  handoff?: HandoffScope;
   onToggleInspector: () => void;
   onToggleChromeTheme: () => void;
 };
@@ -33,7 +41,8 @@ export function Topbar({
   deploy,
   inspectorOpen,
   chromeTheme,
-  showPorted,
+  view,
+  handoff,
   onToggleInspector,
   onToggleChromeTheme,
 }: TopbarProps) {
@@ -48,7 +57,8 @@ export function Topbar({
           origin: deploy.origin,
           overrides: {
             ...(chromeTheme === "light" ? { chromeTheme } : {}),
-            ...(showPorted ? { showPorted: true } : {}),
+            ...(view === "ported" ? { view } : {}),
+            ...(handoff ? { handoff } : {}),
           },
         })
       : `${deploy.origin}${window.location.pathname}${window.location.search}`;
@@ -68,7 +78,7 @@ export function Topbar({
   const cleanReviewUrl = buildCleanReviewUrl(
     typeof window === "undefined" ? `${deploy.origin}/` : window.location.href,
   );
-  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme, showPorted);
+  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme, view, handoff);
 
   return (
     <header className="ds-chrome ds-topbar">
@@ -144,11 +154,13 @@ export function buildCleanReviewUrl(href: string): string {
 export function buildHomeUrl(
   origin: string,
   chromeTheme: ChromeTheme,
-  showPorted = false,
+  view: ScenarioView = "active",
+  handoff?: HandoffScope,
 ): string {
   const url = new URL("/", origin);
   if (chromeTheme === "light") url.searchParams.set(PARAM.chromeTheme, chromeTheme);
-  if (showPorted) url.searchParams.set(PARAM.showPorted, "1");
+  if (view === "ported") url.searchParams.set(PARAM.view, "ported");
+  applyHandoffScope(url.searchParams, handoff);
   return url.toString();
 }
 

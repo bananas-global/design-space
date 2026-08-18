@@ -61,7 +61,11 @@ describe("validateScenario", () => {
 
   it("avisa quando um cenário aprovado não registra a URL de commit", () => {
     const issues = validateScenario(scenario({ status: "approved" }));
-    expect(issues.some((i) => i.level === "warning" && i.message.includes("approvedAt"))).toBe(true);
+    expect(issues.some((i) =>
+      i.level === "warning" &&
+      i.message.includes("Aprovação incompleta") &&
+      i.message.includes("approvedAt"),
+    )).toBe(true);
   });
 
   it("avisa quando falta critério de aceite", () => {
@@ -199,6 +203,33 @@ describe("createRegistry", () => {
     expect(registry.search("nada disso")).toEqual([]);
   });
 
+  it("aplica o handoff a busca, árvore, cobertura, status e componentes", () => {
+    const custom = createRegistry(product({
+      scenarios: [
+        scenario({ id: "requests.allowed", title: "Permitido" }),
+        scenario({ id: "requests.hidden", title: "Oculto" }),
+      ],
+      components: [
+        { id: "feedback.allowed", name: "Permitido", preview: () => null },
+        { id: "feedback.hidden", name: "Oculto", preview: () => null },
+      ],
+    }));
+    const handoff = {
+      scenarios: ["requests.allowed"],
+      components: ["feedback.allowed"],
+    };
+
+    expect(custom.search("", { handoff }).map((item) => item.id)).toEqual(["requests.allowed"]);
+    expect(custom.treeFor({ handoff })[0]?.scenarios.map((item) => item.id)).toEqual([
+      "requests.allowed",
+    ]);
+    expect(custom.coverage({ handoff })["in-review"]).toBe(1);
+    expect(custom.byStatus("in-review", { handoff }).map((item) => item.id)).toEqual([
+      "requests.allowed",
+    ]);
+    expect(custom.componentsFor(handoff).map((item) => item.id)).toEqual(["feedback.allowed"]);
+  });
+
   it("esconde portados das consultas de trabalho ativo por padrão", () => {
     const custom = createRegistry(product({
       scenarios: [
@@ -213,6 +244,17 @@ describe("createRegistry", () => {
     expect(custom.scenariosForRoute("/requests/REQ-2043").map((item) => item.id))
       .toEqual(["requests.review"]);
     expect(custom.coverage().ported).toBe(0);
+
+    expect(custom.activeScenarios({ view: "ported" }).map((item) => item.id)).toEqual([
+      "requests.imported",
+    ]);
+    expect(custom.search("revisão", { view: "ported" })).toEqual([]);
+    expect(custom.search("importada", { view: "ported" })).toHaveLength(1);
+    expect(custom.treeFor({ view: "ported" })[0]?.scenarios.map((item) => item.id)).toEqual([
+      "requests.imported",
+    ]);
+    expect(custom.coverage({ view: "ported" }).ported).toBe(1);
+    expect(custom.coverage({ view: "ported" })["in-review"]).toBe(0);
 
     expect(custom.activeScenarios({ includePorted: true })).toHaveLength(2);
     expect(custom.search("importada", { includePorted: true })).toHaveLength(1);

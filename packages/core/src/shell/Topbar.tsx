@@ -22,6 +22,7 @@ export type TopbarProps = {
   deploy: DeployContext;
   inspectorOpen: boolean;
   chromeTheme: ChromeTheme;
+  showPorted: boolean;
   onToggleInspector: () => void;
   onToggleChromeTheme: () => void;
 };
@@ -32,6 +33,7 @@ export function Topbar({
   deploy,
   inspectorOpen,
   chromeTheme,
+  showPorted,
   onToggleInspector,
   onToggleChromeTheme,
 }: TopbarProps) {
@@ -44,7 +46,10 @@ export function Topbar({
     const url = scenario
       ? scenarioUrl(scenario, {
           origin: deploy.origin,
-          overrides: chromeTheme === "light" ? { chromeTheme } : undefined,
+          overrides: {
+            ...(chromeTheme === "light" ? { chromeTheme } : {}),
+            ...(showPorted ? { showPorted: true } : {}),
+          },
         })
       : `${deploy.origin}${window.location.pathname}${window.location.search}`;
 
@@ -63,7 +68,7 @@ export function Topbar({
   const cleanReviewUrl = buildCleanReviewUrl(
     typeof window === "undefined" ? `${deploy.origin}/` : window.location.href,
   );
-  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme);
+  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme, showPorted);
 
   return (
     <header className="ds-chrome ds-topbar">
@@ -136,9 +141,14 @@ export function buildCleanReviewUrl(href: string): string {
   return url.toString();
 }
 
-export function buildHomeUrl(origin: string, chromeTheme: ChromeTheme): string {
+export function buildHomeUrl(
+  origin: string,
+  chromeTheme: ChromeTheme,
+  showPorted = false,
+): string {
   const url = new URL("/", origin);
   if (chromeTheme === "light") url.searchParams.set(PARAM.chromeTheme, chromeTheme);
+  if (showPorted) url.searchParams.set(PARAM.showPorted, "1");
   return url.toString();
 }
 

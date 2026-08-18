@@ -6,7 +6,43 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
-## 0.3.0 (não publicado)
+## 0.4.0 (2026-08-12)
+
+### Adicionado
+
+- **Fixtures próprias para previews de componentes.** `ComponentPreview<T>` aceita
+  `fixtures` e `defaultFixture`; cada `ComponentPreviewFixture<T>` tem id estável,
+  rótulo, descrição opcional e dados sintéticos como valor ou factory determinística.
+- `ComponentPreviewProps<T>` entrega fixture resolvida, dados, viewport, tema,
+  idioma e preferências de acessibilidade ao preview. Previews 0.3.0 sem props e
+  componentes sem fixtures continuam válidos.
+- O deep link de componente passa a incluir sua fixture:
+  `?component=actions.button&fixture=disabled`. `componentUrl()` monta esse link.
+- O validador detecta ids inválidos ou duplicados dentro do componente e
+  `defaultFixture` inexistente. Uma fixture desconhecida na URL cai explicitamente
+  no default (ou na primeira) e mostra o fallback no painel.
+- Opção discreta **Mostrar portados**, reproduzível como `showPorted=1`.
+
+### Alterado
+
+- Cenários `ported` deixam de aparecer por padrão na home, árvore de Fluxos,
+  busca, jornadas e contagens de trabalho ativo. Continuam em
+  `ProductDefinition`, `registry.tree`, `registry.issues`, `byStatus()`, diagnóstico,
+  deep links diretos e continuam fora de `scenariosUnderTest()`.
+- `Registry.search()`, `coverage()` e `scenariosForRoute()` agora consultam trabalho
+  ativo por padrão; `{ includePorted: true }` restaura o catálogo completo.
+  `activeScenarios()`, `treeFor()` e `orphansFor()` tornam o recorte explícito.
+- Um produto contendo somente portados mostra que não há trabalho ativo. Um
+  portado aberto por deep link continua visível como item ativo na navegação,
+  mesmo com a opção desligada.
+- O painel de componente passa a mostrar nome, grupo, id, fixture ativa e as
+  descrições do componente e da fixture.
+
+Migração: nenhuma obrigatória para consumidores 0.3.0. Para adotar dados por
+componente, tipar o preview com `ComponentPreviewProps<T>` e declarar `fixtures`.
+Fixtures globais de cenário não são usadas automaticamente por componentes.
+
+## 0.3.0
 
 ### Adicionado
 

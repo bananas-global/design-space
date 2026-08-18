@@ -17,7 +17,12 @@
  * revisão omite branch e commit.
  */
 
-import type { ControlsState, DeployOverrides, Scenario } from "../types/index.js";
+import type {
+  ComponentPreview,
+  ControlsState,
+  DeployOverrides,
+  Scenario,
+} from "../types/index.js";
 import { PARAM, applyOverrides } from "../controls/params.js";
 
 export type DeployContext = {
@@ -91,6 +96,29 @@ export function scenarioUrl(
     url.searchParams.set(PARAM.network, scenario.network);
   }
 
+  applyOverrides(url.searchParams, options.overrides);
+
+  return url.toString();
+}
+
+/** URL absoluta de um preview de componente, incluindo sua fixture isolada. */
+export function componentUrl(
+  component: ComponentPreview,
+  options: {
+    origin?: string;
+    fixture?: string;
+    overrides?: Partial<ControlsState>;
+  } = {},
+): string {
+  const origin = options.origin ?? getDeployContext().origin;
+  const url = new URL("/", origin);
+  const fixture =
+    options.fixture ??
+    component.fixtures?.find((item) => item.id === component.defaultFixture)?.id ??
+    component.fixtures?.[0]?.id;
+
+  url.searchParams.set(PARAM.component, component.id);
+  if (fixture) url.searchParams.set(PARAM.fixture, fixture);
   applyOverrides(url.searchParams, options.overrides);
 
   return url.toString();

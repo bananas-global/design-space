@@ -75,6 +75,13 @@ proposta nem compromisso de implementação.
 `implemented`. Cenários `ported` ficam fora até serem promovidos, mas podem ser
 selecionados explicitamente pelo segundo argumento.
 
+Na interface, `ported` também fica fora do trabalho ativo por padrão: não aparece
+na home, na árvore de Fluxos, na busca nem nas contagens ativas. A opção discreta
+**Mostrar portados** inclui essas referências e grava `showPorted=1` na URL. Um
+deep link direto continua abrindo um portado com a opção desligada e o mantém
+identificável como item ativo na navegação. O diagnóstico sempre avalia o catálogo
+completo.
+
 ## A URL é o estado
 
 Todo controle é serializado na query string, então a mesma URL sempre produz a
@@ -86,7 +93,8 @@ rede declarados no cenário.
 | `scenario` | Cenário ativo. Define os padrões dos demais. |
 | `component` | Referência ativa no catálogo visual do produto. |
 | `persona` | Troca o papel e as permissões. |
-| `fixture` | Troca o conjunto de dados. |
+| `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. |
+| `showPorted=1` | Inclui referências portadas na home, navegação, busca e contagens ativas. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
 | `viewport` | `fit`, `mobile`, `tablet`, `desktop`, `custom`. |
 | `w` | Largura, quando `viewport=custom`. |
@@ -155,6 +163,9 @@ e a revisão limpa preservam a aparência escolhida.
 
 - `createRegistry(product)` — índice consultável: busca por vocabulário de
   negócio, árvore de módulos, cobertura por status.
+- `activeScenarios()`, `treeFor()`, `orphansFor()`, `search()` e `coverage()` —
+  consultas de trabalho ativo; recebem `{ includePorted: true }` para incluir
+  material importado ainda não validado. `tree` e `issues` continuam completos.
 - `validateProduct(product)` / `validateScenario(scenario)` — validação em runtime
   do contrato. Pega fixture, persona, regra ou rota inexistente, que o TypeScript
   não alcança.
@@ -165,6 +176,26 @@ O catálogo é opcional. O motor fornece navegação, busca e deep link; cada pr
 continua sendo UI do produto:
 
 ```tsx
+type ButtonData = {
+  label: string;
+  disabled?: boolean;
+};
+
+function PrimaryButtonPreview({
+  fixture,
+  data,
+  viewport,
+  themeMode,
+  locale,
+  a11y,
+}: ComponentPreviewProps<ButtonData>) {
+  return (
+    <button disabled={data?.disabled} data-viewport={viewport.id}>
+      {data?.label ?? fixture?.label ?? "Botão"}
+    </button>
+  );
+}
+
 const product: ProductDefinition = {
   // ...
   components: [
@@ -174,13 +205,58 @@ const product: ProductDefinition = {
       group: "Ações",
       description: "Ação principal da página",
       preview: PrimaryButtonPreview,
+      defaultFixture: "default",
+      fixtures: [
+        {
+          id: "default",
+          label: "Padrão",
+          description: "Ação pronta para uso.",
+          data: { label: "Continuar" },
+        },
+        {
+          id: "disabled",
+          label: "Desabilitado",
+          data: () => ({ label: "Continuar", disabled: true }),
+        },
+        {
+          id: "long-content",
+          label: "Conteúdo longo",
+          data: { label: "Continuar para a próxima etapa do processo" },
+        },
+      ],
     },
   ],
 };
 ```
 
-Abrir um item produz `?component=actions.primary-button`, compartilhável como os
-deep links de cenário. `ComponentPreview` é o tipo público desse contrato.
+Abrir o exemplo produz
+`?component=actions.primary-button&fixture=default`; trocar os dados para o
+estado desabilitado produz
+`?component=actions.primary-button&fixture=disabled`. O seletor só aparece quando
+o componente declara fixtures. Se a URL pedir uma fixture inexistente, o preview
+usa `defaultFixture` (ou a primeira fixture) e o painel nomeia o fallback; a URL
+inválida não é descartada silenciosamente.
+
+`ComponentPreview`, `ComponentPreviewFixture` e `ComponentPreviewProps` são os
+tipos públicos. Um preview 0.3.0 sem props continua compatível:
+
+```tsx
+function StatusPreview() {
+  return <StatusBadge status="approved" />;
+}
+```
+
+### Três tipos de estado
+
+- **Fixture de cenário:** vive em `ProductDefinition.fixtures` e materializa uma
+  situação completa, com persona, permissões, regras e intenção.
+- **Fixture de componente:** vive em `ComponentPreview.fixtures`, tem escopo
+  somente naquele componente e representa dados como padrão, preenchido, vazio,
+  carregando, erro, desabilitado ou conteúdo longo. Não recebe nem simula
+  `ScenarioContext`.
+- **Estado interativo local:** modal aberto, checkbox marcado, hover ou foco
+  continuam no próprio preview. Não precisam de uma segunda abstração de
+  variants.
 
 ### Deploy e deep links
 
@@ -193,6 +269,7 @@ omite branch e commit.
   ambiente: o motor é biblioteca compilada e não alcança o build de quem o
   consome.
 - `scenarioUrl(scenario, options)` — URL absoluta reproduzível.
+- `componentUrl(component, options)` — URL absoluta do componente com sua fixture.
 - `commitUrl(scenario, { template })` — URL imutável para registrar aprovação. O
   template é do produto, com `{commit}` ou `{shortCommit}`.
 

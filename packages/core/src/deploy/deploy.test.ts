@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { commitUrl, getDeployContext, scenarioUrl } from "./index.js";
-import type { Scenario } from "../types/index.js";
+import { commitUrl, componentUrl, getDeployContext, scenarioUrl } from "./index.js";
+import type { ComponentPreview, Scenario } from "../types/index.js";
 
 const scenario: Scenario = {
   id: "orders.blocked",
@@ -95,6 +95,26 @@ describe("scenarioUrl", () => {
       }),
     );
     expect(url.searchParams.get("appearance")).toBe("light");
+  });
+});
+
+describe("componentUrl", () => {
+  const component: ComponentPreview = {
+    id: "feedback.notice",
+    name: "Aviso",
+    preview: () => null,
+    fixtures: [{ id: "long-content", label: "Conteúdo longo", data: { lines: 12 } }],
+  };
+
+  it("carrega componente e fixture em um deep link reproduzível", () => {
+    const url = new URL(componentUrl(component, {
+      origin: "https://acme.example.app",
+      fixture: "long-content",
+    }));
+
+    expect(url.pathname).toBe("/");
+    expect(url.searchParams.get("component")).toBe("feedback.notice");
+    expect(url.searchParams.get("fixture")).toBe("long-content");
   });
 });
 

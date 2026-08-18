@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import type { Registry } from "../registry/index.js";
+import type { ComponentFixtureResolution, Registry } from "../registry/index.js";
 import type { AccessibleNode } from "../a11y/accessible-tree.js";
 import { checkContrastPairs } from "../a11y/contrast.js";
 import type { ComponentPreview, ControlsState, Scenario, ScenarioStatus } from "../types/index.js";
@@ -20,6 +20,7 @@ export type InspectorProps = {
   registry: Registry;
   scenario: Scenario | undefined;
   component?: ComponentPreview;
+  componentFixture?: ComponentFixtureResolution;
   controls: ControlsState;
   focusedNode: AccessibleNode | undefined;
   tabStopCount: number;
@@ -29,6 +30,7 @@ export function Inspector({
   registry,
   scenario,
   component,
+  componentFixture,
   controls,
   focusedNode,
   tabStopCount,
@@ -53,7 +55,13 @@ export function Inspector({
 
       <div className="ds-inspector__body" role="tabpanel">
         {tab === "scenario" && (
-          <ScenarioPanel registry={registry} scenario={scenario} component={component} controls={controls} />
+          <ScenarioPanel
+            registry={registry}
+            scenario={scenario}
+            component={component}
+            componentFixture={componentFixture}
+            controls={controls}
+          />
         )}
         {tab === "a11y" && (
           <A11yPanel
@@ -101,11 +109,13 @@ function ScenarioPanel({
   registry,
   scenario,
   component,
+  componentFixture,
   controls,
 }: {
   registry: Registry;
   scenario: Scenario | undefined;
   component: ComponentPreview | undefined;
+  componentFixture: ComponentFixtureResolution | undefined;
   controls: ControlsState;
 }) {
   const all = useLabels();
@@ -122,7 +132,27 @@ function ScenarioPanel({
           <dt>{labels.id}</dt>
           <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>{component.id}</dd>
           {component.group && <><dt>{labels.componentGroup}</dt><dd>{component.group}</dd></>}
+          {componentFixture?.fixture && (
+            <>
+              <dt>{labels.componentFixture}</dt>
+              <dd>{componentFixture.fixture.label} <code>{componentFixture.fixture.id}</code></dd>
+              {componentFixture.fixture.description && (
+                <>
+                  <dt>{labels.componentFixtureDescription}</dt>
+                  <dd>{componentFixture.fixture.description}</dd>
+                </>
+              )}
+            </>
+          )}
         </dl>
+        {componentFixture?.didFallback && componentFixture.fixture && (
+          <p className="ds-note" data-tone="warn">
+            {labels.componentFixtureFallback(
+              componentFixture.requestedId ?? "",
+              componentFixture.fixture.id,
+            )}
+          </p>
+        )}
       </div>
     );
   }
@@ -427,7 +457,7 @@ function A11yPanel({
 function DiagnosticsPanel({ registry }: { registry: Registry }) {
   const all = useLabels();
   const labels = all.inspector;
-  const coverage = registry.coverage();
+  const coverage = registry.coverage({ includePorted: true });
   const { issues } = registry;
 
   return (

@@ -27,7 +27,7 @@ URL própria.
 1. Copie o diretório para um repositório novo, `<produto>-design-space`.
 2. Troque `name` no `package.json` — isso muda a porta de dev automaticamente.
 3. Troque a dependência do motor de `workspace:*` para a versão publicada
-   (`^0.3.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
+   (`^0.4.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
    `pnpm install` falha.
 4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente e
    atualize `src/tokens/contrast.ts` com os pares reais. O teste de tokens falha
@@ -146,11 +146,20 @@ Comentário resolvido na Toolbar não significa cenário aprovado. Aprovação m
 
 Cenário trazido do sistema existente sem validação começa como `ported`. Esse
 estado documenta a origem sem tratá-la como proposta ou compromisso de
-implementação; a revisão é que determina sua próxima etapa.
+implementação; por padrão ele fica fora da home, árvore, busca e contagens de
+trabalho ativo. **Show ported** o inclui e persiste `showPorted=1` no link. Um
+deep link direto continua funcionando, e a revisão é que determina sua próxima
+etapa.
 
 A aba **Componentes** é alimentada por `ProductDefinition.components`. Cada item
 aponta para um preview React local: o motor organiza e cria o deep link, mas
 componente, conteúdo e aparência continuam exclusivos deste produto.
+
+Fixtures de componente ficam junto do item em `src/components/catalog.tsx` e não
+se misturam às fixtures de cenário em `src/fixtures/`. O exemplo `actions.buttons`
+cobre padrão, preenchido, vazio, carregando, erro, desabilitado e conteúdo longo;
+`feedback.status` demonstra que um componente antigo sem fixture continua válido.
+Estado interativo efêmero, como foco ou modal aberto, permanece local ao preview.
 
 O chrome do template usa en-US e oferece dark/light mode na topbar. A aparência
 é independente do tema do produto e viaja no deep link como `appearance=light`.

@@ -7,8 +7,8 @@
  * pessoa escolhe o que revisar.
  */
 
-import type { Registry } from "../registry/index.js";
-import { NETWORK_STATES, type ControlsState } from "../types/index.js";
+import type { ComponentFixtureResolution, Registry } from "../registry/index.js";
+import { NETWORK_STATES, type ComponentPreview, type ControlsState } from "../types/index.js";
 import { VIEWPORTS } from "../controls/state.js";
 import { useLabels } from "./labels.js";
 
@@ -16,10 +16,19 @@ export type ControlsProps = {
   registry: Registry;
   controls: ControlsState;
   scenarioActive: boolean;
+  component?: ComponentPreview;
+  componentFixture?: ComponentFixtureResolution;
   onChange: (patch: Partial<ControlsState>) => void;
 };
 
-export function Controls({ registry, controls, scenarioActive, onChange }: ControlsProps) {
+export function Controls({
+  registry,
+  controls,
+  scenarioActive,
+  component,
+  componentFixture,
+  onChange,
+}: ControlsProps) {
   const all = useLabels();
   const labels = all.controls;
   const { product } = registry;
@@ -29,6 +38,24 @@ export function Controls({ registry, controls, scenarioActive, onChange }: Contr
 
   return (
     <div className="ds-chrome ds-controls" role="group" aria-label={labels.region}>
+      {component?.fixtures?.length ? (
+        <div className="ds-field">
+          <label htmlFor="ds-component-fixture">{labels.componentFixture}</label>
+          <select
+            id="ds-component-fixture"
+            className="ds-select"
+            value={componentFixture?.fixture?.id ?? ""}
+            onChange={(event) => onChange({ fixture: event.target.value || undefined })}
+          >
+            {component.fixtures.map((fixture) => (
+              <option key={fixture.id} value={fixture.id}>
+                {fixture.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
       {scenarioActive && <div className="ds-field">
         <label htmlFor="ds-persona">{labels.persona}</label>
         <select
@@ -134,7 +161,7 @@ export function Controls({ registry, controls, scenarioActive, onChange }: Contr
         </div>
       )}
 
-      {adapters.length > 0 && (
+      {scenarioActive && adapters.length > 0 && (
         <div className="ds-field">
           <label htmlFor="ds-source">{labels.dataSource}</label>
           <select

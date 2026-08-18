@@ -123,10 +123,48 @@ describe("validateProduct", () => {
   it("valida e indexa o catálogo opcional de componentes", () => {
     const preview = () => null;
     const definition = product({
-      components: [{ id: "actions.button", name: "Botão", group: "Ações", preview }],
+      components: [{
+        id: "actions.button",
+        name: "Botão",
+        group: "Ações",
+        preview,
+        fixtures: [
+          { id: "default", label: "Padrão", data: { label: "Continuar" } },
+          { id: "disabled", label: "Desabilitado", data: () => ({ disabled: true }) },
+        ],
+        defaultFixture: "disabled",
+      }],
     });
     expect(validateProduct(definition).filter((issue) => issue.level === "error")).toEqual([]);
     expect(createRegistry(definition).component("actions.button")?.preview).toBe(preview);
+    expect(createRegistry(definition).componentFixture("actions.button", "disabled")?.label)
+      .toBe("Desabilitado");
+    expect(createRegistry(definition).resolveComponentFixture("actions.button", "missing"))
+      .toMatchObject({ fixture: { id: "disabled" }, requestedId: "missing", didFallback: true });
+  });
+
+  it("valida ids de fixtures do componente, duplicatas e default inexistente", () => {
+    const preview = () => null;
+    const issues = validateProduct(product({
+      components: [{
+        id: "actions.button",
+        name: "Botão",
+        preview,
+        fixtures: [
+          { id: "Inválida", label: "Inválida", data: {} },
+          { id: "duplicada", label: "Primeira", data: {} },
+          { id: "duplicada", label: "Segunda", data: {} },
+        ],
+        defaultFixture: "ausente",
+      }],
+    }));
+
+    expect(issues.some((issue) => issue.message.includes("fixture") && issue.message.includes("Inválida")))
+      .toBe(true);
+    expect(issues.some((issue) => issue.message.includes("duplicado") && issue.message.includes("duplicada")))
+      .toBe(true);
+    expect(issues.some((issue) => issue.message.includes("defaultFixture") && issue.message.includes("ausente")))
+      .toBe(true);
   });
 });
 
@@ -161,6 +199,37 @@ describe("createRegistry", () => {
     expect(registry.search("nada disso")).toEqual([]);
   });
 
+  it("esconde portados das consultas de trabalho ativo por padrão", () => {
+    const custom = createRegistry(product({
+      scenarios: [
+        scenario({ id: "requests.imported", title: "Referência importada", status: "ported" }),
+        scenario({ id: "requests.review", title: "Trabalho em revisão" }),
+      ],
+    }));
+
+    expect(custom.activeScenarios().map((item) => item.id)).toEqual(["requests.review"]);
+    expect(custom.search("importada")).toEqual([]);
+    expect(custom.treeFor()[0]?.scenarios.map((item) => item.id)).toEqual(["requests.review"]);
+    expect(custom.scenariosForRoute("/requests/REQ-2043").map((item) => item.id))
+      .toEqual(["requests.review"]);
+    expect(custom.coverage().ported).toBe(0);
+
+    expect(custom.activeScenarios({ includePorted: true })).toHaveLength(2);
+    expect(custom.search("importada", { includePorted: true })).toHaveLength(1);
+    expect(custom.treeFor({ includePorted: true })[0]?.scenarios).toHaveLength(2);
+    expect(custom.coverage({ includePorted: true }).ported).toBe(1);
+  });
+
+  it("mantém o portado ativo compreensível na árvore de um deep link", () => {
+    const custom = createRegistry(product({
+      scenarios: [scenario({ id: "requests.imported", status: "ported" })],
+    }));
+
+    expect(custom.activeScenarios()).toEqual([]);
+    expect(custom.treeFor({ activeScenario: "requests.imported" })[0]?.scenarios.map((item) => item.id))
+      .toEqual(["requests.imported"]);
+  });
+
   it("conta cobertura por status", () => {
     expect(registry.coverage()["in-review"]).toBe(1);
     expect(registry.coverage().approved).toBe(0);
@@ -171,7 +240,7 @@ describe("createRegistry", () => {
       product({ scenarios: [scenario({ status: "ported" }), scenario({ id: "requests.review" })] }),
     );
 
-    expect(custom.coverage()).toEqual({
+    expect(custom.coverage({ includePorted: true })).toEqual({
       ported: 1,
       proposed: 0,
       "in-review": 1,

@@ -40,6 +40,14 @@ export function DesignSpace({ product }: DesignSpaceProps) {
 
   const scenario = registry.scenario(controls.scenario);
   const component = registry.component(controls.component);
+  const componentFixture = useMemo(
+    () => registry.resolveComponentFixture(component?.id, component ? controls.fixture : undefined),
+    [component, controls.fixture, registry],
+  );
+  const componentData = useMemo(() => {
+    const value = componentFixture.fixture?.data;
+    return typeof value === "function" ? value() : value;
+  }, [componentFixture.fixture]);
   const persona = registry.persona(controls.persona ?? scenario?.persona);
   const fixture = registry.fixture(controls.fixture ?? scenario?.fixture);
 
@@ -141,7 +149,18 @@ export function DesignSpace({ product }: DesignSpaceProps) {
 
   const Preview = component?.preview;
   const screen = Preview ? (
-    <Preview />
+    <Preview
+      fixture={componentFixture.fixture}
+      data={componentData}
+      viewport={viewport}
+      themeMode={controls.themeMode ?? "default"}
+      locale={controls.locale ?? "default"}
+      a11y={{
+        keyboardMode: controls.keyboardMode,
+        reducedMotion: controls.reducedMotion,
+        textScale: controls.textScale,
+      }}
+    />
   ) : match ? (
     <match.definition.screen params={match.params} context={context} />
   ) : NotFound ? (
@@ -172,6 +191,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             deploy={deploy}
             inspectorOpen={controls.inspector}
             chromeTheme={controls.chromeTheme ?? "dark"}
+            showPorted={controls.showPorted ?? false}
             onToggleInspector={() => setControls({ inspector: !controls.inspector })}
             onToggleChromeTheme={() =>
               setControls({ chromeTheme: controls.chromeTheme === "light" ? "dark" : "light" })
@@ -187,13 +207,18 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             controls={controls}
             onOpenScenario={openScenario}
             onOpenComponent={openComponent}
+            onShowPortedChange={(showPorted) => setControls({ showPorted })}
           />
         )}
 
         <div className="ds-stage-area">
           {isHome ? (
             <div className="ds-stage-scroll">
-              <Home registry={registry} onOpenScenario={openScenario} />
+              <Home
+                registry={registry}
+                showPorted={controls.showPorted ?? false}
+                onOpenScenario={openScenario}
+              />
             </div>
           ) : (
             <Stage
@@ -212,6 +237,8 @@ export function DesignSpace({ product }: DesignSpaceProps) {
               registry={registry}
               controls={controls}
               scenarioActive={Boolean(scenario)}
+              component={component}
+              componentFixture={componentFixture}
               onChange={setControls}
             />
           )}
@@ -222,6 +249,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             registry={registry}
             scenario={scenario}
             component={component}
+            componentFixture={componentFixture}
             controls={controls}
             focusedNode={focused}
             tabStopCount={tabStops.length}

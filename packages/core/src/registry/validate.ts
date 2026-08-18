@@ -152,6 +152,37 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
     }
     if (!isNonEmptyString(component?.name)) push("error", where, "`name` é obrigatório.");
     if (typeof component?.preview !== "function") push("error", where, "`preview` é obrigatório.");
+
+    const componentFixtureIds = new Set<string>();
+    for (const [fixtureIndex, fixture] of (component?.fixtures ?? []).entries()) {
+      const fixtureWhere = `${where}/fixture:${fixture?.id ?? fixtureIndex}`;
+      if (!isNonEmptyString(fixture?.id)) {
+        push("error", fixtureWhere, "`id` da fixture do componente é obrigatório.");
+      } else if (!ID_PATTERN.test(fixture.id)) {
+        push(
+          "error",
+          fixtureWhere,
+          `Id de fixture do componente inválido: \`${fixture.id}\`. Use minúsculas em kebab-case.`,
+        );
+      } else if (componentFixtureIds.has(fixture.id)) {
+        push("error", fixtureWhere, `Id de fixture do componente duplicado: \`${fixture.id}\`.`);
+      } else {
+        componentFixtureIds.add(fixture.id);
+      }
+      if (!isNonEmptyString(fixture?.label)) {
+        push("error", fixtureWhere, "`label` da fixture do componente é obrigatório.");
+      }
+      if (!fixture || !("data" in fixture)) {
+        push("error", fixtureWhere, "`data` da fixture do componente é obrigatório.");
+      }
+    }
+    if (component?.defaultFixture && !componentFixtureIds.has(component.defaultFixture)) {
+      push(
+        "error",
+        where,
+        `\`defaultFixture\` aponta para fixture inexistente: \`${component.defaultFixture}\`.`,
+      );
+    }
   }
 
   for (const [index, scenario] of (product.scenarios ?? []).entries()) {

@@ -27,8 +27,12 @@ import type { ViewportSetting } from "../types/index.js";
 export type CanvasProps = {
   location: DesignSpaceLocation;
   viewport: ViewportSetting;
-  /** Zoom em porcentagem. */
+  /**
+   * Zoom em porcentagem. Em 100 (o padrão), um viewport mais largo que a área
+   * central encolhe até caber; o valor efetivo volta por `onEffectiveZoom`.
+   */
   zoom: number;
+  onEffectiveZoom?: (zoom: number) => void;
   title: string;
   /** Desliga o ponteiro no quadro enquanto uma lateral é arrastada. */
   resizing: boolean;
@@ -47,6 +51,7 @@ export function Canvas({
   resizing,
   onFrameNavigate,
   onShortcut,
+  onEffectiveZoom,
 }: CanvasProps) {
   const areaRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -131,11 +136,18 @@ export function Canvas({
     return () => window.removeEventListener("message", onMessage);
   }, [onFrameNavigate, onShortcut, origin]);
 
-  const scale = zoom / 100;
   const fixed = Boolean(viewport.width);
   const gutter = fixed ? GUTTER : 0;
   const availableWidth = Math.max(0, area.width - gutter * 2);
   const availableHeight = Math.max(0, area.height - gutter * 2);
+  const fits = !viewport.width || availableWidth === 0 || viewport.width <= availableWidth;
+  const effectiveZoom =
+    zoom === 100 && !fits ? Math.max(10, Math.floor((availableWidth / viewport.width!) * 100)) : zoom;
+  const scale = effectiveZoom / 100;
+
+  useEffect(() => {
+    onEffectiveZoom?.(effectiveZoom);
+  }, [effectiveZoom, onEffectiveZoom]);
   const width = viewport.width ?? availableWidth / scale;
   const height = viewport.height ?? availableHeight / scale;
 

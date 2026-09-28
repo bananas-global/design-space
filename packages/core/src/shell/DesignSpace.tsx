@@ -175,6 +175,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
   const linkUrl = `${deploy.origin}${location.path}${location.search}`;
   const panelTab: PanelTab = controls.panelTab ?? "variations";
   const zoom = controls.zoom ?? 100;
+  const [effectiveZoom, setEffectiveZoom] = useState(zoom);
 
   return (
     <div
@@ -191,7 +192,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           deploy={deploy}
           viewportId={controls.viewport}
           viewport={viewport}
-          zoom={zoom}
+          zoom={effectiveZoom}
           rotated={Boolean(controls.rotated)}
           theme={theme}
           panelOpen={controls.inspector}
@@ -233,6 +234,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
               location={location}
               viewport={viewport}
               zoom={zoom}
+              onEffectiveZoom={setEffectiveZoom}
               title={labels.shell.frameTitle(product.name)}
               resizing={resizing}
               onFrameNavigate={onFrameNavigate}

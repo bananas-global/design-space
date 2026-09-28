@@ -1,5 +1,7 @@
 # D-09 — Fixtures de componente têm escopo local
 
+> **Nota (2026-09-28):** partes desta decisão que citam `status`, `approvedAt`, referências portadas ou acessibilidade foram superadas pela [0011](0011-revoga-a11y-e-ciclo-de-vida.md).
+
 ## Contexto
 
 Um preview isolado precisa mostrar dados determinísticos em estados como vazio,

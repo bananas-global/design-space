@@ -33,7 +33,7 @@ cliente usa para ela, não o nome do componente que a desenha.
 
 | Camada | Onde vive | O que contém |
 | --- | --- | --- |
-| Motor | `@brucesantos/design-space` | Navegação, registry de cenários, painel, deep links, controles, ferramentas de acessibilidade e teste. |
+| Motor | `@brucesantos/design-space` | Navegação, registry de cenários, catálogo de componentes, painel, deep links, controles e utilitários de teste. |
 | Produto | um `<produto>-design-space` privado por cliente | UI, tokens, componentes, telas, fluxos, regras, personas e fixtures exclusivas. |
 | Dados | fixture adapter por padrão | Dado sintético e determinístico. REST, GraphQL ou staging entram como adapters opcionais. |
 
@@ -98,7 +98,6 @@ controle. **Sem merge automático** de versão incompatível.
 8. **IA como participante de primeira classe.** Estrutura, nomes e contratos são legíveis por agente.
 9. **Governança proporcional.** Exploração é rápida. Validação existe sem burocracia de produção.
 10. **Abstração comprovada.** Só entra no motor o que já provou ser genérico em mais de um produto.
-11. **Acessível por padrão.** Um cenário só é referência aprovada se for operável por teclado, anunciável por leitor de tela e conforme em contraste.
 
 ## Ver também
 
@@ -117,10 +116,8 @@ Fases 1 e 2 construídas e verificadas localmente.
 
 | Repositório | Papel | Verificação |
 | --- | --- | --- |
-| `design-space/packages/core` | motor | typecheck, build, 131 testes |
-| `design-space/packages/template` | molde | typecheck, build, 13 testes, 17 jornadas |
-| produto piloto | 24 cenários | 45 testes, 75 jornadas com axe |
-| segundo produto | 8 cenários — validação da fronteira | 7 testes, 27 jornadas com axe |
+| `design-space/packages/core` | motor | typecheck, build, 112 testes |
+| `design-space/packages/template` | molde | typecheck, build, 11 testes, 10 jornadas |
 
 Os dois produtos vivem em repositórios privados, e o registro do que a Fase 2
 provou fica com eles: a fronteira se sustentou, um vazamento de CSS foi encontrado
@@ -132,6 +129,6 @@ Pendente, porque depende de você:
 | Passo | Por quê |
 | --- | --- |
 | Criar o projeto no provedor de hospedagem, quando houver | requer conta |
-| Aprovar cenários | requer revisão com uma pessoa de negócio |
+| Revisar cenários | requer uma pessoa de negócio |
 
 Tudo detalhado em [`docs/setup.md`](docs/setup.md).

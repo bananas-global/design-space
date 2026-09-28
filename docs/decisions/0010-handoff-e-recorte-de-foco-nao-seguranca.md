@@ -1,5 +1,7 @@
 # D-10 — Handoff por URL é recorte de foco, não fronteira de segurança
 
+> **Nota (2026-09-28):** partes desta decisão que citam `status`, `approvedAt`, referências portadas ou acessibilidade foram superadas pela [0011](0011-revoga-a11y-e-ciclo-de-vida.md).
+
 ## Contexto
 
 `chrome=0` remove as ferramentas do ambiente, mas não define o que foi entregue

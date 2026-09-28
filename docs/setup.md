@@ -101,21 +101,14 @@ seat de hospedagem. Quem revisa não precisa de conta no provedor — só do lin
 
 ## 7. Primeira revisão com uma pessoa de negócio
 
-Se os cenários vieram do sistema existente sem validação, registre-os primeiro com
-`status: "ported"`. Isso os mantém visíveis sem tratá-los como proposta, aprovação
-ou compromisso de implementação.
+Escolha os três cenários que mais rendem conversa — normalmente uma recusa, um
+conflito e um bloqueio por permissão — e leve uma pergunta por cenário, não uma
+apresentação.
 
-É o que falta para os cenários saírem de `ported` ou `em revisão`. Escolha os três
-cenários que mais rendem conversa — normalmente uma recusa, um conflito e um
-bloqueio por permissão — e leve uma pergunta por cenário, não uma apresentação.
-
-Depois da revisão, para cada cenário aprovado: mude `status` para `"approved"` e
-preencha `approvedAt` com a **URL de commit**, não a de branch. O validador avisa se
-você esquecer — aprovação sem URL imutável muda de conteúdo debaixo de quem
-aprovou.
-
-Sem hospedagem não existe URL de commit: registre o permalink do commit no Git e
-anote a escolha nas decisões do produto.
+O cenário não carrega estado de aprovação desde a 0.7.0
+([0011](decisions/0011-revoga-a11y-e-ciclo-de-vida.md)). Se a conversa precisar
+citar a versão exata que foi revisada, use a **URL de commit** (`commitUrl`), não a
+de branch; sem hospedagem, o permalink do commit no Git.
 
 ## 8. Dependabot ou Renovate no produto
 

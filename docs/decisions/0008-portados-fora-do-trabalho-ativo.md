@@ -1,5 +1,11 @@
 # D-08 — Portados ficam fora do trabalho ativo
 
+**Status:** revogada em 2026-09-28 por [0011](0011-revoga-a11y-e-ciclo-de-vida.md)
+
+> **Revogada.** A partir da 0.7.0 não existe `status` de cenário nem coleção de
+> referências portadas: todo cenário registrado é exibido. O texto abaixo fica
+> como registro histórico.
+
 ## Contexto
 
 `ported` registra material importado do sistema existente sem afirmar que ele foi

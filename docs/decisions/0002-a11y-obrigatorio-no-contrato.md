@@ -1,7 +1,11 @@
 # 0002 — `a11y` é campo obrigatório do contrato de cenário
 
 **Data:** 2026-07-30
-**Status:** aceita
+**Status:** revogada em 2026-09-28 por [0011](0011-revoga-a11y-e-ciclo-de-vida.md)
+
+> **Revogada.** A partir da 0.7.0 o contrato de cenário não tem mais `a11y`, e o
+> motor não oferece ferramentas de acessibilidade. O texto abaixo fica como
+> registro histórico.
 
 ## Contexto
 

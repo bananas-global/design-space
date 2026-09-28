@@ -11,6 +11,7 @@
  */
 
 import { scenarioUrl } from "../deploy/index.js";
+import { FRAME_ATTRIBUTE } from "../frame/index.js";
 import { validateProduct, hasErrors, formatIssues } from "../registry/validate.js";
 import type { ControlsState, ProductDefinition, Scenario } from "../types/index.js";
 
@@ -50,6 +51,17 @@ export function pathFor(
   const url = new URL(scenarioUrl(scenario, { origin: "http://design-space.invalid", overrides }));
   return `${url.pathname}${url.search}`;
 }
+
+/**
+ * Seletor do `<iframe>` onde a UI do produto roda desde a 0.8. Em Playwright:
+ *
+ * ```ts
+ * await page.goto(pathFor(scenario));
+ * const app = page.frameLocator(FRAME_SELECTOR);
+ * await expect(app.getByRole("heading", { name: "Fila" })).toBeVisible();
+ * ```
+ */
+export const FRAME_SELECTOR = `iframe[${FRAME_ATTRIBUTE}]`;
 
 /**
  * Falha o teste quando o contrato de cenário do produto tem erro.

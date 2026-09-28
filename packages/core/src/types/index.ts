@@ -90,11 +90,20 @@ export const NETWORK_STATES: readonly NetworkState[] = [
  * disponíveis, regras e resultado esperado.
  */
 export type Scenario = {
-  /** `modulo.situacao` em kebab-case: `requests.approve-blocked`. */
+  /**
+   * Identificador estável, minúsculo, em kebab-case e com pontos opcionais:
+   * `requests.approve-blocked`. Só precisa ser único no produto.
+   */
   id: string;
-  /** Título no vocabulário do negócio: "Aprovação bloqueada por falta de documento". */
+  /**
+   * Nome da variação na lista da tela, no vocabulário do negócio: "Aprovação
+   * bloqueada por falta de documento".
+   */
   title: string;
-  /** Rota que o cenário abre. Precisa casar com uma rota do produto. */
+  /**
+   * Rota que o cenário abre. Precisa casar com uma rota do produto: é essa rota
+   * que define de qual tela o cenário é variação.
+   */
   route: string;
   /**
    * Id de uma persona registrada no produto. Opcional: cenário sem persona tem
@@ -126,44 +135,12 @@ export type Scenario = {
   tags?: string[];
   /** Ticket de engenharia, quando o cenário estiver em implementação. */
   ticket?: string;
-};
-
-/* ------------------------------------------------------------------ *
- * Organização: módulo e jornada
- * ------------------------------------------------------------------ */
-
-/**
- * Uma jornada é uma sequência de passos com ramificações. Cada passo aponta
- * para um cenário, então uma jornada é navegável e testável sem duplicar
- * definição.
- */
-export type Flow = {
-  id: string;
-  /** Título de negócio: "Decidir uma solicitação". */
-  title: string;
-  description?: string;
-  steps: FlowStep[];
-};
-
-export type FlowStep = {
-  /** Cenário que materializa este passo. */
-  scenario: string;
-  /** Rótulo do passo, quando diferir do título do cenário. */
-  label?: string;
-  /** Decisão tomada aqui, quando o passo ramifica. */
-  decision?: string;
-  /** Saídas alternativas: rótulo → id de cenário. */
-  branches?: Record<string, string>;
-};
-
-export type Module = {
-  /** `requests`, `catalog`, `billing`. */
-  id: string;
-  /** Nome no vocabulário do cliente: "Solicitações". */
-  name: string;
-  description?: string;
-  /** Jornadas guiadas do módulo. Opcional: navegação livre é o padrão. */
-  flows?: Flow[];
+  /**
+   * Ids de `ComponentPreview` usados na tela. Alimentam "Componentes usados" no
+   * painel de informações, o "Usado em" de cada componente e a tabela do
+   * "Copiar para o PR".
+   */
+  components?: string[];
 };
 
 /* ------------------------------------------------------------------ *
@@ -180,6 +157,13 @@ export type Module = {
 export type RouteDefinition = {
   path: string;
   screen: ComponentType<ScreenProps>;
+  /**
+   * Nome da tela na lista. Uma rota é uma tela; sem `name`, o motor usa o
+   * título do primeiro cenário da rota e, na falta dele, o próprio `path`.
+   */
+  name?: string;
+  /** Uma linha sobre a tela, exibida em Informações e usada na busca. */
+  description?: string;
 };
 
 export type ScreenProps = {
@@ -224,6 +208,11 @@ export type ComponentPreview<T = unknown> = {
   /** Grupo de navegação: `Ações`, `Formulários`, `Feedback`. */
   group?: string;
   description?: string;
+  /**
+   * Origem no sistema real, em texto livre: `components/button.ex → button/1`.
+   * Aparece em Informações e na tabela do "Copiar para o PR".
+   */
+  source?: string;
   /** Composição visual fornecida e mantida pelo produto. */
   preview: ComponentType<ComponentPreviewProps<T>>;
   /** Dados sintéticos exclusivos deste componente; não usam o catálogo de cenários. */
@@ -278,7 +267,7 @@ export type ProductTheme = {
    * divide a tela com a UI do produto, e chrome em português ao lado de interface
    * em inglês é ruído no meio da revisão.
    *
-   * Isto é rótulo de **mecanismo**. Nome de módulo, título de cenário e nome de
+   * Isto é rótulo de **mecanismo**. Nome de tela, título de cenário e nome de
    * persona continuam vindo do catálogo do produto.
    */
   labels?: LabelsOverride;
@@ -295,11 +284,16 @@ export type ProductDefinition = {
   name: string;
   /** Uma linha sobre o produto, exibida na entrada do Design Space. */
   tagline?: string;
-  modules: Module[];
+  /**
+   * Situações do produto. Cada uma é uma **variação** da tela cuja rota casa
+   * com `route`; a ordem de `routes` define a ordem das telas e a ordem deste
+   * array, a das variações dentro de cada tela.
+   */
   scenarios: Scenario[];
   personas: Persona[];
   fixtures: Fixture[];
   rules?: Rule[];
+  /** Rotas declarativas. Cada rota é uma tela na lista de Telas. */
   routes: RouteDefinition[];
   /** Catálogo visual opcional, implementado integralmente pelo produto. */
   /** Cada item pode ter seu próprio tipo de dados; o registry os trata como opacos. */
@@ -397,7 +391,7 @@ export type ScenarioContext = {
 };
 
 export type ViewportSetting = {
-  /** `mobile`, `tablet`, `desktop`, `fit` ou `custom`. */
+  /** `mobile`, `tablet`, `desktop`, `fit` ou `custom` (só por URL). */
   id: string;
   label: string;
   /** Largura em px. `undefined` em `fit` significa "ocupa o disponível". */
@@ -442,10 +436,22 @@ export type ControlsState = {
   themeMode: string | undefined;
   locale: string | undefined;
   dataSource: string | undefined;
-  /** Tema visual do chrome; independente de `themeMode` do produto. */
+  /**
+   * Tema visual do chrome; independente de `themeMode` do produto. Ausente
+   * significa "o que a pessoa escolheu por último, ou o do sistema".
+   */
   chromeTheme?: ChromeTheme;
   /** Chrome do Design Space oculto: revisão limpa e captura de tela. */
   chrome: boolean;
-  /** Painel lateral direito aberto. */
+  /** Painel lateral direito (Variações e Informações) aberto. `panel=0` fecha. */
   inspector: boolean;
+  /** Aba do painel direito. Padrão: `variations`. */
+  panelTab?: PanelTab;
+  /** Zoom da visualização, em porcentagem (25–150). Padrão: 100. */
+  zoom?: number;
+  /** Viewport girado: largura e altura trocadas quando o preset tem altura. */
+  rotated?: boolean;
 };
+
+/** Abas do painel direito do chrome. */
+export type PanelTab = "variations" | "info";

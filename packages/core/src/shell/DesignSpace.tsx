@@ -4,30 +4,34 @@
  * Tudo que o produto entrega é uma `ProductDefinition`. O motor cuida de
  * navegação, deep link, controles, contexto e verificação; o produto cuida de
  * aparência, domínio e dados. Essa é a fronteira inteira (§8).
+ *
+ * O mesmo componente tem dois papéis, decididos pelo documento em que monta:
+ *
+ * - **Chrome** — o documento de cima: navegação, controles e painel, com a UI do
+ *   produto num `<iframe>` da mesma origem e do mesmo bundle.
+ * - **Quadro** — o documento do `<iframe>` (`ds-frame=1`): só a UI do produto.
  */
 
-import { useEffect, useMemo, useRef } from "react";
-import type { ProductDefinition, ScenarioContext } from "../types/index.js";
-import { createRegistry } from "../registry/index.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ControlsState, PanelTab, ProductDefinition } from "../types/index.js";
+import { createRegistry, type Registry } from "../registry/index.js";
 import { useDesignSpaceState } from "../controls/state.js";
-import { resolveRoute } from "../router/index.js";
-import { fixtureAdapter } from "../adapters/index.js";
-import { useScenarioData } from "../adapters/useScenarioData.js";
 import { getDeployContext } from "../deploy/index.js";
-import { Sidebar } from "./Sidebar.js";
-import { Topbar } from "./Topbar.js";
-import { Controls } from "./Controls.js";
-import { Inspector } from "./Inspector.js";
-import { Stage, StageEmpty } from "./Stage.js";
-import { Home } from "./Home.js";
-import { LabelsContext, resolveLabels } from "./labels.js";
-import {
-  applyHandoffScope,
-  handoffAllowsComponent,
-  handoffAllowsPath,
-  handoffAllowsScenario,
-} from "../handoff/index.js";
 import { PARAM } from "../controls/params.js";
+import { fromFrameUrl, isFrameMode, mergeChromeParams } from "../frame/index.js";
+import { Topbar } from "./Topbar.js";
+import { Sidebar } from "./Sidebar.js";
+import { Panel } from "./Panel.js";
+import { Canvas } from "./Canvas.js";
+import { FrameView } from "./FrameView.js";
+import { LabelsContext, resolveLabels, useLabels } from "./labels.js";
+import {
+  STORAGE_KEYS,
+  storedTheme,
+  useStoredWidth,
+  useSystemTheme,
+  writeStored,
+} from "./storage.js";
 import "./shell.css";
 
 export type DesignSpaceProps = {
@@ -37,287 +41,242 @@ export type DesignSpaceProps = {
 export function DesignSpace({ product }: DesignSpaceProps) {
   const registry = useMemo(() => createRegistry(product), [product]);
   const labels = useMemo(() => resolveLabels(product.theme?.labels), [product.theme?.labels]);
-  const deploy = useMemo(() => getDeployContext(product.deploy), [product.deploy]);
-  const {
-    location,
-    controls,
-    viewport,
-    setControls,
-    navigate,
-    openScenario,
-    openComponent,
-  } = useDesignSpaceState(registry);
+  // Decidido uma vez: o papel do documento não muda enquanto ele existe.
+  const [frame] = useState(() => isFrameMode());
 
-  const stageRef = useRef<HTMLDivElement>(null);
-
-  // Links comuns da UI do produto não passam por `context.navigate`. Reescrever
-  // os destinos internos no palco mantém a allowlist em navegação normal, nova
-  // aba e "copiar endereço", sem alcançar links externos nem âncoras locais.
-  useEffect(() => {
-    const root = stageRef.current;
-    if (!root || !controls.handoff) return;
-
-    const preserveScope = () => {
-      for (const anchor of root.querySelectorAll<HTMLAnchorElement>("a[href]")) {
-        const raw = anchor.getAttribute("href");
-        if (!raw || raw.startsWith("#")) continue;
-
-        let url: URL;
-        try {
-          url = new URL(raw, window.location.href);
-        } catch {
-          continue;
-        }
-        if (url.origin !== window.location.origin) continue;
-
-        applyHandoffScope(url.searchParams, controls.handoff);
-        const scoped = `${url.pathname}${url.search}${url.hash}`;
-        if (raw !== scoped) anchor.setAttribute("href", scoped);
-      }
-    };
-
-    preserveScope();
-    const observer = new MutationObserver(preserveScope);
-    observer.observe(root, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["href"],
-    });
-    return () => observer.disconnect();
-  }, [controls.handoff]);
-
-  const scenario = registry.scenario(controls.scenario);
-  const component = registry.component(controls.component);
-  const requested = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return {
-      scenario: params.get(PARAM.scenario) ?? undefined,
-      component: params.get(PARAM.component) ?? undefined,
-    };
-  }, [location.search]);
-  const handoffBlocked = Boolean(
-    controls.handoff && (
-      (requested.scenario && !handoffAllowsScenario(controls.handoff, requested.scenario)) ||
-      (requested.component && !handoffAllowsComponent(controls.handoff, requested.component)) ||
-      (!requested.component && !handoffAllowsPath(
-        controls.handoff,
-        location.path,
-        product.scenarios,
-      ))
-    ),
+  return (
+    <LabelsContext.Provider value={labels}>
+      {frame ? (
+        <FrameView product={product} registry={registry} />
+      ) : (
+        <Chrome product={product} registry={registry} />
+      )}
+    </LabelsContext.Provider>
   );
+}
+
+/** Larguras das laterais: padrão, mínimo e máximo, em px. */
+const LEFT = { initial: 260, min: 200, max: 480 } as const;
+const RIGHT = { initial: 320, min: 260, max: 560 } as const;
+
+function Chrome({ product, registry }: { product: ProductDefinition; registry: Registry }) {
+  const labels = useLabels();
+  const deploy = useMemo(() => getDeployContext(product.deploy), [product.deploy]);
+  const { location, controls, viewport, setControls, openScenario, openComponent, openScreen, go } =
+    useDesignSpaceState(registry);
+  const locationRef = useRef(location);
+  locationRef.current = location;
+
+  const system = useSystemTheme();
+  const [remembered, setRemembered] = useState(() => storedTheme());
+  const theme = controls.chromeTheme ?? remembered ?? system;
+
+  const [leftWidth, setLeftWidth] = useStoredWidth(
+    STORAGE_KEYS.leftWidth,
+    LEFT.initial,
+    LEFT.min,
+    LEFT.max,
+  );
+  const [rightWidth, setRightWidth] = useStoredWidth(
+    STORAGE_KEYS.rightWidth,
+    RIGHT.initial,
+    RIGHT.min,
+    RIGHT.max,
+  );
+  const [resizing, setResizing] = useState(false);
+
+  const handoff = controls.handoff;
+  const component = registry.component(controls.component);
+  const scenario = registry.scenario(controls.scenario);
+  const screen = component
+    ? undefined
+    : registry
+        .screensFor({ handoff })
+        .find((item) => item.id === registry.screenForPath(location.path)?.id);
+  const variation =
+    screen && scenario && screen.variations.some((item) => item.id === scenario.id)
+      ? scenario
+      : undefined;
   const componentFixture = useMemo(
     () => registry.resolveComponentFixture(component?.id, component ? controls.fixture : undefined),
     [component, controls.fixture, registry],
   );
-  const componentData = useMemo(() => {
-    const value = componentFixture.fixture?.data;
-    return typeof value === "function" ? value() : value;
-  }, [componentFixture.fixture]);
-  const persona = registry.persona(controls.persona ?? scenario?.persona);
-  const fixture = registry.fixture(controls.fixture ?? scenario?.fixture);
 
-  const adapter = useMemo(() => {
-    const id = controls.dataSource ?? "fixtures";
-    if (id === "fixtures") return fixtureAdapter;
-    return product.dataSources?.adapters?.find((a) => a.id === id) ?? fixtureAdapter;
-  }, [controls.dataSource, product.dataSources?.adapters]);
+  const firstScreen = registry.screensFor({ handoff })[0];
+  const firstComponent = registry.componentsFor(handoff)[0];
+  const isEmpty = !firstScreen && !firstComponent;
 
-  const { data, isLoading, error } = useScenarioData({ scenario, fixture, network: controls.network, adapter });
+  // Sem Home: a raiz abre o primeiro item. Só quando o endereço não pediu nada —
+  // um link para um item fora do handoff precisa mostrar o bloqueio, não sumir.
+  const requestedSomething = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.has(PARAM.scenario) || params.has(PARAM.component);
+  }, [location.search]);
+  const redirectPending =
+    location.path === "/" &&
+    !requestedSomething &&
+    !registry.screenForPath("/") &&
+    !isEmpty;
 
-  // Atalhos globais do ambiente. Busca vive na Sidebar; aqui ficam apenas os
-  // atalhos que não competem com atalhos conhecidos do navegador.
+  useEffect(() => {
+    if (!redirectPending) return;
+    if (firstScreen) openScreen(firstScreen.id, { replace: true });
+    else if (firstComponent) openComponent(firstComponent.id, { replace: true });
+  }, [firstComponent, firstScreen, openComponent, openScreen, redirectPending]);
+
+  const toggleChrome = useCallback(
+    () => setControls({ chrome: !controls.chrome }),
+    [controls.chrome, setControls],
+  );
+  const togglePanel = useCallback(
+    () => setControls({ inspector: !controls.inspector }),
+    [controls.inspector, setControls],
+  );
+
+  const onShortcut = useCallback(
+    (key: "C" | "P") => {
+      if (key === "C") toggleChrome();
+      else if (controls.chrome) togglePanel();
+    },
+    [controls.chrome, toggleChrome, togglePanel],
+  );
+
+  // Atalhos que não competem com os do navegador. Busca (Cmd/Ctrl+K) vive na
+  // navegação; com o foco no quadro, o próprio quadro repassa Shift+C e Shift+P.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key !== "C" && event.key !== "P") return;
       const target = event.target as HTMLElement | null;
-      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
-
-      switch (event.key) {
-        case "P":
-          setControls({ inspector: !controls.inspector });
-          break;
-        default:
-          return;
-      }
+      if (target?.closest?.("input, textarea, select, [contenteditable='true'], [contenteditable='']")) return;
       event.preventDefault();
+      onShortcut(event.key);
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [controls.inspector, setControls]);
+  }, [onShortcut]);
 
-  const permissions = useMemo(() => {
-    // Persona escolhida no controle manda sobre a do cenário: é assim que se
-    // responde "e se um perfil sem permissão abrir esta tela?" sem inventar um
-    // segundo cenário.
-    if (controls.persona && controls.persona !== scenario?.persona) {
-      return registry.persona(controls.persona)?.permissions ?? [];
-    }
-    return registry.permissionsOf(scenario);
-  }, [controls.persona, registry, scenario]);
-
-  const context: ScenarioContext = useMemo(
-    () => ({
-      scenario,
-      persona,
-      permissions,
-      can: (permission) => permissions.includes(permission),
-      data,
-      fixture,
-      network: controls.network,
-      isLoading,
-      error,
-      rules: registry.rulesOf(scenario),
-      viewport,
-      themeMode: controls.themeMode,
-      locale: controls.locale,
-      navigate,
-      openScenario,
-    }),
-    [
-      scenario,
-      persona,
-      permissions,
-      data,
-      fixture,
-      controls.network,
-      controls.themeMode,
-      controls.locale,
-      isLoading,
-      error,
-      registry,
-      viewport,
-      navigate,
-      openScenario,
-    ],
+  const onFrameNavigate = useCallback(
+    (url: string, replace: boolean) => {
+      const { path, search } = fromFrameUrl(url);
+      go(path, mergeChromeParams(search, locationRef.current.search), { replace });
+    },
+    [go],
   );
 
-  // A raiz sem cenário ativo é o mapa de situações, não uma tela do produto.
-  // Quem recebe o link cru precisa ver o que existe antes de escolher; cair no
-  // meio de um fluxo — ou num estado sem permissão — se lê como defeito.
-  const isHome = !handoffBlocked && !scenario && !component && location.path === "/";
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    writeStored(STORAGE_KEYS.appearance, next);
+    setRemembered(next);
+    setControls({ chromeTheme: next });
+  };
 
-  const match = resolveRoute(product.routes, location.path);
-  const Wrapper = product.wrapper;
-  const NotFound = product.notFound;
-
-  const Preview = component?.preview;
-  const screen = handoffBlocked ? (
-    <StageEmpty title={labels.shell.outsideHandoff}>
-      <p>{labels.shell.outsideHandoffHint}</p>
-    </StageEmpty>
-  ) : Preview ? (
-    <Preview
-      fixture={componentFixture.fixture}
-      data={componentData}
-      viewport={viewport}
-      themeMode={controls.themeMode ?? "default"}
-      locale={controls.locale ?? "default"}
-    />
-  ) : match ? (
-    <match.definition.screen params={match.params} context={context} />
-  ) : NotFound ? (
-    <NotFound path={location.path} />
-  ) : (
-    <StageEmpty title={labels.shell.noRoute}>
-      <p>
-        <code>{location.path}</code> {labels.shell.noRouteHint}
-      </p>
-    </StageEmpty>
-  );
-
-  const stageContent = Wrapper && !handoffBlocked
-    ? <Wrapper context={context}>{screen}</Wrapper>
-    : screen;
+  const change = (patch: Partial<ControlsState>) => setControls(patch);
+  const linkUrl = `${deploy.origin}${location.path}${location.search}`;
+  const panelTab: PanelTab = controls.panelTab ?? "variations";
+  const zoom = controls.zoom ?? 100;
 
   return (
-    <LabelsContext.Provider value={labels}>
-      <div
-        className="ds-root"
-        data-chrome={controls.chrome ? "visible" : "hidden"}
-        data-appearance={controls.chromeTheme ?? "dark"}
-        data-inspector={controls.inspector ? "open" : "closed"}
-        data-viewport={viewport.id}
-      >
-        {controls.chrome && (
-          <Topbar
-            product={product}
-            scenario={scenario}
-            deploy={deploy}
-            inspectorOpen={controls.inspector}
-            chromeTheme={controls.chromeTheme ?? "dark"}
-            handoff={controls.handoff}
-            onToggleInspector={() => setControls({ inspector: !controls.inspector })}
-            onToggleChromeTheme={() =>
-              setControls({ chromeTheme: controls.chromeTheme === "light" ? "dark" : "light" })
-            }
-          />
-        )}
+    <div
+      className="ds-root"
+      data-appearance={theme}
+      data-chrome={controls.chrome ? "visible" : "hidden"}
+      data-panel={controls.inspector ? "open" : "closed"}
+      data-resizing={resizing ? "true" : undefined}
+      data-viewport={viewport.id}
+    >
+      {controls.chrome && (
+        <Topbar
+          productName={product.name}
+          deploy={deploy}
+          viewportId={controls.viewport}
+          viewport={viewport}
+          zoom={zoom}
+          rotated={Boolean(controls.rotated)}
+          theme={theme}
+          panelOpen={controls.inspector}
+          issues={registry.issues}
+          linkUrl={linkUrl}
+          onViewport={(id) => change({ viewport: id })}
+          onRotate={() => change({ rotated: !controls.rotated })}
+          onZoom={(next) => change({ zoom: next })}
+          onCleanReview={toggleChrome}
+          onToggleTheme={toggleTheme}
+          onTogglePanel={togglePanel}
+        />
+      )}
 
+      <div className="ds-body">
         {controls.chrome && (
           <Sidebar
             registry={registry}
-            activeScenario={scenario}
-            activeComponent={controls.component}
-            controls={controls}
-            onOpenScenario={openScenario}
-            onOpenComponent={openComponent}
+            handoff={handoff}
+            activeScreen={screen?.id}
+            activeComponent={component?.id}
+            onOpenScreen={(id) => openScreen(id)}
+            onOpenComponent={(id) => openComponent(id)}
+            width={leftWidth}
+            onResize={setLeftWidth}
+            onResizeStart={() => setResizing(true)}
+            onResizeEnd={() => setResizing(false)}
           />
         )}
 
-        <div className="ds-stage-area">
-          {isHome ? (
-            <div className="ds-stage-scroll">
-              <Home
-                registry={registry}
-                handoff={controls.handoff}
-                onOpenScenario={openScenario}
-                onOpenComponent={openComponent}
-              />
+        <main className="ds-main">
+          {isEmpty ? (
+            <div className="ds-chrome-empty">
+              <h1 className="ds-chrome-empty__title">{labels.shell.empty}</h1>
+              <p className="ds-muted">{labels.shell.emptyHint}</p>
             </div>
-          ) : (
-            <Stage ref={stageRef} viewport={viewport}>
-              {stageContent}
-            </Stage>
-          )}
-
-          {controls.chrome && (
-            <Controls
-              registry={registry}
-              controls={controls}
-              scenarioActive={Boolean(scenario)}
-              component={component}
-              componentFixture={componentFixture}
-              onChange={setControls}
+          ) : redirectPending ? null : (
+            <Canvas
+              location={location}
+              viewport={viewport}
+              zoom={zoom}
+              title={labels.shell.frameTitle(product.name)}
+              resizing={resizing}
+              onFrameNavigate={onFrameNavigate}
+              onShortcut={onShortcut}
             />
           )}
-        </div>
+        </main>
 
-        {controls.chrome && (
-          <Inspector
+        {controls.chrome && controls.inspector && (
+          <Panel
             registry={registry}
-            scenario={scenario}
+            controls={controls}
+            deploy={deploy}
+            screen={screen}
+            variation={variation}
             component={component}
             componentFixture={componentFixture}
-            controls={controls}
+            tab={panelTab}
+            onTab={(tab) => change({ panelTab: tab })}
+            onOpenScenario={openScenario}
+            onOpenComponent={(id) => openComponent(id)}
+            onChange={change}
+            width={rightWidth}
+            onResize={setRightWidth}
+            onResizeStart={() => setResizing(true)}
+            onResizeEnd={() => setResizing(false)}
           />
         )}
-
-        {/* Sem chrome não há como voltar a não ser editando a URL, o que trava
-            quem recebeu o link em modo de revisão limpa. Este botão é invisível
-            até receber hover ou foco, então não aparece em captura de tela. */}
-        {!controls.chrome && (
-          <button
-            type="button"
-            className="ds-chrome ds-restore"
-            onClick={() => setControls({ chrome: true })}
-          >
-            {labels.shell.restoreChrome}
-          </button>
-        )}
       </div>
-    </LabelsContext.Provider>
+
+      {/* Sem chrome não há como voltar a não ser editando a URL, o que trava
+          quem recebeu o link em revisão limpa. O botão é discreto e fica quase
+          invisível até receber hover ou foco, então não pesa em captura. */}
+      {!controls.chrome && (
+        <button
+          type="button"
+          className="ds-restore"
+          aria-label={labels.shell.restoreChrome}
+          title={labels.shell.restoreChrome}
+          onClick={toggleChrome}
+        >
+          <span className="ds-restore__dot" aria-hidden="true" />
+        </button>
+      )}
+    </div>
   );
 }

@@ -9,8 +9,7 @@
 
 /* ------------------------------------- shell */
 export { DesignSpace, type DesignSpaceProps } from "./shell/DesignSpace.js";
-export { Stage, StageEmpty, type StageProps } from "./shell/Stage.js";
-export { Home, type HomeProps } from "./shell/Home.js";
+export { StageEmpty } from "./shell/Stage.js";
 export {
   DEFAULT_LABELS,
   EN_US_LABELS,
@@ -24,10 +23,11 @@ export {
 /* ---------------------------------- registry */
 export {
   createRegistry,
+  normalizeSearch,
   type ComponentFixtureResolution,
-  type ModuleNode,
   type Registry,
   type ScenarioQueryOptions,
+  type ScreenNode,
 } from "./registry/index.js";
 export {
   formatIssues,
@@ -43,13 +43,21 @@ export { matchPath, resolveRoute, type RouteMatch } from "./router/index.js";
 /* ---------------------------------- controls */
 export {
   VIEWPORTS,
+  ZOOM_DEFAULT,
+  ZOOM_MAX,
+  ZOOM_MIN,
+  clampZoom,
   parseControls,
   resolveViewport,
   serializeControls,
   useDesignSpaceState,
   type DesignSpaceState,
+  type DesignSpaceStateOptions,
   type DesignSpaceLocation,
 } from "./controls/state.js";
+
+/* ------------------------------------- quadro */
+export { FRAME_ATTRIBUTE, FRAME_PARAM } from "./frame/index.js";
 export { PARAM, applyOverrides, serializeValue } from "./controls/params.js";
 
 /* ----------------------------------- handoff */
@@ -99,11 +107,9 @@ export {
   type DataRequest,
   type DataSourceAdapter,
   type Fixture,
-  type Flow,
-  type FlowStep,
   type HandoffScope,
-  type Module,
   type NetworkState,
+  type PanelTab,
   type Persona,
   type ProductDefinition,
   type ProductTheme,

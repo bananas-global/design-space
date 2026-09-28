@@ -7,7 +7,7 @@
  * interface dele. Traduzir só parte do chrome seria pior que não traduzir — o
  * rótulo em outro idioma vira ruído no meio da revisão.
  *
- * Rótulo de **produto** continua vindo do produto: nome de módulo, título de
+ * Rótulo de **produto** continua vindo do produto: nome de tela, título de
  * cenário, nome de persona, rótulo de fixture. O que vive aqui é rótulo de
  * **mecanismo**.
  *
@@ -33,106 +33,115 @@ export type Labels = {
   /** Rótulo de viewport por id: `fit`, `mobile`, `tablet`, `desktop`, `custom`. */
   viewport: Record<string, string>;
   topbar: {
-    homeTitle: (product: string) => string;
-    toggleNav: string;
+    region: string;
+    viewportGroup: string;
+    rotate: string;
+    zoomOut: string;
+    zoomIn: string;
+    zoomReset: string;
+    zoomValue: (percent: number) => string;
     copyLink: string;
     copied: string;
     copyPrompt: string;
     cleanReview: string;
-    cleanReviewTitle: string;
-    panel: string;
     lightMode: string;
     darkMode: string;
+    openPanel: string;
+    closePanel: string;
+    diagnostics: (errors: number, warnings: number) => string;
     branchTitle: (branch: string) => string;
     commitTitle: (commit: string) => string;
     envTitle: (env: string) => string;
   };
   sidebar: {
     region: string;
-    flowsTab: string;
+    tabs: string;
+    screensTab: string;
     componentsTab: string;
     searchPlaceholder: string;
     searchLabel: string;
-    componentSearchPlaceholder: string;
-    componentSearchLabel: string;
     searchShortcut: string;
     noMatch: (query: string) => string;
-    matchCount: (total: number) => string;
-    noComponentMatch: (query: string) => string;
-    componentMatchCount: (total: number) => string;
-    emptyScenarios: string;
+    emptyScreens: string;
     emptyComponents: string;
-    withoutModule: string;
-    scope: string;
-    scopeData: string;
-    scopePersona: string;
-    scopeNetwork: string;
+    ungrouped: string;
+    toggleGroup: (group: string) => string;
+    resize: string;
   };
-  controls: {
+  panel: {
     region: string;
+    tabs: string;
+    variationsTab: string;
+    infoTab: string;
+    resize: string;
+    variationsList: string;
+    defaultVariation: string;
+    defaultVariationHint: string;
+    noVariations: string;
+    noComponentVariations: string;
+    nothingSelected: string;
     persona: string;
-    fixture: string;
-    componentFixture: string;
     network: string;
-    viewport: string;
-    customWidth: string;
     theme: string;
     locale: string;
     dataSource: string;
     fixturesOption: string;
     none: string;
+    fixtureFallback: (requested: string, fallback: string) => string;
   };
-  inspector: {
-    region: string;
-    tabScenario: string;
-    tabDiagnostics: string;
-    diagnosticsWithErrors: (count: number) => string;
-    noScenario: string;
-    componentReference: string;
-    componentGroup: string;
-    componentFixture: string;
-    componentFixtureDescription: string;
-    componentFixtureFallback: (requested: string, fallback: string) => string;
-    taskScope: string;
-    taskScopeDescription: string;
-    inheritedScope: string;
-    inheritedScopeDescription: string;
-    productScope: string;
-    productScopeDescription: string;
-    situation: string;
-    reproduction: string;
+  info: {
+    screen: string;
+    variation: string;
+    component: string;
+    name: string;
     id: string;
+    group: string;
+    description: string;
+    source: string;
+    usedIn: string;
+    notUsed: string;
     route: string;
     persona: string;
-    personaSwapped: string;
-    data: string;
-    network: string;
-    goal: (goal: string) => string;
     permissions: string;
+    intent: string;
     preconditions: string;
-    rules: string;
     actions: string;
     expected: string;
-    engineering: string;
-    coverage: string;
-    scenariosRegistered: (count: number) => string;
-    scenarioContract: string;
-    noIssues: string;
-    diagnosticsProductNotice: string;
+    rules: string;
+    components: string;
+    ticket: string;
+    copyForPr: string;
+    copiedForPr: string;
+    copyPrompt: string;
   };
-  home: {
-    lead: (total: number) => string;
-    componentsLead: (total: number) => string;
-    withoutModule: string;
-    withoutModuleHint: string;
-    noScenarios: string;
+  diagnostics: {
+    title: string;
+    noIssues: string;
+    error: string;
+    warning: string;
+    close: string;
+  };
+  /** Texto do markdown gerado por "Copiar para o PR". */
+  pr: {
+    variations: string;
+    components: string;
+    component: string;
+    source: string;
+    expected: string;
+    commit: (shortCommit: string) => string;
+    immutableLink: string;
+    noExpected: string;
+    empty: string;
   };
   shell: {
     restoreChrome: string;
+    frameTitle: (product: string) => string;
     noRoute: string;
     noRouteHint: string;
     outsideHandoff: string;
     outsideHandoffHint: string;
+    empty: string;
+    emptyHint: string;
   };
 };
 
@@ -155,123 +164,125 @@ export const DEFAULT_LABELS: Labels = {
   },
 
   topbar: {
-    homeTitle: (product) => `Ir para a página inicial de ${product}`,
-    toggleNav: "Mostrar ou ocultar a navegação",
+    region: "Barra do Design Space",
+    viewportGroup: "Viewport",
+    rotate: "Girar",
+    zoomOut: "Diminuir zoom",
+    zoomIn: "Aumentar zoom",
+    zoomReset: "Voltar o zoom para 100%",
+    zoomValue: (percent) => `${percent}%`,
     copyLink: "Copiar link",
     copied: "Link copiado",
-    copyPrompt: "Copie o link do cenário:",
-    cleanReview: "Revisão limpa",
-    cleanReviewTitle: "Abrir a situação em uma nova aba, sem o chrome do Design Space",
-    panel: "Painel",
-    lightMode: "Modo claro",
-    darkMode: "Modo escuro",
+    copyPrompt: "Copie o link:",
+    cleanReview: "Revisão limpa (Shift+C)",
+    lightMode: "Tema claro",
+    darkMode: "Tema escuro",
+    openPanel: "Abrir painel (Shift+P)",
+    closePanel: "Fechar painel (Shift+P)",
+    diagnostics: (errors, warnings) =>
+      `Diagnóstico: ${errors} ${errors === 1 ? "erro" : "erros"}, ${warnings} ${
+        warnings === 1 ? "aviso" : "avisos"
+      }`,
     branchTitle: (branch) => `Branch: ${branch}`,
     commitTitle: (commit) => `Commit: ${commit}`,
     envTitle: (env) => `Ambiente: ${env}`,
   },
 
   sidebar: {
-    region: "Cenários do produto",
-    flowsTab: "Fluxos",
+    region: "Navegação",
+    tabs: "Telas e componentes",
+    screensTab: "Telas",
     componentsTab: "Componentes",
-    searchPlaceholder: "Buscar situação…",
-    searchLabel: "Buscar cenário pelo vocabulário do produto",
-    componentSearchPlaceholder: "Buscar componente…",
-    componentSearchLabel: "Buscar componente do produto",
+    searchPlaceholder: "Buscar",
+    searchLabel: "Buscar telas e componentes",
     searchShortcut: "⌘K",
-    noMatch: (query) => `Nenhuma situação para "${query}".`,
-    matchCount: (total) => `${total} ${total === 1 ? "situação" : "situações"}.`,
-    noComponentMatch: (query) => `Nenhum componente para "${query}".`,
-    componentMatchCount: (total) => `${total} ${total === 1 ? "componente" : "componentes"}.`,
-    emptyScenarios: "O produto ainda não registrou cenários.",
+    noMatch: (query) => `Nada encontrado para "${query}".`,
+    emptyScreens: "O produto ainda não registrou telas.",
     emptyComponents: "O produto ainda não registrou componentes.",
-    withoutModule: "Sem módulo",
-    scope: "Escopo ativo",
-    scopeData: "Dados",
-    scopePersona: "Persona",
-    scopeNetwork: "Rede",
+    ungrouped: "Outros",
+    toggleGroup: (group) => `Mostrar ou ocultar ${group}`,
+    resize: "Redimensionar a navegação",
   },
 
-  controls: {
-    region: "Controles do cenário",
+  panel: {
+    region: "Painel",
+    tabs: "Variações e informações",
+    variationsTab: "Variações",
+    infoTab: "Informações",
+    resize: "Redimensionar o painel",
+    variationsList: "Variações da tela",
+    defaultVariation: "Padrão",
+    defaultVariationHint: "A tela sem cenário declarado, sem fixture.",
+    noVariations: "Esta tela não tem variações.",
+    noComponentVariations: "Este componente não declara variações de dados.",
+    nothingSelected: "Escolha uma tela ou um componente na navegação.",
     persona: "Persona",
-    fixture: "Dados",
-    componentFixture: "Dados do componente",
-    network: "Rede",
-    viewport: "Viewport",
-    customWidth: "Largura personalizada em pixels",
+    network: "Estado de rede",
     theme: "Tema",
     locale: "Idioma",
-    dataSource: "Fonte",
+    dataSource: "Fonte de dados",
     fixturesOption: "Fixtures",
     none: "—",
+    fixtureFallback: (requested, fallback) =>
+      `A variação \`${requested}\` não existe neste componente. Exibindo \`${fallback}\`.`,
   },
 
-  inspector: {
-    region: "Painel de contexto",
-    tabScenario: "Cenário",
-    tabDiagnostics: "Diagnóstico",
-    diagnosticsWithErrors: (count) => `Diagnóstico (${count})`,
-    noScenario:
-      "Nenhum cenário ativo. Escolha uma situação na navegação para ver contexto, regras e critérios.",
-    componentReference: "Componente",
-    componentGroup: "Grupo",
-    componentFixture: "Fixture ativa",
-    componentFixtureDescription: "Descrição da fixture",
-    componentFixtureFallback: (requested, fallback) =>
-      `A fixture \`${requested}\` não existe neste componente. Exibindo \`${fallback}\` como fallback.`,
-    taskScope: "Dados desta tarefa",
-    taskScopeDescription: "Contrato e estado autorizados para a situação ativa.",
-    inheritedScope: "Contexto herdado do produto e da persona",
-    inheritedScopeDescription:
-      "Informações compartilhadas que ajudam a interpretar a tarefa, mas não pertencem só a ela.",
-    productScope: "Verificações gerais do produto",
-    productScopeDescription: "Resultados compartilhados por todo o catálogo, não só por esta tarefa.",
-    situation: "Situação",
-    reproduction: "Reprodução",
+  info: {
+    screen: "Tela",
+    variation: "Variação",
+    component: "Componente",
+    name: "Nome",
     id: "Id",
+    group: "Grupo",
+    description: "Descrição",
+    source: "Origem",
+    usedIn: "Usado em",
+    notUsed: "Nenhuma tela declara este componente.",
     route: "Rota",
     persona: "Persona",
-    personaSwapped: "trocada",
-    data: "Dados",
-    network: "Rede",
-    goal: (goal) => `Objetivo: ${goal}`,
-    permissions: "Permissões efetivas",
+    permissions: "Permissões",
+    intent: "Intenção",
     preconditions: "Pré-condições",
+    actions: "Ações",
+    expected: "Comportamento esperado",
     rules: "Regras",
-    actions: "Ações disponíveis",
-    expected: "Critérios de aceite",
-    engineering: "Engenharia",
-    coverage: "Cobertura",
-    scenariosRegistered: (count) => `${count} cenários registrados.`,
-    scenarioContract: "Contrato de cenário",
-    noIssues: "Nenhum problema encontrado.",
-    diagnosticsProductNotice:
-      "Este diagnóstico avalia o catálogo inteiro do produto, inclusive itens fora da tarefa e do handoff ativos.",
+    components: "Componentes usados",
+    ticket: "Ticket",
+    copyForPr: "Copiar para o PR",
+    copiedForPr: "Copiado",
+    copyPrompt: "Copie o texto para o PR:",
   },
 
-  home: {
-    componentsLead: (total) =>
-      `Catálogo de componentes e layouts do produto, cada um com dados sintéticos próprios. ${total} ${
-        total === 1 ? "componente registrado" : "componentes registrados"
-      }.`,
-    lead: (total) =>
-      `Especificação executável: cada situação abaixo abre por link, com persona, dados e regras próprios. ${total} ${
-        total === 1 ? "situação registrada" : "situações registradas"
-      }.`,
-    withoutModule: "Sem módulo",
-    withoutModuleHint:
-      "O prefixo do id não corresponde a nenhum módulo registrado, então estas situações não aparecem na navegação por módulo.",
-    noScenarios: "O produto ainda não registrou cenários. Os componentes ficam na aba Componentes da navegação.",
+  diagnostics: {
+    title: "Diagnóstico",
+    noIssues: "Nenhum problema encontrado.",
+    error: "Erro",
+    warning: "Aviso",
+    close: "Fechar diagnóstico",
+  },
+
+  pr: {
+    variations: "Variações",
+    components: "Componentes",
+    component: "Componente",
+    source: "Origem",
+    expected: "Comportamento esperado",
+    commit: (shortCommit) => `Commit \`${shortCommit}\``,
+    immutableLink: "link deste deployment",
+    noExpected: "Sem comportamento esperado declarado.",
+    empty: "—",
   },
 
   shell: {
-    restoreChrome: "Mostrar controles",
+    restoreChrome: "Mostrar o chrome (Shift+C)",
+    frameTitle: (product) => `Pré-visualização de ${product}`,
     noRoute: "Nenhuma rota para este endereço",
-    noRouteHint: "não casa com nenhuma rota declarada. Escolha uma situação na navegação.",
+    noRouteHint: "não casa com nenhuma rota declarada. Escolha uma tela na navegação.",
     outsideHandoff: "Fora do escopo deste handoff",
     outsideHandoffHint:
       "Este link permite revisar somente os cenários, rotas e componentes listados no handoff. Escolha um item disponível na navegação.",
+    empty: "Nada para mostrar ainda",
+    emptyHint: "O produto ainda não registrou telas nem componentes.",
   },
 };
 
@@ -294,123 +305,125 @@ export const EN_US_LABELS: Labels = {
   },
 
   topbar: {
-    homeTitle: (product) => `Go to ${product} home`,
-    toggleNav: "Show or hide navigation",
+    region: "Design Space bar",
+    viewportGroup: "Viewport",
+    rotate: "Rotate",
+    zoomOut: "Zoom out",
+    zoomIn: "Zoom in",
+    zoomReset: "Reset zoom to 100%",
+    zoomValue: (percent) => `${percent}%`,
     copyLink: "Copy link",
     copied: "Link copied",
-    copyPrompt: "Copy the scenario link:",
-    cleanReview: "Clean review",
-    cleanReviewTitle: "Open this state in a new tab without the Design Space chrome",
-    panel: "Panel",
-    lightMode: "Light mode",
-    darkMode: "Dark mode",
+    copyPrompt: "Copy the link:",
+    cleanReview: "Clean review (Shift+C)",
+    lightMode: "Light theme",
+    darkMode: "Dark theme",
+    openPanel: "Open panel (Shift+P)",
+    closePanel: "Close panel (Shift+P)",
+    diagnostics: (errors, warnings) =>
+      `Diagnostics: ${errors} ${errors === 1 ? "error" : "errors"}, ${warnings} ${
+        warnings === 1 ? "warning" : "warnings"
+      }`,
     branchTitle: (branch) => `Branch: ${branch}`,
     commitTitle: (commit) => `Commit: ${commit}`,
     envTitle: (env) => `Environment: ${env}`,
   },
 
   sidebar: {
-    region: "Product scenarios",
-    flowsTab: "Flows",
+    region: "Navigation",
+    tabs: "Screens and components",
+    screensTab: "Screens",
     componentsTab: "Components",
-    searchPlaceholder: "Search scenarios…",
-    searchLabel: "Search scenarios using product language",
-    componentSearchPlaceholder: "Search components…",
-    componentSearchLabel: "Search product components",
+    searchPlaceholder: "Search",
+    searchLabel: "Search screens and components",
     searchShortcut: "⌘K",
-    noMatch: (query) => `No scenarios found for "${query}".`,
-    matchCount: (total) => `${total} ${total === 1 ? "scenario" : "scenarios"}.`,
-    noComponentMatch: (query) => `No components found for "${query}".`,
-    componentMatchCount: (total) => `${total} ${total === 1 ? "component" : "components"}.`,
-    emptyScenarios: "The product has not registered any scenarios yet.",
+    noMatch: (query) => `Nothing found for "${query}".`,
+    emptyScreens: "The product has not registered any screens yet.",
     emptyComponents: "The product has not registered any components yet.",
-    withoutModule: "No module",
-    scope: "Active scope",
-    scopeData: "Data",
-    scopePersona: "Persona",
-    scopeNetwork: "Network",
+    ungrouped: "Other",
+    toggleGroup: (group) => `Show or hide ${group}`,
+    resize: "Resize navigation",
   },
 
-  controls: {
-    region: "Scenario controls",
+  panel: {
+    region: "Panel",
+    tabs: "Variations and information",
+    variationsTab: "Variations",
+    infoTab: "Information",
+    resize: "Resize panel",
+    variationsList: "Screen variations",
+    defaultVariation: "Default",
+    defaultVariationHint: "The screen without a declared scenario or fixture.",
+    noVariations: "This screen has no variations.",
+    noComponentVariations: "This component does not declare data variations.",
+    nothingSelected: "Choose a screen or a component in the navigation.",
     persona: "Persona",
-    fixture: "Data",
-    componentFixture: "Component data",
-    network: "Network",
-    viewport: "Viewport",
-    customWidth: "Custom width in pixels",
+    network: "Network state",
     theme: "Theme",
     locale: "Language",
-    dataSource: "Source",
+    dataSource: "Data source",
     fixturesOption: "Fixtures",
     none: "—",
+    fixtureFallback: (requested, fallback) =>
+      `Variation \`${requested}\` does not exist for this component. Showing \`${fallback}\`.`,
   },
 
-  inspector: {
-    region: "Context panel",
-    tabScenario: "Scenario",
-    tabDiagnostics: "Diagnostics",
-    diagnosticsWithErrors: (count) => `Diagnostics (${count})`,
-    noScenario:
-      "No active scenario. Choose a state in the navigation to see its context, rules, and criteria.",
-    componentReference: "Component",
-    componentGroup: "Group",
-    componentFixture: "Active fixture",
-    componentFixtureDescription: "Fixture description",
-    componentFixtureFallback: (requested, fallback) =>
-      `Fixture \`${requested}\` does not exist for this component. Showing \`${fallback}\` as fallback.`,
-    taskScope: "This task",
-    taskScopeDescription: "The contract and authorized state for the active scenario.",
-    inheritedScope: "Inherited product and persona context",
-    inheritedScopeDescription:
-      "Shared information that helps interpret the task but does not belong only to it.",
-    productScope: "Product-wide checks",
-    productScopeDescription: "Results shared across the catalog, not only this task.",
-    situation: "State",
-    reproduction: "Reproduction",
+  info: {
+    screen: "Screen",
+    variation: "Variation",
+    component: "Component",
+    name: "Name",
     id: "ID",
+    group: "Group",
+    description: "Description",
+    source: "Source",
+    usedIn: "Used in",
+    notUsed: "No screen declares this component.",
     route: "Route",
     persona: "Persona",
-    personaSwapped: "changed",
-    data: "Data",
-    network: "Network",
-    goal: (goal) => `Goal: ${goal}`,
-    permissions: "Effective permissions",
+    permissions: "Permissions",
+    intent: "Intent",
     preconditions: "Preconditions",
+    actions: "Actions",
+    expected: "Expected behavior",
     rules: "Rules",
-    actions: "Available actions",
-    expected: "Acceptance criteria",
-    engineering: "Engineering",
-    coverage: "Coverage",
-    scenariosRegistered: (count) => `${count} ${count === 1 ? "scenario" : "scenarios"} registered.`,
-    scenarioContract: "Scenario contract",
-    noIssues: "No issues found.",
-    diagnosticsProductNotice:
-      "These diagnostics evaluate the entire product catalog, including items outside the active task and handoff.",
+    components: "Components used",
+    ticket: "Ticket",
+    copyForPr: "Copy for PR",
+    copiedForPr: "Copied",
+    copyPrompt: "Copy the text for the PR:",
   },
 
-  home: {
-    componentsLead: (total) =>
-      `Catalog of the product's components and layouts, each with its own synthetic data. ${total} ${
-        total === 1 ? "component registered" : "components registered"
-      }.`,
-    lead: (total) =>
-      `Executable specification: each state below opens from a link with its own persona, data, and rules. ${total} ${
-        total === 1 ? "state registered" : "states registered"
-      }.`,
-    withoutModule: "No module",
-    withoutModuleHint:
-      "The ID prefix does not match a registered module, so these states do not appear in module navigation.",
-    noScenarios: "The product has not registered any scenarios yet. Components live in the Components tab of the navigation.",
+  diagnostics: {
+    title: "Diagnostics",
+    noIssues: "No issues found.",
+    error: "Error",
+    warning: "Warning",
+    close: "Close diagnostics",
+  },
+
+  pr: {
+    variations: "Variations",
+    components: "Components",
+    component: "Component",
+    source: "Source",
+    expected: "Expected behavior",
+    commit: (shortCommit) => `Commit \`${shortCommit}\``,
+    immutableLink: "this deployment",
+    noExpected: "No expected behavior declared.",
+    empty: "—",
   },
 
   shell: {
-    restoreChrome: "Show controls",
+    restoreChrome: "Show chrome (Shift+C)",
+    frameTitle: (product) => `${product} preview`,
     noRoute: "No route for this address",
-    noRouteHint: "does not match any declared route. Choose a state from the navigation.",
+    noRouteHint: "does not match any declared route. Choose a screen from the navigation.",
     outsideHandoff: "Outside this handoff scope",
     outsideHandoffHint:
       "This link only allows review of the scenarios, routes, and components listed in the handoff. Choose an available item from the navigation.",
+    empty: "Nothing to show yet",
+    emptyHint: "The product has not registered any screens or components yet.",
   },
 };
 
@@ -441,8 +454,8 @@ export function resolveLabels(override?: LabelsOverride): Labels {
 /**
  * Rótulos resolvidos, para o chrome inteiro.
  *
- * O padrão do contexto é o português, então `Home` e `Stage` — exportados e
- * montáveis fora do `DesignSpace` — continuam funcionando sem provider.
+ * O padrão do contexto é o português, então `StageEmpty` — exportado e
+ * montável fora do `DesignSpace` — continua funcionando sem provider.
  */
 export const LabelsContext = createContext<Labels>(DEFAULT_LABELS);
 

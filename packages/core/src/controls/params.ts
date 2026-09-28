@@ -25,6 +25,9 @@ export const PARAM = {
   chromeTheme: "appearance",
   chrome: "chrome",
   inspector: "panel",
+  panelTab: "tab",
+  zoom: "zoom",
+  rotated: "rotate",
 } as const satisfies Record<Exclude<keyof ControlsState, "handoff">, string>;
 
 /**

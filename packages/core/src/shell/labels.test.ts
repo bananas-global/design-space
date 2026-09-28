@@ -22,7 +22,7 @@ describe("resolveLabels", () => {
     // O que não foi declarado continua padrão, inclusive no mesmo grupo.
     expect(labels.network.error).toBe(DEFAULT_LABELS.network.error);
     expect(labels.topbar.copyLink).toBe("Copy link");
-    expect(labels.controls.persona).toBe(DEFAULT_LABELS.controls.persona);
+    expect(labels.panel.persona).toBe(DEFAULT_LABELS.panel.persona);
   });
 
   it("não muta o padrão", () => {
@@ -32,10 +32,10 @@ describe("resolveLabels", () => {
 
   it("aceita override de rótulo interpolado", () => {
     const labels = resolveLabels({
-      home: { lead: (total) => `${total} scenarios` },
+      topbar: { zoomValue: (percent) => `${percent} pct` },
     });
 
-    expect(labels.home.lead(3)).toBe("3 scenarios");
+    expect(labels.topbar.zoomValue(50)).toBe("50 pct");
   });
 
   it("não carrega mais rótulos de status, acessibilidade ou referências portadas", () => {
@@ -45,10 +45,25 @@ describe("resolveLabels", () => {
     expect(JSON.stringify(Object.keys(DEFAULT_LABELS.sidebar))).not.toMatch(/ported|Ported/);
   });
 
+  it("não carrega mais rótulos de módulo, jornada ou Home", () => {
+    expect(Object.keys(DEFAULT_LABELS)).not.toContain("home");
+    expect(Object.keys(DEFAULT_LABELS)).not.toContain("inspector");
+    expect(JSON.stringify(Object.keys(DEFAULT_LABELS.sidebar))).not.toMatch(/flow|module/i);
+  });
+
+  it("en-US tem exatamente as mesmas chaves do padrão", () => {
+    for (const group of Object.keys(DEFAULT_LABELS) as (keyof typeof DEFAULT_LABELS)[]) {
+      expect(Object.keys(EN_US_LABELS[group]).sort(), group).toEqual(
+        Object.keys(DEFAULT_LABELS[group]).sort(),
+      );
+    }
+  });
+
   it("oferece um dicionário en-US completo", () => {
-    expect(EN_US_LABELS.topbar.lightMode).toBe("Light mode");
+    expect(EN_US_LABELS.topbar.lightMode).toBe("Light theme");
     expect(EN_US_LABELS.sidebar.componentsTab).toBe("Components");
-    expect(EN_US_LABELS.inspector.noIssues).toBe("No issues found.");
+    expect(EN_US_LABELS.diagnostics.noIssues).toBe("No issues found.");
+    expect(EN_US_LABELS.info.copyForPr).toBe("Copy for PR");
     expect(resolveLabels(EN_US_LABELS)).toEqual(EN_US_LABELS);
   });
 });

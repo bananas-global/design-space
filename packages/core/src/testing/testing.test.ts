@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Scenario } from "../types/index.js";
-import { pathFor } from "./index.js";
+import { FRAME_SELECTOR, pathFor } from "./index.js";
 
 describe("pathFor", () => {
   it("monta o caminho relativo sem exigir persona", () => {
@@ -25,5 +25,11 @@ describe("pathFor", () => {
     });
 
     expect(new URL(path, "http://x.invalid").searchParams.get("persona")).toBe("reviewer");
+  });
+});
+
+describe("FRAME_SELECTOR", () => {
+  it("aponta para o iframe do chrome", () => {
+    expect(FRAME_SELECTOR).toBe("iframe[data-ds-frame]");
   });
 });

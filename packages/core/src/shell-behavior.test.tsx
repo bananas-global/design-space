@@ -1,81 +1,128 @@
-import { act, createElement } from "react";
-import { createRoot } from "react-dom/client";
-import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { createRegistry } from "./registry/index.js";
-import { Controls } from "./shell/Controls.js";
 import { DesignSpace } from "./shell/DesignSpace.js";
-import { Home } from "./shell/Home.js";
-import { Inspector } from "./shell/Inspector.js";
-import { LabelsContext, DEFAULT_LABELS } from "./shell/labels.js";
-import { Sidebar } from "./shell/Sidebar.js";
+import { DEFAULT_LABELS } from "./shell/labels.js";
+import { FRAME_PARAM } from "./frame/index.js";
 import type {
   ComponentPreviewProps,
-  ControlsState,
   ProductDefinition,
-  Scenario,
+  ScreenProps,
 } from "./types/index.js";
 
 beforeAll(() => {
-  const environment = globalThis as typeof globalThis & {
-    IS_REACT_ACT_ENVIRONMENT: boolean;
-  };
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean };
   environment.IS_REACT_ACT_ENVIRONMENT = true;
 });
 
-const controls: ControlsState = {
-  scenario: undefined,
-  component: undefined,
-  persona: undefined,
-  fixture: undefined,
-  network: "success",
-  viewport: "fit",
-  customWidth: undefined,
-  themeMode: undefined,
-  locale: undefined,
-  dataSource: "fixtures",
-  chromeTheme: "dark",
-  chrome: true,
-  inspector: true,
-};
+function RequestScreen({ params, context }: ScreenProps) {
+  return (
+    <main data-testid="screen">
+      <h1>{`Request ${params.id ?? "queue"}`}</h1>
+      <output data-testid="data">{JSON.stringify(context.data ?? null)}</output>
+      <output data-testid="persona">{context.persona?.id ?? "none"}</output>
+      <a href="/requests/REQ-9">open</a>
+    </main>
+  );
+}
 
-const portedScenario: Scenario = {
-  id: "requests.imported",
-  title: "Imported reference",
-  route: "/requests/imported",
-  fixture: "request-imported",
-};
-
-const activeScenario: Scenario = {
-  id: "billing.review",
-  title: "Active review",
-  route: "/billing/review",
-  persona: "reviewer",
-  fixture: "request-imported",
-};
+function ButtonPreview({ data }: ComponentPreviewProps<{ label: string }>) {
+  return <button type="button">{data?.label ?? "empty"}</button>;
+}
 
 function product(overrides: Partial<ProductDefinition> = {}): ProductDefinition {
   return {
     id: "reference",
     name: "Reference",
-    modules: [
-      { id: "requests", name: "Requests" },
-      { id: "billing", name: "Billing" },
-      { id: "empty", name: "Empty module" },
+    personas: [
+      { id: "reviewer", name: "Reviewer", permissions: ["requests.read"] },
+      { id: "requester", name: "Requester", permissions: [] },
     ],
-    scenarios: [portedScenario],
-    personas: [{ id: "reviewer", name: "Reviewer", permissions: [] }],
-    fixtures: [{ id: "request-imported", label: "Imported", data: {} }],
-    routes: [{ path: "/requests/:id", screen: () => null }],
+    fixtures: [
+      { id: "queue", label: "Queue", data: { total: 3 } },
+      { id: "detail", label: "Detail", data: { id: "REQ-1" } },
+    ],
+    routes: [
+      { path: "/requests", screen: RequestScreen, name: "Request queue" },
+      { path: "/requests/:id", screen: RequestScreen, name: "Request detail" },
+    ],
+    scenarios: [
+      {
+        id: "queue",
+        title: "Full queue",
+        intent: "See everything waiting.",
+        route: "/requests",
+        persona: "reviewer",
+        fixture: "queue",
+        expected: ["Three requests are listed."],
+        components: ["actions.button"],
+      },
+      {
+        id: "queue-empty",
+        title: "Empty queue",
+        intent: "Explain the empty state.",
+        route: "/requests",
+        persona: "reviewer",
+        fixture: "queue",
+        network: "empty",
+        expected: ["The empty state explains what to do."],
+      },
+      {
+        id: "detail",
+        title: "Detail",
+        route: "/requests/REQ-1",
+        persona: "reviewer",
+        fixture: "detail",
+        expected: ["The detail opens."],
+      },
+    ],
+    components: [
+      {
+        id: "actions.button",
+        name: "Button",
+        group: "Actions",
+        source: "components/button.ex → button/1",
+        preview: ButtonPreview,
+        fixtures: [
+          { id: "default", label: "Default", data: { label: "Continue" } },
+          { id: "long", label: "Long label", data: { label: "Continue to the next step" } },
+        ],
+      },
+      { id: "feedback.notice", name: "Notice", group: "Feedback", preview: () => null },
+    ],
     ...overrides,
   };
 }
 
-function withLabels(node: React.ReactNode): string {
-  return renderToStaticMarkup(
-    <LabelsContext.Provider value={DEFAULT_LABELS}>{node}</LabelsContext.Provider>,
+let root: Root | undefined;
+
+async function mount(url: string, definition: ProductDefinition = product()) {
+  window.history.replaceState(null, "", url);
+  const container = document.createElement("div");
+  document.body.append(container);
+  root = createRoot(container);
+  await act(async () => {
+    root!.render(<DesignSpace product={definition} />);
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+  return container;
+}
+
+function button(container: HTMLElement, name: string): HTMLButtonElement {
+  const found = [...container.querySelectorAll("button")].find(
+    (item) => item.textContent?.trim() === name || item.getAttribute("aria-label") === name,
   );
+  if (!found) throw new Error(`Botão não encontrado: ${name}`);
+  return found;
+}
+
+async function click(element: Element) {
+  await act(async () => {
+    (element as HTMLElement).click();
+  });
 }
 
 function setInputValue(input: HTMLInputElement, value: string) {
@@ -85,445 +132,308 @@ function setInputValue(input: HTMLInputElement, value: string) {
 }
 
 afterEach(() => {
+  act(() => root?.unmount());
+  root = undefined;
   document.body.innerHTML = "";
   window.history.replaceState(null, "", "/");
-});
-
-describe("navegação sem status nem coleções", () => {
-  it("exibe todo cenário registrado na Home, sem legenda de status nem módulo vazio", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const markup = withLabels(<Home registry={registry} onOpenScenario={() => undefined} />);
-
-    expect(markup).toContain(activeScenario.title);
-    expect(markup).toContain(portedScenario.title);
-    expect(markup).not.toContain("data-status");
-    expect(markup).not.toContain("ds-home__legend");
-    expect(markup).not.toContain("Empty module");
-  });
-
-  it("mostra um único estado vazio quando não há cenário nem componente", () => {
-    const registry = createRegistry(product({ scenarios: [] }));
-    const markup = withLabels(<Home registry={registry} onOpenScenario={() => undefined} />);
-
-    expect(markup.match(/ds-home__empty/g)).toHaveLength(1);
-    expect(markup).toContain(DEFAULT_LABELS.home.noScenarios);
-    expect(markup).not.toContain("Empty module");
-  });
-
-  it("busca em todos os cenários registrados", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const container = document.createElement("div");
-    const root = createRoot(container);
-    act(() => root.render(
-      <Sidebar
-        registry={registry}
-        activeScenario={undefined}
-        activeComponent={undefined}
-        controls={controls}
-        onOpenScenario={() => undefined}
-        onOpenComponent={() => undefined}
-      />,
-    ));
-
-    const input = container.querySelector('input[type="search"]') as HTMLInputElement;
-    act(() => setInputValue(input, "Imported reference"));
-    expect(container.textContent).toContain(portedScenario.title);
-    expect(container.textContent).not.toContain(activeScenario.title);
-    act(() => setInputValue(input, "nada disso"));
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.noMatch("nada disso"));
-    act(() => root.unmount());
-  });
-
-  it("abre cenário sem persona com permissões vazias", async () => {
-    let permissions: string[] | undefined;
-    const definition = product({
-      scenarios: [portedScenario],
-      routes: [{
-        path: "/requests/:id",
-        screen: ({ context }) => {
-          permissions = context.permissions;
-          return createElement("span", null, "SCREEN");
-        },
-      }],
-    });
-    window.history.replaceState(null, "", `/requests/imported?scenario=${portedScenario.id}`);
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={definition} />));
-
-    expect(container.textContent).toContain("SCREEN");
-    expect(permissions).toEqual([]);
-    expect(container.querySelector('[aria-current="true"]')?.textContent).toContain(
-      portedScenario.title,
-    );
-    await act(async () => root.unmount());
-  });
-});
-
-describe("produto que é só catálogo de componentes", () => {
-  function catalogOnly(): ProductDefinition {
-    return {
-      id: "catalog",
-      name: "Catalog",
-      modules: [],
-      scenarios: [],
-      personas: [],
-      fixtures: [],
-      routes: [],
-      components: [
-        { id: "actions.button", name: "Button", group: "Actions", preview: () => null },
-        {
-          id: "layouts.page",
-          name: "Page layout",
-          group: "Layouts",
-          description: "Two columns",
-          preview: () => createElement("span", null, "PAGE LAYOUT"),
-        },
-      ],
-    };
+  try {
+    window.localStorage.clear();
+  } catch {
+    // sem armazenamento no ambiente
   }
-
-  it("abre a Home no catálogo, sem seções de cenário vazias", async () => {
-    window.history.replaceState(null, "", "/");
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={catalogOnly()} />));
-
-    const text = container.textContent ?? "";
-    expect(text).toContain(DEFAULT_LABELS.home.componentsLead(2));
-    expect(text).toContain("Actions");
-    expect(text).toContain("Layouts");
-    expect(text).toContain("Page layout");
-    expect(text).not.toContain(DEFAULT_LABELS.home.noScenarios);
-    expect(text).not.toContain(DEFAULT_LABELS.sidebar.emptyScenarios);
-    expect(container.querySelector(".ds-home__empty")).toBeNull();
-    // A navegação abre direto nos componentes, sem aba de fluxos vazia.
-    expect(container.querySelector(".ds-sidebar__tabs")).toBeNull();
-    expect(container.querySelectorAll(".ds-component-item")).toHaveLength(2);
-    // Nenhum erro no diagnóstico: produto sem rota e sem cenário é válido.
-    expect(text).not.toMatch(new RegExp(`${DEFAULT_LABELS.inspector.tabDiagnostics} \\(`));
-
-    const card = [...container.querySelectorAll(".ds-home__card")].find((button) =>
-      button.textContent?.includes("Page layout"),
-    );
-    await act(async () => card?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(window.location.search).toBe("?component=layouts.page");
-    expect(container.textContent).toContain("PAGE LAYOUT");
-    await act(async () => root.unmount());
-  });
 });
 
-describe("component preview fixtures in the shell", () => {
-  it("renders the data selector only for components that declare fixtures", () => {
-    const definition = product({
-      components: [
-        { id: "feedback.notice", name: "Notice", preview: () => null },
-        {
-          id: "actions.button",
-          name: "Button",
-          preview: () => null,
-          fixtures: [{ id: "filled", label: "Filled", data: { label: "Continue" } }],
-        },
-      ],
-    });
-    const registry = createRegistry(definition);
-    const withoutFixtures = registry.component("feedback.notice");
-    const withFixtures = registry.component("actions.button");
+describe("chrome", () => {
+  it("abre a raiz na primeira variação da primeira tela, sem Home", async () => {
+    const container = await mount("/");
+    expect(window.location.pathname).toBe("/requests");
+    expect(new URLSearchParams(window.location.search).get("scenario")).toBe("queue");
 
-    const withoutMarkup = withLabels(
-      <Controls
-        registry={registry}
-        controls={{ ...controls, component: withoutFixtures?.id }}
-        scenarioActive={false}
-        component={withoutFixtures}
-        componentFixture={registry.resolveComponentFixture(withoutFixtures?.id, undefined)}
-        onChange={() => undefined}
-      />,
-    );
-    const withMarkup = withLabels(
-      <Controls
-        registry={registry}
-        controls={{ ...controls, component: withFixtures?.id, fixture: "filled" }}
-        scenarioActive={false}
-        component={withFixtures}
-        componentFixture={registry.resolveComponentFixture(withFixtures?.id, "filled")}
-        onChange={() => undefined}
-      />,
-    );
-
-    expect(withoutMarkup).not.toContain("ds-component-fixture");
-    expect(withMarkup).toContain("ds-component-fixture");
-    expect(withMarkup).toContain("Filled");
+    const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]");
+    expect(frame).not.toBeNull();
+    expect(frame!.getAttribute("src")).toBe(`/requests?scenario=queue&${FRAME_PARAM}=1`);
+    expect(container.querySelector(".ds-topbar")?.textContent).toContain("Reference");
   });
 
-  it("passes resolved fixture data and relevant controls without ScenarioContext", async () => {
-    let received: ComponentPreviewProps<{ label: string }> | undefined;
-    const Preview = (props: ComponentPreviewProps<{ label: string }>) => {
-      received = props;
-      return createElement("span", null, props.data?.label);
-    };
-    const definition = product({
-      theme: { modes: ["light", "dark"], locales: ["pt-BR", "en-US"] },
-      components: [{
-        id: "actions.button",
-        name: "Button",
-        preview: Preview,
-        fixtures: [{ id: "filled", label: "Filled", data: () => ({ label: "Continue" }) }],
-        defaultFixture: "filled",
-      }],
-    });
-    window.history.replaceState(
-      null,
-      "",
-      "/?component=actions.button&fixture=filled&viewport=mobile&theme=dark&locale=en-US",
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-
-    await act(async () => root.render(<DesignSpace product={definition} />));
-
-    expect(received).toMatchObject({
-      fixture: { id: "filled", label: "Filled" },
-      data: { label: "Continue" },
-      viewport: { id: "mobile", width: 390, height: 844 },
-      themeMode: "dark",
-      locale: "en-US",
-    });
-    expect(received).not.toHaveProperty("scenario");
-    expect(received).not.toHaveProperty("a11y");
-    await act(async () => root.unmount());
+  it("abre no primeiro componente quando o produto não tem telas", async () => {
+    const container = await mount("/", product({ routes: [], scenarios: [] }));
+    expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");
+    // Sem telas, a aba Telas some e fica só a lista de componentes.
+    expect(container.querySelector(".ds-sidebar [role='tablist']")).toBeNull();
+    expect(container.querySelector(".ds-sidebar")?.textContent).toContain("Button");
   });
 
-  it("makes an invalid fixture fallback explicit instead of failing silently", async () => {
-    const definition = product({
-      components: [{
-        id: "feedback.notice",
-        name: "Notice",
-        preview: ({ data }: ComponentPreviewProps<{ message: string }>) =>
-          createElement("span", null, data?.message),
-        fixtures: [{ id: "default", label: "Default", data: { message: "Ready" } }],
-      }],
-    });
-    window.history.replaceState(
-      null,
-      "",
-      "/?component=feedback.notice&fixture=missing",
+  it("mostra Telas e Componentes com contagem e destaca o item ativo", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const tabs = [...container.querySelectorAll(".ds-sidebar [role='tab']")].map((tab) =>
+      tab.textContent?.replace(/\s+/g, " ").trim(),
     );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-
-    await act(async () => root.render(<DesignSpace product={definition} />));
-
-    expect(container.textContent).toContain("Ready");
-    expect(container.textContent).toContain("missing");
-    expect(container.textContent).toContain("fallback");
-    expect(window.location.search).toContain("fixture=missing");
-    await act(async () => root.unmount());
-  });
-});
-
-describe("handoff focado no shell", () => {
-  const hiddenScenario: Scenario = {
-    ...activeScenario,
-    id: "billing.hidden",
-    title: "Hidden review",
-    route: "/billing/hidden",
-  };
-
-  function scopedProduct(): ProductDefinition {
-    return product({
-      modules: [{
-        id: "billing",
-        name: "Billing",
-        flows: [{
-          id: "review",
-          title: "Review flow",
-          steps: [
-            { scenario: activeScenario.id, label: "Allowed step" },
-            { scenario: hiddenScenario.id, label: "Hidden step" },
-          ],
-        }],
-      }, { id: "requests", name: "Requests" }],
-      scenarios: [activeScenario, hiddenScenario, portedScenario],
-      routes: [
-        { path: "/billing/:id", screen: () => createElement("span", null, "SENSITIVE SCREEN") },
-        { path: "/requests/:id", screen: () => null },
-      ],
-      components: [
-        { id: "feedback.allowed", name: "Allowed component", preview: () => null },
-        { id: "feedback.hidden", name: "Hidden component", preview: () => null },
-      ],
-    });
-  }
-
-  it("filtra Home, flows e componentes pela allowlist", async () => {
-    const registry = createRegistry(scopedProduct());
-    const handoff = {
-      scenarios: [activeScenario.id, portedScenario.id],
-      components: ["feedback.allowed"],
-    };
-    const home = withLabels(
-      <Home
-        registry={registry}
-        handoff={handoff}
-        onOpenScenario={() => undefined}
-      />,
-    );
-    expect(home).toContain(activeScenario.title);
-    expect(home).toContain("Allowed step");
-    expect(home).not.toContain(hiddenScenario.title);
-    expect(home).not.toContain("Hidden step");
-    expect(home).toContain(portedScenario.title);
-
-    const container = document.createElement("div");
-    const root = createRoot(container);
-    await act(async () => root.render(
-      <LabelsContext.Provider value={DEFAULT_LABELS}>
-        <Sidebar
-          registry={registry}
-          activeScenario={activeScenario}
-          activeComponent={undefined}
-          controls={{ ...controls, handoff }}
-          onOpenScenario={() => undefined}
-          onOpenComponent={() => undefined}
-        />
-      </LabelsContext.Provider>,
-    ));
-    const componentsTab = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.sidebar.componentsTab,
-    );
-    await act(async () => componentsTab?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(container.textContent).toContain("Allowed component");
-    expect(container.textContent).not.toContain("Hidden component");
-    await act(async () => root.unmount());
+    expect(tabs).toEqual([
+      `${DEFAULT_LABELS.sidebar.screensTab}2`,
+      `${DEFAULT_LABELS.sidebar.componentsTab}2`,
+    ]);
+    const active = container.querySelector(".ds-sidebar [aria-current='true']");
+    expect(active?.textContent).toContain("Request queue");
   });
 
-  it("mostra bloqueio claro para URL fora do escopo e aceita rota autorizada", async () => {
-    const definition = scopedProduct();
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
+  it("busca sem diferenciar acento nem caixa, contando por aba", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const input = container.querySelector<HTMLInputElement>(".ds-sidebar input")!;
+    await act(async () => setInputValue(input, "BÚTTON"));
 
-    window.history.replaceState(
-      null,
-      "",
-      "/billing/hidden?scenario=billing.hidden&handoff=1&allowScenario=billing.review",
+    const counts = [...container.querySelectorAll(".ds-sidebar [role='tab'] .ds-count")].map(
+      (item) => item.textContent,
     );
-    await act(async () => root.render(<DesignSpace product={definition} />));
-    expect(container.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
-    expect(container.textContent).not.toContain("SENSITIVE SCREEN");
+    expect(counts).toEqual(["0", "1"]);
 
+    await click(button(container, `${DEFAULT_LABELS.sidebar.componentsTab}1`));
+    expect(container.querySelector(".ds-sidebar__list")?.textContent).toContain("Button");
+    expect(container.querySelector(".ds-sidebar__list")?.textContent).not.toContain("Notice");
+  });
+
+  it("lista as variações da tela e troca de variação pela URL", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain("Full queue");
+    expect(panel.textContent).toContain("See everything waiting.");
+    expect(panel.textContent).toContain("Empty queue");
+
+    await click(button(container, "Empty queueExplain the empty state."));
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("scenario")).toBe("queue-empty");
+    expect(window.location.pathname).toBe("/requests");
+  });
+
+  it("Informações da tela mostram rota, comportamento esperado e componentes com origem", async () => {
+    const container = await mount("/requests?scenario=queue&tab=info");
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain("/requests");
+    expect(panel.textContent).toContain(DEFAULT_LABELS.info.expected);
+    expect(panel.textContent).toContain("Three requests are listed.");
+    expect(panel.textContent).toContain("components/button.ex → button/1");
+    expect(() => button(container, DEFAULT_LABELS.info.copyForPr)).not.toThrow();
+
+    await click(button(container, "Button"));
+    expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");
+  });
+
+  it("Informações do componente mostram origem e onde é usado, com link", async () => {
+    const container = await mount("/?component=actions.button&tab=info");
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain("components/button.ex → button/1");
+    expect(panel.textContent).toContain(DEFAULT_LABELS.info.usedIn);
+
+    await click(button(container, "Request queue"));
+    expect(window.location.pathname).toBe("/requests");
+    expect(new URLSearchParams(window.location.search).get("scenario")).toBe("queue");
+  });
+
+  it("as variações de um componente são as fixtures dele", async () => {
+    const container = await mount("/?component=actions.button");
+    await click(button(container, "Long label"));
+    expect(new URLSearchParams(window.location.search).get("fixture")).toBe("long");
+  });
+
+  it("viewport, girar e zoom vão para a URL e para o tamanho do quadro", async () => {
+    const container = await mount("/requests?scenario=queue");
+    await click(button(container, DEFAULT_LABELS.viewport.mobile!));
+    const frame = () => container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!;
+    expect(new URLSearchParams(window.location.search).get("viewport")).toBe("mobile");
+    expect(frame().style.width).toBe("375px");
+    expect(frame().style.height).toBe("812px");
+
+    await click(button(container, DEFAULT_LABELS.topbar.rotate));
+    expect(frame().style.width).toBe("812px");
+
+    await click(button(container, DEFAULT_LABELS.topbar.zoomOut));
+    expect(new URLSearchParams(window.location.search).get("zoom")).toBe("90");
+    expect(frame().style.transform).toBe("scale(0.9)");
+  });
+
+  it("Shift+C esconde o chrome e o botão discreto o traz de volta", async () => {
+    const container = await mount("/requests?scenario=queue");
     await act(async () => {
-      window.history.replaceState(
-        null,
-        "",
-        "/billing/hidden?handoff=1&allowRoute=%2Fbilling%2F%3Aid",
-      );
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "C", shiftKey: true }));
     });
-    expect(container.textContent).toContain("SENSITIVE SCREEN");
-    expect(container.textContent).not.toContain(DEFAULT_LABELS.shell.outsideHandoff);
-    await act(async () => root.unmount());
+    expect(container.querySelector(".ds-root")?.getAttribute("data-chrome")).toBe("hidden");
+    expect(container.querySelector(".ds-topbar")).toBeNull();
+    expect(new URLSearchParams(window.location.search).get("chrome")).toBe("0");
+
+    await click(container.querySelector(".ds-restore")!);
+    expect(container.querySelector(".ds-topbar")).not.toBeNull();
   });
 
-  it("preserva a allowlist quando a tela navega com query própria", async () => {
-    const navigable = scopedProduct();
-    navigable.routes = [{
-      path: "/billing/:id",
-      screen: ({ context }) => createElement(
-        "button",
-        { onClick: () => context.navigate("/billing/hidden?panel=0") },
-        "LEAVE SCOPE",
-      ),
-    }];
-    window.history.replaceState(
-      null,
-      "",
-      "/billing/review?scenario=billing.review&handoff=1&allowScenario=billing.review",
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={navigable} />));
-
-    const leave = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "LEAVE SCOPE",
-    );
-    await act(async () => leave?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-
-    expect(window.location.pathname).toBe("/billing/hidden");
-    expect(window.location.search).toContain("handoff=1");
-    expect(window.location.search).toContain("allowScenario=billing.review");
-    expect(window.location.search).toContain("panel=0");
-    expect(container.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
-    await act(async () => root.unmount());
+  it("Shift+P fecha e abre o painel", async () => {
+    const container = await mount("/requests?scenario=queue");
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "P", shiftKey: true }));
+    });
+    expect(container.querySelector(".ds-panel")).toBeNull();
+    expect(new URLSearchParams(window.location.search).get("panel")).toBe("0");
   });
 
-  it("acrescenta o handoff a links internos da UI do produto", async () => {
-    const linked = scopedProduct();
-    linked.routes = [{
-      path: "/billing/:id",
-      screen: () => createElement(
-        "div",
-        null,
-        createElement("a", { href: "/billing/hidden?tab=details" }, "INTERNAL LINK"),
-        createElement("a", { href: "https://docs.example.test/guide" }, "EXTERNAL LINK"),
-      ),
-    }];
-    window.history.replaceState(
-      null,
-      "",
-      "/billing/review?scenario=billing.review&handoff=1&allowScenario=billing.review",
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={linked} />));
+  it("segue o sistema por padrão e lembra a troca de tema", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const rootElement = () => container.querySelector(".ds-root")!;
+    expect(rootElement().getAttribute("data-appearance")).toBe("light");
 
-    const anchors = [...container.querySelectorAll("a")];
-    const internal = anchors.find((anchor) => anchor.textContent === "INTERNAL LINK");
-    const external = anchors.find((anchor) => anchor.textContent === "EXTERNAL LINK");
-    expect(internal?.getAttribute("href")).toContain("tab=details");
-    expect(internal?.getAttribute("href")).toContain("handoff=1");
-    expect(internal?.getAttribute("href")).toContain("allowScenario=billing.review");
-    expect(external?.getAttribute("href")).toBe("https://docs.example.test/guide");
-    await act(async () => root.unmount());
+    await click(button(container, DEFAULT_LABELS.topbar.darkMode));
+    expect(rootElement().getAttribute("data-appearance")).toBe("dark");
+    expect(new URLSearchParams(window.location.search).get("appearance")).toBe("dark");
+    expect(window.localStorage.getItem("ds:appearance")).toBe("dark");
+  });
+
+  it("mostra o indicador de diagnóstico só quando há problema", async () => {
+    const clean = await mount("/requests?scenario=queue");
+    expect(clean.querySelector(".ds-diagnostics")).toBeNull();
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+
+    const broken = await mount(
+      "/requests?scenario=queue",
+      product({
+        scenarios: [
+          ...product().scenarios,
+          { id: "broken", title: "Broken", route: "/requests", fixture: "missing" },
+        ],
+      }),
+    );
+    const trigger = broken.querySelector<HTMLButtonElement>(".ds-diagnostics__trigger")!;
+    expect(trigger.getAttribute("data-level")).toBe("error");
+    await click(trigger);
+    expect(broken.querySelector(".ds-diagnostics__popover")?.textContent).toContain("missing");
+  });
+
+  it("estado vazio simples quando o produto não tem nada", async () => {
+    const container = await mount("/", product({ routes: [], scenarios: [], components: [] }));
+    expect(container.textContent).toContain(DEFAULT_LABELS.shell.empty);
+    expect(container.querySelector("iframe")).toBeNull();
+  });
+
+  it("filtra a navegação pelo handoff", async () => {
+    const container = await mount(
+      "/requests/REQ-1?scenario=detail&handoff=1&allowScenario=detail&allowComponent=feedback.notice",
+    );
+    const sidebar = container.querySelector(".ds-sidebar")!;
+    expect(sidebar.textContent).toContain("Request detail");
+    expect(sidebar.textContent).not.toContain("Request queue");
+    await click(button(container, `${DEFAULT_LABELS.sidebar.componentsTab}1`));
+    expect(sidebar.textContent).toContain("Notice");
+    expect(sidebar.textContent).not.toContain("Button");
   });
 });
 
-describe("escopos autoexplicativos do Inspector", () => {
-  it("separa tarefa, contexto herdado e produto, sem aba de acessibilidade", async () => {
-    const scenario: Scenario = {
-      ...activeScenario,
-      permissions: ["requests.read"],
-      expected: ["A decisão fica registrada."],
+describe("mensagens do quadro no chrome", () => {
+  function frameWindow(container: HTMLElement): Window {
+    return container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!.contentWindow!;
+  }
+
+  it("adota a navegação do quadro, mantendo os controles do chrome", async () => {
+    const container = await mount("/requests?scenario=queue&appearance=dark&zoom=75");
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          source: frameWindow(container),
+          data: {
+            ds: 1,
+            type: "navigate",
+            url: `/requests/REQ-1?scenario=detail&${FRAME_PARAM}=1`,
+            replace: false,
+          },
+        }),
+      );
+    });
+
+    expect(window.location.pathname).toBe("/requests/REQ-1");
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("scenario")).toBe("detail");
+    expect(params.get("appearance")).toBe("dark");
+    expect(params.get("zoom")).toBe("75");
+    expect(params.has(FRAME_PARAM)).toBe(false);
+  });
+
+  it("ignora mensagem de outra origem ou de outra janela", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const data = {
+      ds: 1,
+      type: "navigate",
+      url: `/requests/REQ-1?scenario=detail&${FRAME_PARAM}=1`,
+      replace: false,
     };
-    const registry = createRegistry(product({ scenarios: [scenario] }));
-    const container = document.createElement("div");
-    const root = createRoot(container);
-    await act(async () => root.render(
-      <LabelsContext.Provider value={DEFAULT_LABELS}>
-        <Inspector
-          registry={registry}
-          scenario={scenario}
-          controls={{ ...controls, scenario: scenario.id }}
-        />
-      </LabelsContext.Provider>,
-    ));
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: "https://evil.example.test",
+          source: frameWindow(container),
+          data,
+        }),
+      );
+      window.dispatchEvent(new MessageEvent("message", { origin: window.location.origin, source: window, data }));
+    });
+    expect(window.location.pathname).toBe("/requests");
+  });
 
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.taskScope);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.inheritedScope);
-    expect(container.querySelectorAll('[role="tab"]')).toHaveLength(2);
+  it("atalho repassado pelo quadro esconde o chrome", async () => {
+    const container = await mount("/requests?scenario=queue");
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          source: frameWindow(container),
+          data: { ds: 1, type: "shortcut", key: "C" },
+        }),
+      );
+    });
+    expect(container.querySelector(".ds-root")?.getAttribute("data-chrome")).toBe("hidden");
+  });
+});
 
-    const diagnostics = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent?.startsWith(DEFAULT_LABELS.inspector.tabDiagnostics),
+describe("modo quadro", () => {
+  it("renderiza só a UI do produto, sem nenhum elemento do chrome", async () => {
+    const container = await mount(`/requests/REQ-1?scenario=detail&${FRAME_PARAM}=1`);
+    expect(container.querySelector("[data-testid='screen']")?.textContent).toContain("Request REQ-1");
+    expect(container.querySelector("[data-testid='data']")?.textContent).toBe('{"id":"REQ-1"}');
+    expect(container.querySelector("[data-testid='persona']")?.textContent).toBe("reviewer");
+    expect(container.querySelector("[class^='ds-'], [class*=' ds-']")).toBeNull();
+    expect(container.querySelector("iframe")).toBeNull();
+  });
+
+  it("renderiza o preview do componente com a fixture pedida", async () => {
+    const container = await mount(`/?component=actions.button&fixture=long&${FRAME_PARAM}=1`);
+    expect(container.textContent).toBe("Continue to the next step");
+  });
+
+  it("aplica persona e rede da URL do quadro", async () => {
+    const container = await mount(
+      `/requests?scenario=queue&persona=requester&network=empty&${FRAME_PARAM}=1`,
     );
-    await act(async () => diagnostics?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.diagnosticsProductNotice);
-    await act(async () => root.unmount());
+    expect(container.querySelector("[data-testid='persona']")?.textContent).toBe("requester");
+    expect(container.querySelector("[data-testid='data']")?.textContent).toBe("null");
+  });
+
+  it("links internos navegam dentro do quadro, sem recarregar", async () => {
+    const container = await mount(`/requests?scenario=queue&${FRAME_PARAM}=1`);
+    await click(container.querySelector("a")!);
+    expect(window.location.pathname).toBe("/requests/REQ-9");
+    expect(new URLSearchParams(window.location.search).get(FRAME_PARAM)).toBe("1");
+    expect(container.querySelector("h1")?.textContent).toBe("Request REQ-9");
+  });
+
+  it("bloqueia endereço fora do handoff e preserva o recorte nos links", async () => {
+    const blocked = await mount(
+      `/requests?scenario=queue&handoff=1&allowScenario=detail&${FRAME_PARAM}=1`,
+    );
+    expect(blocked.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+
+    const allowed = await mount(
+      `/requests/REQ-1?scenario=detail&handoff=1&allowScenario=detail&allowRoute=%2Frequests%2F%3Aid&${FRAME_PARAM}=1`,
+    );
+    const href = allowed.querySelector("a")?.getAttribute("href") ?? "";
+    const url = new URL(href, window.location.origin);
+    expect(url.searchParams.get("handoff")).toBe("1");
+    expect(url.searchParams.getAll("allowScenario")).toEqual(["detail"]);
   });
 });

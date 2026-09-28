@@ -46,10 +46,8 @@ export function validateScenario(scenario: Scenario, index?: number): Validation
     err("`id` é obrigatório.");
   } else if (!ID_PATTERN.test(scenario.id)) {
     err(
-      "`id` deve ser minúsculo em kebab-case, com o módulo como prefixo: `requests.approve-blocked`.",
+      "`id` deve ser minúsculo, em kebab-case, com pontos opcionais: `requests.approve-blocked` ou `approve-blocked`.",
     );
-  } else if (!scenario.id.includes(".")) {
-    warn("`id` sem prefixo de módulo dificulta a navegação e a busca do agente.");
   }
 
   if (!isNonEmptyString(scenario?.title)) {
@@ -67,6 +65,10 @@ export function validateScenario(scenario: Scenario, index?: number): Validation
   }
   if (!isNonEmptyString(scenario?.fixture)) {
     err("`fixture` é obrigatório. O padrão do ambiente é dado sintético (D-05).");
+  }
+
+  if (scenario?.components !== undefined && !Array.isArray(scenario.components)) {
+    err("`components`, quando informado, deve ser uma lista de ids de componente.");
   }
 
   if (scenario?.network && !NETWORK_STATES.includes(scenario.network)) {
@@ -94,7 +96,6 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
   const personaIds = new Set(product.personas?.map((p) => p.id) ?? []);
   const fixtureIds = new Set(product.fixtures?.map((f) => f.id) ?? []);
   const ruleIds = new Set(product.rules?.map((r) => r.id) ?? []);
-  const moduleIds = new Set(product.modules?.map((m) => m.id) ?? []);
   const scenarioIds = new Set<string>();
 
   if (!isNonEmptyString(product.id)) push("error", "product", "`id` é obrigatório.");
@@ -104,6 +105,34 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
   // existe quando há cenário que precisa abrir uma tela.
   if (!product.routes?.length && product.scenarios?.length) {
     push("error", "product", "`routes` está vazio: nenhum cenário conseguirá renderizar.");
+  }
+
+  if ("modules" in (product as object)) {
+    push(
+      "warning",
+      "product",
+      "`modules` foi removido na 0.8.0 e é ignorado: cada rota é uma tela, e os cenários da rota são as variações dela.",
+    );
+  }
+
+  const routePaths = new Set<string>();
+  for (const [index, route] of (product.routes ?? []).entries()) {
+    const where = `route:${route?.path ?? index}`;
+    if (!isNonEmptyString(route?.path)) {
+      push("error", where, "`path` é obrigatório.");
+      continue;
+    }
+    if (!route.path.startsWith("/")) push("error", where, "`path` deve começar com `/`.");
+    if (routePaths.has(route.path)) {
+      push("error", where, `\`path\` duplicado: ${route.path}. Cada rota é uma tela.`);
+    }
+    routePaths.add(route.path);
+    if (typeof route.screen !== "function" && typeof route.screen !== "object") {
+      push("error", where, "`screen` é obrigatório.");
+    }
+    if (route.name !== undefined && !isNonEmptyString(route.name)) {
+      push("warning", where, "`name` vazio: a tela aparece com o título do primeiro cenário.");
+    }
   }
 
   const componentIds = new Set<string>();
@@ -119,7 +148,12 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
       componentIds.add(component.id);
     }
     if (!isNonEmptyString(component?.name)) push("error", where, "`name` é obrigatório.");
-    if (typeof component?.preview !== "function") push("error", where, "`preview` é obrigatório.");
+    if (typeof component?.preview !== "function" && typeof component?.preview !== "object") {
+      push("error", where, "`preview` é obrigatório.");
+    }
+    if (component?.source !== undefined && typeof component.source !== "string") {
+      push("error", where, "`source`, quando informado, é texto livre.");
+    }
 
     const componentFixtureIds = new Set<string>();
     for (const [fixtureIndex, fixture] of (component?.fixtures ?? []).entries()) {
@@ -163,15 +197,6 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
         push("error", where, `\`id\` duplicado: ${scenario.id}.`);
       }
       scenarioIds.add(scenario.id);
-
-      const modulePrefix = scenario.id.split(".")[0];
-      if (modulePrefix && moduleIds.size > 0 && !moduleIds.has(modulePrefix)) {
-        push(
-          "warning",
-          where,
-          `Prefixo \`${modulePrefix}\` não corresponde a nenhum módulo registrado. O cenário não vai aparecer na navegação.`,
-        );
-      }
     }
 
     if (scenario?.persona && !personaIds.has(scenario.persona)) {
@@ -185,33 +210,21 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
         push("error", where, `Regra não registrada: \`${rule}\`.`);
       }
     }
+    for (const component of Array.isArray(scenario?.components) ? scenario.components : []) {
+      if (!componentIds.has(component)) {
+        push(
+          "warning",
+          where,
+          `Componente não registrado: \`${component}\`. Ele não aparece em "Componentes usados".`,
+        );
+      }
+    }
     if (scenario?.route && !matchesAnyRoute(scenario.route, product)) {
       push(
         "error",
         where,
         `Rota \`${scenario.route}\` não casa com nenhuma rota declarada. O deep link abriria a tela de rota inexistente.`,
       );
-    }
-  }
-
-  for (const module of product.modules ?? []) {
-    for (const flow of module.flows ?? []) {
-      const where = `flow:${module.id}/${flow.id}`;
-      if (!flow.steps?.length) push("warning", where, "Jornada sem passos.");
-      for (const step of flow.steps ?? []) {
-        if (!scenarioIds.has(step.scenario)) {
-          push("error", where, `Passo aponta para cenário inexistente: \`${step.scenario}\`.`);
-        }
-        for (const [label, target] of Object.entries(step.branches ?? {})) {
-          if (!scenarioIds.has(target)) {
-            push(
-              "error",
-              where,
-              `Ramificação "${label}" aponta para cenário inexistente: \`${target}\`.`,
-            );
-          }
-        }
-      }
     }
   }
 

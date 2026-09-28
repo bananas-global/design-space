@@ -158,9 +158,43 @@ describe("chrome", () => {
   it("abre no primeiro componente quando o produto não tem telas", async () => {
     const container = await mount("/", product({ routes: [], scenarios: [] }));
     expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");
-    // Sem telas, a aba Telas some e fica só a lista de componentes.
-    expect(container.querySelector(".ds-sidebar [role='tablist']")).toBeNull();
+    // As duas abas ficam; a lateral abre em Componentes, e Telas explica onde
+    // as telas entram.
+    expect(container.querySelector(".ds-sidebar [role='tablist']")).not.toBeNull();
     expect(container.querySelector(".ds-sidebar")?.textContent).toContain("Button");
+    await click(button(container, `${DEFAULT_LABELS.sidebar.screensTab}0`));
+    expect(container.querySelector(".ds-sidebar")?.textContent).toContain(DEFAULT_LABELS.sidebar.emptyScreens);
+  });
+
+  it("filtra o painel direito sem diferenciar acento, e Cmd+F foca o filtro", async () => {
+    const container = await mount("/requests?scenario=queue&tab=info");
+    const input = container.querySelector<HTMLInputElement>(`.ds-panel input[aria-label="${DEFAULT_LABELS.panel.searchLabel}"]`)!;
+    expect(input).not.toBeNull();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "f", metaKey: true }));
+    });
+    expect(document.activeElement).toBe(input);
+
+    const visibleRows = () =>
+      [...container.querySelectorAll<HTMLElement>(".ds-panel [data-ds-filter]")].filter((row) => !row.hidden);
+    const before = visibleRows().length;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "ROTA");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const after = visibleRows();
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.length).toBeLessThan(before);
+    expect(after.every((row) => row.textContent?.toLowerCase().includes("rota"))).toBe(true);
+
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "zzzz-nada");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(container.querySelector(".ds-panel")?.textContent).toContain(DEFAULT_LABELS.panel.noMatch("zzzz-nada"));
   });
 
   it("mostra Telas e Componentes com contagem e destaca o item ativo", async () => {

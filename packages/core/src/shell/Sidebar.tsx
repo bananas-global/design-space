@@ -56,13 +56,14 @@ export function Sidebar({
     activeComponent || !hasScreens ? "components" : "screens",
   );
 
-  // A aba segue o item aberto: um link de componente abre em Componentes, e um
-  // produto sem telas nunca mostra a aba vazia.
+  // A aba segue o item aberto: um link de componente abre em Componentes. As
+  // duas abas aparecem sempre, mesmo vazias — a aba vazia diz onde as telas
+  // entram.
   useEffect(() => {
     if (activeComponent && hasComponents) setTab("components");
     else if (activeScreen && hasScreens) setTab("screens");
   }, [activeComponent, activeScreen, hasComponents, hasScreens]);
-  const currentTab: SidebarTab = !hasScreens ? "components" : !hasComponents ? "screens" : tab;
+  const currentTab = tab;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -96,11 +97,11 @@ export function Sidebar({
 
   return (
     <nav className="ds-sidebar" aria-label={s.region} style={{ width }}>
-      <div className="ds-sidebar__search">
+      <div className="ds-search">
         <Icon name="search" size={14} />
         <input
           ref={searchRef}
-          className="ds-input ds-sidebar__input"
+          className="ds-input ds-search__input"
           type="search"
           value={query}
           placeholder={s.searchPlaceholder}
@@ -115,24 +116,22 @@ export function Sidebar({
         </kbd>
       </div>
 
-      {hasScreens && hasComponents && (
-        <div className="ds-tabs" role="tablist" aria-label={s.tabs}>
-          <TabButton
-            selected={currentTab === "screens"}
-            label={s.screensTab}
-            count={screens.length}
-            onSelect={() => setTab("screens")}
-          />
-          <TabButton
-            selected={currentTab === "components"}
-            label={s.componentsTab}
-            count={components.length}
-            onSelect={() => setTab("components")}
-          />
-        </div>
-      )}
+      <div className="ds-tabs" role="tablist" aria-label={s.tabs}>
+        <TabButton
+          selected={currentTab === "screens"}
+          label={s.screensTab}
+          count={screens.length}
+          onSelect={() => setTab("screens")}
+        />
+        <TabButton
+          selected={currentTab === "components"}
+          label={s.componentsTab}
+          count={components.length}
+          onSelect={() => setTab("components")}
+        />
+      </div>
 
-      <div className="ds-sidebar__list" role={hasScreens && hasComponents ? "tabpanel" : undefined}>
+      <div className="ds-sidebar__list" role="tabpanel">
         {currentTab === "screens" ? (
           !hasScreens ? (
             <p className="ds-empty">{s.emptyScreens}</p>

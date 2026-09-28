@@ -7,8 +7,8 @@
  * vem cada componente no sistema real, com o texto pronto para o PR.
  */
 
-import { useState, type ReactNode } from "react";
-import type { ComponentFixtureResolution, Registry, ScreenNode } from "../registry/index.js";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { normalizeSearch, type ComponentFixtureResolution, type Registry, type ScreenNode } from "../registry/index.js";
 import type { DeployContext } from "../deploy/index.js";
 import {
   NETWORK_STATES,
@@ -46,6 +46,27 @@ export type PanelProps = {
 export function Panel(props: PanelProps) {
   const { tab, onTab, width, onResize, onResizeStart, onResizeEnd } = props;
   const labels = useLabels().panel;
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [empty, setEmpty] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isFilterShortcut(event)) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // O filtro age sobre o que já está renderizado: cada linha filtrável some se
+  // o texto dela não casa, e uma seção some quando todas as linhas somem.
+  useLayoutEffect(() => {
+    setEmpty(applyFilter(bodyRef.current, query));
+  });
 
   return (
     <aside className="ds-panel" aria-label={labels.region} style={{ width }}>
@@ -57,6 +78,24 @@ export function Panel(props: PanelProps) {
         onStart={onResizeStart}
         onEnd={onResizeEnd}
       />
+      <div className="ds-search">
+        <Icon name="search" size={14} />
+        <input
+          ref={searchRef}
+          className="ds-input ds-search__input"
+          type="search"
+          value={query}
+          placeholder={labels.searchPlaceholder}
+          aria-label={labels.searchLabel}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setQuery("");
+          }}
+        />
+        <kbd className="ds-kbd" aria-hidden="true">
+          {labels.searchShortcut}
+        </kbd>
+      </div>
       <div className="ds-tabs" role="tablist" aria-label={labels.tabs}>
         <button
           type="button"
@@ -79,8 +118,9 @@ export function Panel(props: PanelProps) {
           {labels.infoTab}
         </button>
       </div>
-      <div className="ds-panel__body" role="tabpanel">
+      <div className="ds-panel__body" role="tabpanel" ref={bodyRef}>
         {tab === "variations" ? <Variations {...props} /> : <Info {...props} />}
+        {empty && <p className="ds-empty">{labels.noMatch(query)}</p>}
       </div>
     </aside>
   );
@@ -113,7 +153,7 @@ function Variations({
         )}
         <ul className="ds-items" aria-label={p.variationsList}>
           {fixtures.map((fixture) => (
-            <li key={fixture.id}>
+            <li key={fixture.id} data-ds-filter>
               <button
                 type="button"
                 className="ds-item ds-item--stacked"
@@ -150,7 +190,7 @@ function Variations({
           </li>
         ) : (
           variations.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} data-ds-filter>
               <button
                 type="button"
                 className="ds-item ds-item--stacked"
@@ -250,7 +290,7 @@ function Variations({
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="ds-field">
+    <label className="ds-field" data-ds-filter>
       <span className="ds-field__label">{label}</span>
       {children}
     </label>
@@ -300,7 +340,7 @@ function Info({
                   usage.variations.find((item) => item.components?.includes(component.id)) ??
                   usage.variations[0];
                 return (
-                  <li key={usage.id}>
+                  <li key={usage.id} data-ds-filter>
                     <button
                       type="button"
                       className="ds-link"
@@ -377,7 +417,7 @@ function Info({
         <Section title={i.components}>
           <ul className="ds-links">
             {components.map((item) => (
-              <li key={item.id}>
+              <li key={item.id} data-ds-filter>
                 <button type="button" className="ds-link" onClick={() => onOpenComponent(item.id)}>
                   {item.name}
                 </button>
@@ -398,7 +438,7 @@ function Info({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="ds-section">
+    <section className="ds-section" data-ds-filter-group>
       <h2 className="ds-section__title">{title}</h2>
       <div className="ds-defs">{children}</div>
     </section>
@@ -407,7 +447,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 function Definition({ term, children }: { term: string; children: ReactNode }) {
   return (
-    <dl className="ds-def">
+    <dl className="ds-def" data-ds-filter>
       <dt>{term}</dt>
       <dd>{children}</dd>
     </dl>
@@ -417,7 +457,7 @@ function Definition({ term, children }: { term: string; children: ReactNode }) {
 function List({ term, items }: { term: string; items: string[] | undefined }) {
   if (!items?.length) return null;
   return (
-    <dl className="ds-def">
+    <dl className="ds-def" data-ds-filter>
       <dt>{term}</dt>
       <dd>
         <ul className="ds-list">
@@ -428,4 +468,35 @@ function List({ term, items }: { term: string; items: string[] | undefined }) {
       </dd>
     </dl>
   );
+}
+
+/** Cmd/Ctrl+F: o filtro do painel no lugar da busca do navegador. */
+export function isFilterShortcut(
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">,
+): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "f";
+}
+
+/**
+ * Esconde as linhas do painel que não casam com o filtro, sem diferenciar
+ * acento nem caixa. Devolve `true` quando o filtro não deixou nada visível.
+ */
+export function applyFilter(root: HTMLElement | null, query: string): boolean {
+  if (!root) return false;
+  const needle = normalizeSearch(query);
+  const rows = [...root.querySelectorAll<HTMLElement>("[data-ds-filter]")];
+  for (const row of rows) {
+    row.hidden = needle.length > 0 && !normalizeSearch(row.textContent ?? "").includes(needle);
+  }
+  for (const group of root.querySelectorAll<HTMLElement>("[data-ds-filter-group]")) {
+    const own = [...group.querySelectorAll<HTMLElement>("[data-ds-filter]")];
+    const title = normalizeSearch(group.querySelector(".ds-section__title")?.textContent ?? "");
+    if (needle.length > 0 && title.includes(needle)) {
+      group.hidden = false;
+      for (const row of own) row.hidden = false;
+      continue;
+    }
+    group.hidden = needle.length > 0 && own.every((row) => row.hidden);
+  }
+  return needle.length > 0 && rows.length > 0 && rows.every((row) => row.hidden);
 }

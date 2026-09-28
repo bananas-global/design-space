@@ -69,6 +69,10 @@ export type Labels = {
   };
   panel: {
     region: string;
+    searchPlaceholder: string;
+    searchLabel: string;
+    searchShortcut: string;
+    noMatch: (query: string) => string;
     tabs: string;
     variationsTab: string;
     infoTab: string;
@@ -195,7 +199,7 @@ export const DEFAULT_LABELS: Labels = {
     searchLabel: "Buscar telas e componentes",
     searchShortcut: "⌘K",
     noMatch: (query) => `Nada encontrado para "${query}".`,
-    emptyScreens: "O produto ainda não registrou telas.",
+    emptyScreens: "Nenhuma tela neste branch. Telas de feature entram por PR, enquanto estão em desenho.",
     emptyComponents: "O produto ainda não registrou componentes.",
     ungrouped: "Outros",
     toggleGroup: (group) => `Mostrar ou ocultar ${group}`,
@@ -204,6 +208,10 @@ export const DEFAULT_LABELS: Labels = {
 
   panel: {
     region: "Painel",
+    searchPlaceholder: "Filtrar",
+    searchLabel: "Filtrar variações e informações",
+    searchShortcut: "⌘F",
+    noMatch: (query) => `Nada neste painel para "${query}".`,
     tabs: "Variações e informações",
     variationsTab: "Variações",
     infoTab: "Informações",
@@ -335,7 +343,7 @@ export const EN_US_LABELS: Labels = {
     searchLabel: "Search screens and components",
     searchShortcut: "⌘K",
     noMatch: (query) => `Nothing found for "${query}".`,
-    emptyScreens: "The product has not registered any screens yet.",
+    emptyScreens: "No screens on this branch. Feature screens come in through a pull request while they are being designed.",
     emptyComponents: "The product has not registered any components yet.",
     ungrouped: "Other",
     toggleGroup: (group) => `Show or hide ${group}`,
@@ -344,6 +352,10 @@ export const EN_US_LABELS: Labels = {
 
   panel: {
     region: "Panel",
+    searchPlaceholder: "Filter",
+    searchLabel: "Filter variations and details",
+    searchShortcut: "⌘F",
+    noMatch: (query) => `Nothing in this panel for "${query}".`,
     tabs: "Variations and information",
     variationsTab: "Variations",
     infoTab: "Information",

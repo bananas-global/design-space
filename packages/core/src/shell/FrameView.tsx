@@ -23,7 +23,7 @@ import {
   handoffAllowsPath,
   handoffAllowsScenario,
 } from "../handoff/index.js";
-import { postFrameMessage } from "../frame/index.js";
+import { postFrameMessage, type FrameShortcut } from "../frame/index.js";
 import { StageEmpty } from "./Stage.js";
 import { useLabels } from "./labels.js";
 
@@ -65,13 +65,13 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
   // iframe, então o quadro repassa. Campos de texto ficam de fora.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key !== "C" && event.key !== "P") return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest?.("input, textarea, select, [contenteditable='true'], [contenteditable='']")) return;
       if (window.parent === window) return;
+      const key = frameShortcutOf(event);
+      if (!key) return;
+      const target = event.target as HTMLElement | null;
+      if (key === "C" && target?.closest?.("input, textarea, select, [contenteditable='true'], [contenteditable='']")) return;
       event.preventDefault();
-      postFrameMessage(window.parent, { ds: 1, type: "shortcut", key: event.key }, window.location.origin);
+      postFrameMessage(window.parent, { ds: 1, type: "shortcut", key }, window.location.origin);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -230,4 +230,18 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
       {Wrapper && !handoffBlocked ? <Wrapper context={context}>{screen}</Wrapper> : screen}
     </div>
   );
+}
+
+/** O atalho do chrome que este evento representa, se algum. */
+export function frameShortcutOf(
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">,
+): FrameShortcut | undefined {
+  if (event.altKey) return undefined;
+  if (event.shiftKey && !event.metaKey && !event.ctrlKey && event.key === "C") return "C";
+  if ((event.metaKey || event.ctrlKey) && !event.shiftKey) {
+    const key = event.key.toLowerCase();
+    if (key === "k") return "K";
+    if (key === "f") return "F";
+  }
+  return undefined;
 }

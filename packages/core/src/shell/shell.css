@@ -379,7 +379,7 @@
   border-left: 1px solid var(--ds-border);
 }
 
-.ds-sidebar__search {
+.ds-search {
   position: relative;
   display: flex;
   align-items: center;
@@ -387,13 +387,13 @@
   color: var(--ds-muted);
 }
 
-.ds-sidebar__search > .ds-icon {
+.ds-search > .ds-icon {
   position: absolute;
   left: 9px;
   pointer-events: none;
 }
 
-.ds-input.ds-sidebar__input {
+.ds-input.ds-search__input {
   padding-left: 28px;
   padding-right: 36px;
 }

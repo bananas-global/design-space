@@ -35,13 +35,19 @@ export const CHROME_ONLY_PARAMS: readonly string[] = [
   PARAM.rotated,
 ];
 
+/**
+ * Atalhos do chrome que o quadro repassa: revisão limpa (Shift+C), busca da
+ * lateral (Cmd/Ctrl+K) e filtro do painel (Cmd/Ctrl+F).
+ */
+export type FrameShortcut = "C" | "K" | "F";
+
 export type FrameMessage =
   /** Quadro → pai: montou, neste endereço. */
   | { ds: 1; type: "ready"; url: string }
   /** Quadro → pai: a UI do produto navegou. */
   | { ds: 1; type: "navigate"; url: string; replace: boolean }
   /** Quadro → pai: atalho do chrome pressionado com o foco dentro do quadro. */
-  | { ds: 1; type: "shortcut"; key: "C" | "P" }
+  | { ds: 1; type: "shortcut"; key: FrameShortcut }
   /** Pai → quadro: novo estado, sem recarregar. */
   | { ds: 1; type: "location"; url: string };
 
@@ -103,7 +109,7 @@ function isFrameMessage(data: unknown): data is FrameMessage {
     case "navigate":
       return typeof (message as { url?: unknown }).url === "string";
     case "shortcut":
-      return (message as { key?: unknown }).key === "C" || (message as { key?: unknown }).key === "P";
+      return ["C", "K", "F"].includes((message as { key?: unknown }).key as string);
     default:
       return false;
   }

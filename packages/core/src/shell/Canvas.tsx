@@ -17,6 +17,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import type { DesignSpaceLocation } from "../controls/state.js";
 import {
   FRAME_ATTRIBUTE,
+  type FrameShortcut,
   acceptFrameMessage,
   frameKey,
   postFrameMessage,
@@ -37,7 +38,7 @@ export type CanvasProps = {
   /** Desliga o ponteiro no quadro enquanto uma lateral é arrastada. */
   resizing: boolean;
   onFrameNavigate: (url: string, replace: boolean) => void;
-  onShortcut: (key: "C" | "P") => void;
+  onShortcut: (key: FrameShortcut) => void;
 };
 
 /** Respiro entre o quadro e a borda quando o viewport tem tamanho fixo. */

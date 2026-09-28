@@ -18,7 +18,7 @@ import { createRegistry, type Registry } from "../registry/index.js";
 import { useDesignSpaceState } from "../controls/state.js";
 import { getDeployContext } from "../deploy/index.js";
 import { PARAM } from "../controls/params.js";
-import { fromFrameUrl, isFrameMode, mergeChromeParams } from "../frame/index.js";
+import { fromFrameUrl, isFrameMode, mergeChromeParams, type FrameShortcut } from "../frame/index.js";
 import { Topbar } from "./Topbar.js";
 import { Sidebar } from "./Sidebar.js";
 import { Panel } from "./Panel.js";
@@ -129,8 +129,14 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
     [controls.chrome, setControls],
   );
   const onShortcut = useCallback(
-    (key: "C" | "P") => {
-      if (key === "C") toggleChrome();
+    (key: FrameShortcut) => {
+      if (key === "C") {
+        toggleChrome();
+        return;
+      }
+      // Busca (K) e filtro (F) vindos do quadro: repete o atalho no documento do
+      // chrome, onde a lateral e o painel escutam.
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: key.toLowerCase(), metaKey: true }));
     },
     [toggleChrome],
   );

@@ -74,7 +74,7 @@ provedor, e o que sobra é de conta:
 Confira o que mais importa: abra uma rota profunda direto, em janela anônima.
 
 ```
-https://<projeto>/<rota-profunda>?scenario=<modulo>.<situacao>
+https://<projeto>/<rota-profunda>?scenario=<id-do-cenario>
 ```
 
 Precisa abrir a situação certa sem login e sem 404. Se der 404, o rewrite de SPA

@@ -69,9 +69,21 @@ padrão é compartilhado pela convenção no template; o componente, não.
 - **Não** use nome de cliente nem vocabulário de um setor específico em comentário,
   exemplo ou fixture de teste do motor. Exemplo do motor é genérico: solicitação,
   aprovação, cobrança. Existe trava em `src/shell/boundary.test.ts`.
-- **Não** escreva CSS que possa alcançar a UI do produto. Todo seletor é
-  prefixado com `ds-`, toda custom property com `--ds-`, e não existe regra em
-  elemento nu fora de `.ds-root`.
+- **Não** escreva CSS que possa alcançar a UI do produto. A UI roda num
+  `<iframe>`, mas o mesmo bundle carrega `shell.css` no documento do quadro:
+  todo seletor começa em `.ds-`, toda custom property em `--ds-`, e não existe
+  regra em `:root`, `html`, `body` nem em elemento nu. Existe trava em
+  `src/shell/boundary.test.ts`.
+- **Não** confie no documento do chrome. O CSS global do produto também carrega
+  nele: `.ds-root` define fundo, fonte e cor, e todo elemento novo do chrome
+  precisa de classe `ds-` com o estilo completo.
+- **Não** dê cor, logo ou tema por produto ao chrome. Ele é preto e branco para
+  todos; a única cor é o vermelho do diagnóstico
+  ([0012](docs/decisions/0012-chrome-unico-telas-como-rotas-e-iframe.md)).
+- **Não** reintroduza módulo, jornada ou outra camada entre rota e cenário. Uma
+  tela é uma rota; as variações são os cenários da rota.
+- **Não** aceite `postMessage` sem checar `event.origin === location.origin` e
+  `event.source` contra a janela esperada. Use `acceptFrameMessage`.
 - **Não** mude o schema de cenário sem entrada no `CHANGELOG.md` e sem avaliar se
   é major. Mudança incompatível exige comando ou guia, nunca merge silencioso.
 - **Não** reintroduza `a11y`, `status` ou coleção de portados no contrato de
@@ -112,7 +124,8 @@ documento diz qual decisão ele abre e por quê, em vez de reescrevê-la.
 | `src/controls/` | Estado dos controles e sua serialização na URL. |
 | `src/adapters/` | Fontes de dados e resolução do cenário ativo. |
 | `src/deploy/` | Contexto de deployment e montagem de deep links. |
-| `src/shell/` | Chrome neutro: mapa, navegação, painel, controles, palco. |
+| `src/frame/` | Protocolo entre o chrome e o quadro (`ds-frame=1`, `postMessage`). |
+| `src/shell/` | Chrome neutro: barra, Telas/Componentes, Variações/Informações, quadro. |
 | `src/testing/` | Entrypoint separado, fora do bundle do preview. |
 
 ## Ao mudar o motor

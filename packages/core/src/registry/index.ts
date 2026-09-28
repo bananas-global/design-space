@@ -6,20 +6,17 @@
  * vez a partir da `ProductDefinition`.
  */
 
-import {
-  SCENARIO_STATUSES,
-  type ComponentPreview,
-  type ComponentPreviewFixture,
-  type Fixture,
-  type Flow,
-  type HandoffScope,
-  type Module,
-  type Persona,
-  type ProductDefinition,
-  type Rule,
-  type Scenario,
-  type ScenarioStatus,
-  type ScenarioView,
+import type {
+  ComponentPreview,
+  ComponentPreviewFixture,
+  Fixture,
+  Flow,
+  HandoffScope,
+  Module,
+  Persona,
+  ProductDefinition,
+  Rule,
+  Scenario,
 } from "../types/index.js";
 import { validateProduct, type ValidationIssue } from "./validate.js";
 import { handoffAllowsComponent, handoffAllowsScenario } from "../handoff/index.js";
@@ -30,13 +27,7 @@ export type ModuleNode = {
 };
 
 export type ScenarioQueryOptions = {
-  /** Coleção consultada. Padrão: trabalho ativo. */
-  view?: ScenarioView;
-  /** Inclui o catálogo completo. Reservado a diagnóstico e compatibilidade. */
-  includePorted?: boolean;
-  /** @deprecated Deep links agora inferem `view: "ported"`. */
-  activeScenario?: string;
-  /** Recorte de handoff aplicado depois da visão ativa/portada. */
+  /** Recorte de handoff. Sem ele, todo cenário registrado é visível. */
   handoff?: HandoffScope;
 };
 
@@ -78,9 +69,9 @@ export type Registry = {
   permissionsOf: (scenario: Scenario | undefined) => string[];
   /** Cenários que abrem a mesma rota. Serve para o seletor de situação. */
   scenariosForRoute: (route: string, options?: ScenarioQueryOptions) => Scenario[];
-  /** Cenários da visão pedida; trabalho ativo é o padrão. */
+  /** Cenários permitidos pelo recorte; sem handoff devolve todos. */
   activeScenarios: (options?: ScenarioQueryOptions) => Scenario[];
-  /** Árvore filtrada para navegação, preservando `tree` como catálogo completo. */
+  /** Árvore filtrada pelo recorte, preservando `tree` como catálogo completo. */
   treeFor: (options?: ScenarioQueryOptions) => ModuleNode[];
   orphansFor: (options?: ScenarioQueryOptions) => Scenario[];
   /**
@@ -88,11 +79,8 @@ export type Registry = {
    * sem saber o id nem o nome do arquivo (§15.1 "Compreensão de negócio").
    */
   search: (query: string, options?: ScenarioQueryOptions) => Scenario[];
-  byStatus: (status: ScenarioStatus, options?: ScenarioQueryOptions) => Scenario[];
   /** Componentes permitidos pelo recorte; sem handoff devolve o catálogo. */
   componentsFor: (handoff?: HandoffScope) => ComponentPreview[];
-  /** Contagem por status, para o cabeçalho de cobertura. */
-  coverage: (options?: ScenarioQueryOptions) => Record<ScenarioStatus, number>;
 };
 
 export function createRegistry(product: ProductDefinition): Registry {
@@ -123,15 +111,7 @@ export function createRegistry(product: ProductDefinition): Registry {
     return components.get(componentId)?.fixtures?.find((fixture) => fixture.id === fixtureId);
   };
   const visibleScenarios = (options: ScenarioQueryOptions = {}) =>
-    product.scenarios.filter(
-      (target) =>
-        handoffAllowsScenario(options.handoff, target.id) &&
-        (options.includePorted ||
-          (options.view === "ported"
-            ? target.status === "ported"
-            : target.status !== "ported") ||
-          (options.view === undefined && target.id === options.activeScenario)),
-    );
+    product.scenarios.filter((target) => handoffAllowsScenario(options.handoff, target.id));
 
   const permissionsOf = (target: Scenario | undefined): string[] => {
     if (!target) return [];
@@ -200,7 +180,7 @@ export function createRegistry(product: ProductDefinition): Registry {
             s.intent ?? "",
             s.route,
             moduleName,
-            personas.get(s.persona)?.name ?? "",
+            persona(s.persona)?.name ?? "",
             (s.tags ?? []).join(" "),
             (s.expected ?? []).join(" "),
           ].join(" "),
@@ -209,20 +189,10 @@ export function createRegistry(product: ProductDefinition): Registry {
       });
     },
 
-    byStatus: (status, options) =>
-      visibleScenarios({ ...options, includePorted: true }).filter((s) => s.status === status),
     componentsFor: (handoff) =>
       (product.components ?? []).filter((component) =>
         handoffAllowsComponent(handoff, component.id),
       ),
-
-    coverage: (options) => {
-      const counts = Object.fromEntries(
-        SCENARIO_STATUSES.map((status) => [status, 0]),
-      ) as Record<ScenarioStatus, number>;
-      for (const s of visibleScenarios(options)) counts[s.status] += 1;
-      return counts;
-    },
   };
 }
 

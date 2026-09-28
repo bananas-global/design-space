@@ -1,20 +1,16 @@
 /**
- * Painel de contexto: regras, critérios, acessibilidade e diagnóstico.
+ * Painel de contexto: regras, critérios e diagnóstico.
  *
  * É aqui que o ambiente para de ser um protótipo bonito e passa a ser
- * especificação. A aba de acessibilidade existe no mesmo nível das outras de
- * propósito — se ela fosse a última aba, seria auditoria de fim de projeto com
- * outro nome.
+ * especificação.
  */
 
 import { useState } from "react";
 import type { ComponentFixtureResolution, Registry } from "../registry/index.js";
-import type { AccessibleNode } from "../a11y/accessible-tree.js";
-import { checkContrastPairs } from "../a11y/contrast.js";
-import type { ComponentPreview, ControlsState, Scenario, ScenarioStatus } from "../types/index.js";
+import type { ComponentPreview, ControlsState, Scenario } from "../types/index.js";
 import { useLabels } from "./labels.js";
 
-type Tab = "scenario" | "a11y" | "diagnostics";
+type Tab = "scenario" | "diagnostics";
 
 export type InspectorProps = {
   registry: Registry;
@@ -22,8 +18,6 @@ export type InspectorProps = {
   component?: ComponentPreview;
   componentFixture?: ComponentFixtureResolution;
   controls: ControlsState;
-  focusedNode: AccessibleNode | undefined;
-  tabStopCount: number;
 };
 
 export function Inspector({
@@ -32,8 +26,6 @@ export function Inspector({
   component,
   componentFixture,
   controls,
-  focusedNode,
-  tabStopCount,
 }: InspectorProps) {
   const labels = useLabels().inspector;
   const [tab, setTab] = useState<Tab>("scenario");
@@ -44,9 +36,6 @@ export function Inspector({
       <div className="ds-inspector__tabs" role="tablist">
         <TabButton id="scenario" current={tab} onSelect={setTab}>
           {component ? labels.componentReference : labels.tabScenario}
-        </TabButton>
-        <TabButton id="a11y" current={tab} onSelect={setTab}>
-          {labels.tabA11y}
         </TabButton>
         <TabButton id="diagnostics" current={tab} onSelect={setTab}>
           {errorCount > 0 ? labels.diagnosticsWithErrors(errorCount) : labels.tabDiagnostics}
@@ -61,15 +50,6 @@ export function Inspector({
             component={component}
             componentFixture={componentFixture}
             controls={controls}
-          />
-        )}
-        {tab === "a11y" && (
-          <A11yPanel
-            registry={registry}
-            scenario={scenario}
-            focusedNode={focusedNode}
-            keyboardMode={controls.keyboardMode}
-            tabStopCount={tabStopCount}
           />
         )}
         {tab === "diagnostics" && <DiagnosticsPanel registry={registry} />}
@@ -169,8 +149,6 @@ function ScenarioPanel({
   // que a captura de tela não seja lida como o cenário canônico.
   const personaOverridden = Boolean(controls.persona && controls.persona !== scenario.persona);
 
-  const approvalRecorded = scenario.status !== "approved" || Boolean(scenario.approvedAt);
-
   return (
     <>
       <ScopeGroup
@@ -182,19 +160,15 @@ function ScenarioPanel({
         <h2 className="ds-block__title">{labels.situation}</h2>
         <p style={{ color: "var(--ds-fg)", fontSize: 14, fontWeight: 600 }}>{scenario.title}</p>
         {scenario.intent && <p>{scenario.intent}</p>}
-        <div className="ds-chips">
-          <span className="ds-chip" data-tone={statusTone(scenario)}>
-            {approvalRecorded ? all.status[scenario.status] : labels.approvalPendingStatus}
-          </span>
-          {(scenario.tags ?? []).map((tag) => (
-            <span className="ds-chip" key={tag}>
-              {tag}
-            </span>
-          ))}
-        </div>
-        <p style={{ marginTop: 6 }}>
-          {approvalRecorded ? all.statusMeaning[scenario.status] : labels.approvalPendingMeaning}
-        </p>
+        {scenario.tags?.length ? (
+          <div className="ds-chips">
+            {scenario.tags.map((tag) => (
+              <span className="ds-chip" key={tag}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="ds-block">
@@ -257,26 +231,6 @@ function ScenarioPanel({
         </div>
       ) : null}
 
-      {(scenario.status === "approved" || scenario.approvedAt) && (
-        <div className="ds-block">
-          <h2 className="ds-block__title">{labels.approval}</h2>
-          {scenario.approvedAt ? (
-            <>
-              <p>
-                {scenario.approvedAt.date} · <code>{scenario.approvedAt.commit.slice(0, 7)}</code>
-              </p>
-              <a href={scenario.approvedAt.url} target="_blank" rel="noreferrer">
-                {labels.openApproved}
-              </a>
-            </>
-          ) : (
-            <p className="ds-note" data-tone="warn" role="alert">
-              {labels.approvalMissing}
-            </p>
-          )}
-        </div>
-      )}
-
       {scenario.ticket && (
         <div className="ds-block">
           <h2 className="ds-block__title">{labels.engineering}</h2>
@@ -321,188 +275,11 @@ function ScenarioPanel({
 }
 
 /* ------------------------------------------------------------------ *
- * Acessibilidade
- * ------------------------------------------------------------------ */
-
-function A11yPanel({
-  registry,
-  scenario,
-  focusedNode,
-  keyboardMode,
-  tabStopCount,
-}: {
-  registry: Registry;
-  scenario: Scenario | undefined;
-  focusedNode: AccessibleNode | undefined;
-  keyboardMode: boolean;
-  tabStopCount: number;
-}) {
-  const all = useLabels();
-  const labels = all.inspector;
-  const contrast = checkContrastPairs(registry.product.theme?.contrastPairs);
-  const failing = contrast.filter((result) => result.passes !== true);
-
-  return (
-    <>
-      {scenario && (
-        <ScopeGroup
-          scope="task"
-          title={labels.taskScope}
-          description={labels.taskScopeDescription}
-        >
-        <div className="ds-block">
-          <h2 className="ds-block__title">{labels.a11yContract}</h2>
-          <dl className="ds-kv">
-            <dt>{labels.keyboard}</dt>
-            <dd>{all.keyboard[scenario.a11y.keyboard]}</dd>
-            <dt>{labels.contrast}</dt>
-            <dd>{labels.contrastTarget(scenario.a11y.contrast)}</dd>
-          </dl>
-          {scenario.a11y.announces?.length ? (
-            <>
-              <p style={{ marginTop: 8 }}>{labels.announces}</p>
-              <div className="ds-chips">
-                {scenario.a11y.announces.map((event) => (
-                  <span className="ds-chip" key={event}>
-                    {event}
-                  </span>
-                ))}
-              </div>
-            </>
-          ) : null}
-          {scenario.a11y.notes && <p style={{ marginTop: 8 }}>{scenario.a11y.notes}</p>}
-        </div>
-        </ScopeGroup>
-      )}
-
-      <ScopeGroup
-        scope="screen"
-        title={labels.screenScope}
-        description={labels.screenScopeDescription}
-      >
-      <div className="ds-block">
-        <h2 className="ds-block__title">{labels.focusedElement}</h2>
-        {!keyboardMode ? (
-          <p>{labels.keyboardModeOff}</p>
-        ) : !focusedNode ? (
-          <p>{labels.pressTab(tabStopCount)}</p>
-        ) : (
-          <>
-            <dl className="ds-kv">
-              <dt>{labels.role}</dt>
-              <dd>{focusedNode.role}</dd>
-              <dt>{labels.name}</dt>
-              <dd>
-                {focusedNode.name ? (
-                  focusedNode.name
-                ) : (
-                  <span style={{ color: "var(--ds-err)" }}>{labels.noAccessibleName}</span>
-                )}
-              </dd>
-              <dt>{labels.nameFrom}</dt>
-              <dd>{focusedNode.nameFrom}</dd>
-              {focusedNode.description ? (
-                <>
-                  <dt>{labels.description}</dt>
-                  <dd>{focusedNode.description}</dd>
-                </>
-              ) : null}
-              <dt>{labels.selector}</dt>
-              <dd style={{ fontFamily: "var(--ds-mono)", fontSize: 11 }}>
-                {focusedNode.selector}
-              </dd>
-            </dl>
-            {focusedNode.states.length > 0 && (
-              <div className="ds-chips" style={{ marginTop: 8 }}>
-                {focusedNode.states.map((state) => (
-                  <span className="ds-chip" key={state}>
-                    {state}
-                  </span>
-                ))}
-              </div>
-            )}
-            {focusedNode.hiddenFromAssistiveTech && (
-              <p className="ds-note" style={{ marginTop: 8 }}>
-                {labels.focusableButHidden}
-              </p>
-            )}
-            <p style={{ marginTop: 8 }}>{labels.tabStopsInStage(tabStopCount)}</p>
-          </>
-        )}
-      </div>
-      </ScopeGroup>
-
-      <ScopeGroup
-        scope="product"
-        title={labels.productScope}
-        description={labels.productScopeDescription}
-      >
-      <div className="ds-block">
-        <h2 className="ds-block__title">{labels.tokenContrast}</h2>
-        {contrast.length === 0 ? (
-          <p>{labels.noContrastPairs}</p>
-        ) : (
-          <table className="ds-contrast">
-            <thead>
-              <tr>
-                <th scope="col">{labels.pair}</th>
-                <th scope="col">{labels.ratio}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contrast.map((result) => (
-                <tr key={result.pair.name}>
-                  <td>
-                    <span
-                      className="ds-swatch"
-                      style={{ background: result.pair.background }}
-                      aria-hidden="true"
-                    />
-                    <span
-                      className="ds-swatch"
-                      style={{ background: result.pair.foreground }}
-                      aria-hidden="true"
-                    />
-                    {result.pair.name}
-                  </td>
-                  <td
-                    style={{
-                      color:
-                        result.passes === true
-                          ? "var(--ds-ok)"
-                          : result.passes === false
-                            ? "var(--ds-err)"
-                            : "var(--ds-warn)",
-                    }}
-                  >
-                    {result.label}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {failing.length > 0 && (
-          <p className="ds-note" style={{ marginTop: 8 }}>
-            {labels.pairsFailing(failing.length)}
-          </p>
-        )}
-      </div>
-
-      <p className="ds-note">{labels.automatedIsFloor}</p>
-      </ScopeGroup>
-    </>
-  );
-}
-
-/* ------------------------------------------------------------------ *
  * Diagnóstico
  * ------------------------------------------------------------------ */
 
 function DiagnosticsPanel({ registry }: { registry: Registry }) {
-  const all = useLabels();
-  const labels = all.inspector;
-  const coverage = registry.coverage({ includePorted: true });
+  const labels = useLabels().inspector;
   const { issues } = registry;
 
   return (
@@ -514,17 +291,7 @@ function DiagnosticsPanel({ registry }: { registry: Registry }) {
       >
       <div className="ds-block">
         <h2 className="ds-block__title">{labels.coverage}</h2>
-        <dl className="ds-kv">
-          {Object.entries(coverage)
-            .filter(([, count]) => count > 0)
-            .map(([status, count]) => (
-              <div key={status} style={{ display: "contents" }}>
-                <dt>{all.status[status as Scenario["status"]]}</dt>
-                <dd style={{ fontVariantNumeric: "tabular-nums" }}>{count}</dd>
-              </div>
-            ))}
-        </dl>
-        <p style={{ marginTop: 8 }}>{labels.scenariosRegistered(registry.product.scenarios.length)}</p>
+        <p>{labels.scenariosRegistered(registry.product.scenarios.length)}</p>
       </div>
 
       <div className="ds-block">
@@ -545,28 +312,13 @@ function DiagnosticsPanel({ registry }: { registry: Registry }) {
   );
 }
 
-const STATUS_TONES = {
-  ported: undefined,
-  proposed: "warn",
-  "in-review": "warn",
-  approved: "ok",
-  "in-implementation": undefined,
-  implemented: "ok",
-  superseded: undefined,
-} satisfies Record<ScenarioStatus, "ok" | "warn" | undefined>;
-
-function statusTone(scenario: Pick<Scenario, "status" | "approvedAt">): "ok" | "warn" | undefined {
-  if (scenario.status === "approved" && !scenario.approvedAt) return "warn";
-  return STATUS_TONES[scenario.status];
-}
-
 function ScopeGroup({
   scope,
   title,
   description,
   children,
 }: {
-  scope: "task" | "inherited" | "screen" | "product";
+  scope: "task" | "inherited" | "product";
   title: string;
   description: string;
   children: React.ReactNode;

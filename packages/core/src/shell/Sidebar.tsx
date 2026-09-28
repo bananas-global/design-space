@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Registry } from "../registry/index.js";
-import type {
-  ComponentPreview,
-  ControlsState,
-  Scenario,
-  ScenarioView,
-} from "../types/index.js";
-import { scenarioView } from "../controls/state.js";
+import type { ComponentPreview, ControlsState, Scenario } from "../types/index.js";
 import { useLabels } from "./labels.js";
 
 type SidebarMode = "flows" | "components";
@@ -20,7 +14,6 @@ export type SidebarProps = {
   controls: ControlsState;
   onOpenScenario: (scenarioId: string) => void;
   onOpenComponent: (componentId: string) => void;
-  onViewChange: (view: ScenarioView) => void;
 };
 
 export function Sidebar({
@@ -30,25 +23,26 @@ export function Sidebar({
   controls,
   onOpenScenario,
   onOpenComponent,
-  onViewChange,
 }: SidebarProps) {
   const labels = useLabels();
-  const [mode, setMode] = useState<SidebarMode>(activeComponent ? "components" : "flows");
+  const handoff = controls.handoff;
+  const scenarioCount = registry.activeScenarios({ handoff }).length;
+  const componentCount = registry.componentsFor(handoff).length;
+  // Produto que é só catálogo de componentes não tem fluxo para mostrar: a aba
+  // de fluxos vazia seria a primeira coisa na tela e não levaria a lugar nenhum.
+  const componentsOnly = scenarioCount === 0 && componentCount > 0;
+  const [mode, setMode] = useState<SidebarMode>(
+    activeComponent || componentsOnly ? "components" : "flows",
+  );
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef(new Map<string, HTMLButtonElement>());
-  const view = scenarioView(controls);
-  const handoff = controls.handoff;
-  const portedTotal = registry.byStatus("ported", { handoff }).length;
-  const viewTotal = registry.activeScenarios({ view, handoff }).length;
-  const viewLabel =
-    view === "ported" ? labels.sidebar.portedReferences(portedTotal) : labels.sidebar.activeWork;
 
   useEffect(() => {
-    if (activeComponent) setMode("components");
+    if (activeComponent || componentsOnly) setMode("components");
     else if (activeScenario) setMode("flows");
-  }, [activeComponent, activeScenario]);
+  }, [activeComponent, activeScenario, componentsOnly]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -64,9 +58,9 @@ export function Sidebar({
   const scenarioMatches = useMemo(() => {
     if (!query.trim()) return undefined;
     return new Set(
-      registry.search(query, { view, handoff }).map((scenario) => scenario.id),
+      registry.search(query, { handoff }).map((scenario) => scenario.id),
     );
-  }, [handoff, query, registry, view]);
+  }, [handoff, query, registry]);
 
   const componentMatches = useMemo(() => {
     const needle = normalize(query);
@@ -80,10 +74,7 @@ export function Sidebar({
   const visible = (scenarios: Scenario[]) =>
     scenarioMatches ? scenarios.filter((scenario) => scenarioMatches.has(scenario.id)) : scenarios;
 
-  const navigationOptions = {
-    view,
-    handoff,
-  };
+  const navigationOptions = { handoff };
   const nodes = registry.treeFor(navigationOptions)
     .map((node) => ({ ...node, scenarios: visible(node.scenarios) }))
     .filter((node) => node.scenarios.length > 0);
@@ -133,7 +124,7 @@ export function Sidebar({
 
   return (
     <nav className="ds-chrome ds-sidebar" aria-label={labels.sidebar.region}>
-      <div className="ds-sidebar__tabs" role="tablist">
+      {!componentsOnly && <div className="ds-sidebar__tabs" role="tablist">
         <button
           type="button"
           role="tab"
@@ -156,7 +147,7 @@ export function Sidebar({
         >
           {labels.sidebar.componentsTab}
         </button>
-      </div>
+      </div>}
 
       <div className="ds-sidebar__search">
         <input
@@ -180,23 +171,9 @@ export function Sidebar({
 
       <div
         className="ds-sidebar__tree"
-        role="tabpanel"
-        aria-label={mode === "flows" ? labels.sidebar.currentView(viewLabel) : undefined}
+        role={componentsOnly ? undefined : "tabpanel"}
+        aria-label={mode === "flows" ? labels.sidebar.flowsTab : labels.sidebar.componentsTab}
       >
-        {mode === "flows" && (
-          <header className="ds-sidebar__view-header">
-            <h2>{viewLabel}</h2>
-            {view === "ported" && (
-              <button
-                type="button"
-                className="ds-text-action"
-                onClick={() => onViewChange("active")}
-              >
-                {labels.sidebar.backToActive}
-              </button>
-            )}
-          </header>
-        )}
 
         {query.trim() !== "" && (
           <p className="ds-sidebar__empty" role="status">
@@ -210,23 +187,8 @@ export function Sidebar({
           </p>
         )}
 
-        {mode === "flows" && query.trim() === "" && viewTotal === 0 ? (
-          <div className="ds-sidebar__view-empty">
-            <p>
-              {view === "ported"
-                ? labels.sidebar.noPortedReferences
-                : labels.sidebar.noActiveWork}
-            </p>
-            {view === "active" && portedTotal > 0 && (
-              <button
-                type="button"
-                className="ds-text-action"
-                onClick={() => onViewChange("ported")}
-              >
-                {labels.sidebar.viewPorted(portedTotal)}
-              </button>
-            )}
-          </div>
+        {mode === "flows" && query.trim() === "" && scenarioCount === 0 ? (
+          <p className="ds-sidebar__empty">{labels.sidebar.emptyScenarios}</p>
         ) : mode === "flows" ? (
           <ScenarioTree
             nodes={nodes}
@@ -267,18 +229,6 @@ export function Sidebar({
           ))
         )}
       </div>
-
-      {mode === "flows" && view === "active" && viewTotal > 0 && portedTotal > 0 && (
-        <div className="ds-sidebar__view-footer">
-          <button
-            type="button"
-            className="ds-text-action"
-            onClick={() => onViewChange("ported")}
-          >
-            {labels.sidebar.viewPorted(portedTotal)}
-          </button>
-        </div>
-      )}
 
       {mode === "flows" && activeScenario && (
         <aside className="ds-sidebar__scope" aria-label={labels.sidebar.scope}>
@@ -360,11 +310,6 @@ function ScenarioItem({
   onKeyDown,
   setItemRef,
 }: ScenarioTreeProps & { scenario: Scenario }) {
-  const labels = useLabels();
-  const approvalIncomplete = scenario.status === "approved" && !scenario.approvedAt;
-  const status = approvalIncomplete
-    ? labels.inspector.approvalPendingStatus
-    : labels.status[scenario.status];
   return (
     <li>
       <button
@@ -375,14 +320,7 @@ function ScenarioItem({
         onClick={() => onOpen(scenario.id)}
         onKeyDown={(event) => onKeyDown(scenario.id, event)}
       >
-        <span
-          className="ds-status-dot"
-          data-status={scenario.status}
-          data-approval={approvalIncomplete ? "incomplete" : undefined}
-          title={status}
-        />
         <span className="ds-scenario__title">{scenario.title}</span>
-        <span className="ds-visually-hidden">{status}</span>
       </button>
     </li>
   );

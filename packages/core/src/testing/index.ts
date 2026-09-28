@@ -12,13 +12,7 @@
 
 import { scenarioUrl } from "../deploy/index.js";
 import { validateProduct, hasErrors, formatIssues } from "../registry/validate.js";
-import {
-  assertContrastPairs,
-  checkContrastPair,
-  checkContrastPairs,
-  contrastRatio,
-} from "../a11y/contrast.js";
-import type { ControlsState, ProductDefinition, Scenario, ScenarioStatus } from "../types/index.js";
+import type { ControlsState, ProductDefinition, Scenario } from "../types/index.js";
 
 /**
  * Origem contra a qual os testes rodam.
@@ -58,26 +52,6 @@ export function pathFor(
 }
 
 /**
- * Cenários que valem uma jornada automatizada.
- *
- * Deliberadamente não é "todos": rodar Playwright em cenário `ported` ou
- * `proposed` transforma importação ou exploração em trabalho de manutenção de
- * teste, que é o oposto de "governança proporcional" (Princípio 9). O piso é o
- * cenário que já foi aprovado ou já existe em produção.
- */
-export function scenariosUnderTest(
-  product: ProductDefinition,
-  statuses: ScenarioStatus[] = ["approved", "in-implementation", "implemented"],
-): Scenario[] {
-  return product.scenarios.filter((scenario) => statuses.includes(scenario.status));
-}
-
-/** Cenários que declaram jornada completável só por teclado. */
-export function keyboardScenarios(product: ProductDefinition): Scenario[] {
-  return product.scenarios.filter((scenario) => scenario.a11y.keyboard === "full");
-}
-
-/**
  * Falha o teste quando o contrato de cenário do produto tem erro.
  *
  * É o equivalente do typecheck para o que o TypeScript não alcança: fixture
@@ -90,13 +64,7 @@ export function assertValidProduct(product: ProductDefinition): void {
   }
 }
 
-// Medição de contraste também é ferramenta de teste: o produto valida os
-// próprios tokens, e o motor só sabe medir.
 export {
-  assertContrastPairs,
-  checkContrastPair,
-  checkContrastPairs,
-  contrastRatio,
   formatIssues,
   hasErrors,
   validateProduct,

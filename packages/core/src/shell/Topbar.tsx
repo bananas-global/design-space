@@ -19,7 +19,6 @@ import type {
   HandoffScope,
   ProductDefinition,
   Scenario,
-  ScenarioView,
 } from "../types/index.js";
 import { useLabels } from "./labels.js";
 
@@ -29,7 +28,6 @@ export type TopbarProps = {
   deploy: DeployContext;
   inspectorOpen: boolean;
   chromeTheme: ChromeTheme;
-  view: ScenarioView;
   handoff?: HandoffScope;
   onToggleInspector: () => void;
   onToggleChromeTheme: () => void;
@@ -41,7 +39,6 @@ export function Topbar({
   deploy,
   inspectorOpen,
   chromeTheme,
-  view,
   handoff,
   onToggleInspector,
   onToggleChromeTheme,
@@ -57,7 +54,6 @@ export function Topbar({
           origin: deploy.origin,
           overrides: {
             ...(chromeTheme === "light" ? { chromeTheme } : {}),
-            ...(view === "ported" ? { view } : {}),
             ...(handoff ? { handoff } : {}),
           },
         })
@@ -78,7 +74,7 @@ export function Topbar({
   const cleanReviewUrl = buildCleanReviewUrl(
     typeof window === "undefined" ? `${deploy.origin}/` : window.location.href,
   );
-  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme, view, handoff);
+  const homeUrl = buildHomeUrl(deploy.origin, chromeTheme, handoff);
 
   return (
     <header className="ds-chrome ds-topbar">
@@ -154,12 +150,10 @@ export function buildCleanReviewUrl(href: string): string {
 export function buildHomeUrl(
   origin: string,
   chromeTheme: ChromeTheme,
-  view: ScenarioView = "active",
   handoff?: HandoffScope,
 ): string {
   const url = new URL("/", origin);
   if (chromeTheme === "light") url.searchParams.set(PARAM.chromeTheme, chromeTheme);
-  if (view === "ported") url.searchParams.set(PARAM.view, "ported");
   applyHandoffScope(url.searchParams, handoff);
   return url.toString();
 }

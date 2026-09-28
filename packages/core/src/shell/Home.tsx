@@ -12,113 +12,46 @@
  */
 
 import type { Registry } from "../registry/index.js";
-import {
-  SCENARIO_STATUSES,
-  type Flow,
-  type HandoffScope,
-  type Module,
-  type Scenario,
-  type ScenarioView,
-} from "../types/index.js";
+import type { ComponentPreview, Flow, HandoffScope, Module, Scenario } from "../types/index.js";
 import { useLabels } from "./labels.js";
 
 export type HomeProps = {
   registry: Registry;
   onOpenScenario: (scenarioId: string) => void;
-  view?: ScenarioView;
-  onViewChange?: (view: ScenarioView) => void;
+  /** Abre um componente. Usado quando o produto é só catálogo de componentes. */
+  onOpenComponent?: (componentId: string) => void;
   handoff?: HandoffScope;
-  /** @deprecated Use `view="ported"`. */
-  showPorted?: boolean;
 };
 
-export function Home({
-  registry,
-  onOpenScenario,
-  view: requestedView,
-  onViewChange,
-  handoff,
-  showPorted = false,
-}: HomeProps) {
+export function Home({ registry, onOpenScenario, onOpenComponent, handoff }: HomeProps) {
   const labels = useLabels();
   const { product } = registry;
-  const view = requestedView ?? (showPorted ? "ported" : "active");
-  const options = { view, handoff };
-  const coverage = registry.coverage(options);
+  const options = { handoff };
   const total = registry.activeScenarios(options).length;
   const nodes = registry.treeFor(options).filter((node) => node.scenarios.length > 0);
   const orphans = registry.orphansFor(options);
-  const portedTotal = registry.byStatus("ported", { handoff }).length;
-  const viewLabel =
-    view === "ported" ? labels.sidebar.portedReferences(portedTotal) : labels.sidebar.activeWork;
+  const components = registry.componentsFor(handoff);
+  // Sem cenário, a entrada é o catálogo: um mapa de situações vazio não diz
+  // nada, e a pergunta de quem abre o link passa a ser "que componentes existem".
+  const componentsOnly = total === 0 && components.length > 0;
 
   return (
     <div className="ds-chrome ds-home">
       <header className="ds-home__header">
-        <p className="ds-home__view" aria-live="polite">
-          {viewLabel}
-        </p>
         <h1>{product.name}</h1>
         {product.tagline && <p className="ds-home__tagline">{product.tagline}</p>}
-        <p className="ds-home__lead">{labels.home.lead(total)}</p>
-        <div className="ds-chips">
-          {Object.entries(coverage)
-            .filter(([, count]) => count > 0)
-            .map(([status, count]) => (
-              <span className="ds-chip" key={status}>
-                {labels.status[status as Scenario["status"]]}: {count}
-              </span>
-            ))}
-        </div>
-        {total > 0 && view === "active" && portedTotal > 0 && (
-          <button
-            type="button"
-            className="ds-text-action ds-home__view-action"
-            onClick={() => onViewChange?.("ported")}
-          >
-            {labels.sidebar.viewPorted(portedTotal)}
-          </button>
-        )}
-        {view === "ported" && (
-          <button
-            type="button"
-            className="ds-text-action ds-home__view-action"
-            onClick={() => onViewChange?.("active")}
-          >
-            {labels.sidebar.backToActive}
-          </button>
-        )}
+        <p className="ds-home__lead">
+          {componentsOnly ? labels.home.componentsLead(components.length) : labels.home.lead(total)}
+        </p>
       </header>
 
-      <section className="ds-home__legend" aria-labelledby="ds-status-legend-title">
-        <h2 id="ds-status-legend-title">{labels.home.statusLegend}</h2>
-        <ul>
-          {SCENARIO_STATUSES.map((status) => (
-            <li key={status}>
-              <span className="ds-status-dot" data-status={status} aria-hidden="true" />
-              <span>
-                <strong>{labels.status[status]}</strong>
-                <small>{labels.statusMeaning[status]}</small>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {componentsOnly && (
+        <ComponentCatalog components={components} onOpenComponent={onOpenComponent} />
+      )}
 
-      {total === 0 && (
-        <section className="ds-home__empty" aria-label={labels.sidebar.currentView(viewLabel)}>
-          <p>
-            {view === "ported" ? labels.home.noPortedReferences : labels.home.noActiveWork}
-          </p>
-          {view === "active" && portedTotal > 0 && (
-            <button
-              type="button"
-              className="ds-text-action"
-              onClick={() => onViewChange?.("ported")}
-            >
-              {labels.sidebar.viewPorted(portedTotal)}
-            </button>
-          )}
+      {total === 0 && !componentsOnly && (
+        <section className="ds-home__empty">
+          <p>{labels.home.noScenarios}</p>
         </section>
       )}
 
@@ -128,7 +61,6 @@ export function Home({
           module={module}
           scenarios={scenarios}
           registry={registry}
-          view={view}
           handoff={handoff}
           onOpenScenario={onOpenScenario}
         />
@@ -153,14 +85,12 @@ function ModuleCard({
   module,
   scenarios,
   registry,
-  view,
   handoff,
   onOpenScenario,
 }: {
   module: Module;
   scenarios: Scenario[];
   registry: Registry;
-  view: ScenarioView;
   handoff?: HandoffScope;
   onOpenScenario: (id: string) => void;
 }) {
@@ -174,7 +104,6 @@ function ModuleCard({
           key={flow.id}
           flow={flow}
           registry={registry}
-          view={view}
           handoff={handoff}
           onOpenScenario={onOpenScenario}
         />
@@ -188,22 +117,17 @@ function ModuleCard({
 function FlowOutline({
   flow,
   registry,
-  view,
   handoff,
   onOpenScenario,
 }: {
   flow: Flow;
   registry: Registry;
-  view: ScenarioView;
   handoff?: HandoffScope;
   onOpenScenario: (id: string) => void;
 }) {
-  const visibleSteps = flow.steps.filter((step) => {
-    const scenario = registry.scenario(step.scenario);
-    return scenario &&
-      (!handoff || handoff.scenarios?.includes(scenario.id)) &&
-      (view === "ported" ? scenario.status === "ported" : scenario.status !== "ported");
-  });
+  const allowed = (id: string) =>
+    Boolean(registry.scenario(id)) && (!handoff || Boolean(handoff.scenarios?.includes(id)));
+  const visibleSteps = flow.steps.filter((step) => allowed(step.scenario));
   if (visibleSteps.length === 0) return null;
 
   return (
@@ -213,12 +137,9 @@ function FlowOutline({
       <ol className="ds-flow__steps">
         {visibleSteps.map((step, index) => {
           const scenario = registry.scenario(step.scenario);
-          const branches = Object.entries(step.branches ?? {}).filter(([, target]) => {
-            const branchScenario = registry.scenario(target);
-            return branchScenario &&
-              (!handoff || handoff.scenarios?.includes(branchScenario.id)) &&
-              (view === "ported" ? branchScenario.status === "ported" : branchScenario.status !== "ported");
-          });
+          const branches = Object.entries(step.branches ?? {}).filter(([, target]) =>
+            allowed(target),
+          );
           return (
             <li key={`${step.scenario}-${index}`}>
               <button type="button" className="ds-flow__step" onClick={() => onOpenScenario(step.scenario)}>
@@ -258,35 +179,66 @@ function ScenarioGrid({
   registry: Registry;
   onOpenScenario: (id: string) => void;
 }) {
-  const labels = useLabels();
-
   return (
     <ul className="ds-home__grid">
       {scenarios.map((scenario) => (
         <li key={scenario.id}>
           <button type="button" className="ds-home__card" onClick={() => onOpenScenario(scenario.id)}>
             <span className="ds-home__card-head">
-              <span
-                className="ds-status-dot"
-                data-status={scenario.status}
-                data-approval={
-                  scenario.status === "approved" && !scenario.approvedAt ? "incomplete" : undefined
-                }
-              />
               <span className="ds-home__card-title">{scenario.title}</span>
             </span>
             {scenario.intent && <span className="ds-home__card-intent">{scenario.intent}</span>}
-            <span className="ds-home__card-meta">
-              {registry.persona(scenario.persona)?.name ?? scenario.persona}
-              {" · "}
-              {scenario.status === "approved" && !scenario.approvedAt
-                ? labels.inspector.approvalPendingStatus
-                : labels.status[scenario.status]}
-              {scenario.a11y.keyboard === "full" ? ` · ${labels.home.keyboardBadge}` : ""}
-            </span>
+            {scenario.persona && (
+              <span className="ds-home__card-meta">
+                {registry.persona(scenario.persona)?.name ?? scenario.persona}
+              </span>
+            )}
           </button>
         </li>
       ))}
     </ul>
+  );
+}
+
+function ComponentCatalog({
+  components,
+  onOpenComponent,
+}: {
+  components: ComponentPreview[];
+  onOpenComponent?: (id: string) => void;
+}) {
+  const labels = useLabels();
+  const groups = new Map<string, ComponentPreview[]>();
+  for (const component of components) {
+    const group = component.group ?? labels.sidebar.componentsTab;
+    groups.set(group, [...(groups.get(group) ?? []), component]);
+  }
+
+  return (
+    <>
+      {[...groups.entries()].map(([group, items]) => (
+        <section className="ds-home__module" key={group}>
+          <h2>{group}</h2>
+          <ul className="ds-home__grid">
+            {items.map((component) => (
+              <li key={component.id}>
+                <button
+                  type="button"
+                  className="ds-home__card"
+                  onClick={() => onOpenComponent?.(component.id)}
+                >
+                  <span className="ds-home__card-head">
+                    <span className="ds-home__card-title">{component.name}</span>
+                  </span>
+                  {component.description && (
+                    <span className="ds-home__card-intent">{component.description}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </>
   );
 }

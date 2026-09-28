@@ -3,9 +3,9 @@
  *
  * O motor é neutro quanto ao produto e agora também quanto ao idioma. A razão é
  * concreta: o chrome fica na mesma tela que a UI do cliente, então um Design
- * Space revisado em inglês misturava "Em revisão" e "Copiar link" com a
- * interface dele. Traduzir só os status seria pior que não traduzir — o rótulo em
- * outro idioma vira ruído no meio da revisão.
+ * Space revisado em inglês misturava "Copiar link" e "Revisão limpa" com a
+ * interface dele. Traduzir só parte do chrome seria pior que não traduzir — o
+ * rótulo em outro idioma vira ruído no meio da revisão.
  *
  * Rótulo de **produto** continua vindo do produto: nome de módulo, título de
  * cenário, nome de persona, rótulo de fixture. O que vive aqui é rótulo de
@@ -17,7 +17,7 @@
  * ```ts
  * theme: {
  *   labels: {
- *     status: { approved: "Approved", "in-review": "In review" },
+ *     network: { success: "Success", error: "Error" },
  *     topbar: { copyLink: "Copy link" },
  *   },
  * }
@@ -26,13 +26,10 @@
 
 import { createContext, useContext } from "react";
 
-import type { KeyboardCoverage, NetworkState, ScenarioStatus } from "../types/index.js";
+import type { NetworkState } from "../types/index.js";
 
 export type Labels = {
-  status: Record<ScenarioStatus, string>;
-  statusMeaning: Record<ScenarioStatus, string>;
   network: Record<NetworkState, string>;
-  keyboard: Record<KeyboardCoverage, string>;
   /** Rótulo de viewport por id: `fit`, `mobile`, `tablet`, `desktop`, `custom`. */
   viewport: Record<string, string>;
   topbar: {
@@ -63,19 +60,7 @@ export type Labels = {
     matchCount: (total: number) => string;
     noComponentMatch: (query: string) => string;
     componentMatchCount: (total: number) => string;
-    activeWork: string;
-    portedReferences: (total: number) => string;
-    viewPorted: (total: number) => string;
-    backToActive: string;
-    currentView: (view: string) => string;
-    noActiveWork: string;
-    noPortedReferences: string;
-    /** @deprecated Mantido para overrides escritos para 0.4.0. */
-    showPorted: string;
-    /** @deprecated Deep links portados agora abrem a visão correspondente. */
-    activePorted: string;
-    /** @deprecated Grupos vazios não são mais renderizados. */
-    emptyModule: string;
+    emptyScenarios: string;
     emptyComponents: string;
     withoutModule: string;
     scope: string;
@@ -95,18 +80,11 @@ export type Labels = {
     locale: string;
     dataSource: string;
     fixturesOption: string;
-    a11y: string;
-    keyboardMode: string;
-    keyboardModeTitle: string;
-    reducedMotion: string;
-    reducedMotionTitle: string;
-    textScale: string;
     none: string;
   };
   inspector: {
     region: string;
     tabScenario: string;
-    tabA11y: string;
     tabDiagnostics: string;
     diagnosticsWithErrors: (count: number) => string;
     noScenario: string;
@@ -119,8 +97,6 @@ export type Labels = {
     taskScopeDescription: string;
     inheritedScope: string;
     inheritedScopeDescription: string;
-    screenScope: string;
-    screenScopeDescription: string;
     productScope: string;
     productScopeDescription: string;
     situation: string;
@@ -137,34 +113,7 @@ export type Labels = {
     rules: string;
     actions: string;
     expected: string;
-    approval: string;
-    approvalPendingStatus: string;
-    approvalPendingMeaning: string;
-    approvalMissing: string;
-    openApproved: string;
     engineering: string;
-    a11yContract: string;
-    keyboard: string;
-    contrast: string;
-    contrastTarget: (target: string) => string;
-    announces: string;
-    focusedElement: string;
-    keyboardModeOff: string;
-    pressTab: (tabStops: number) => string;
-    role: string;
-    name: string;
-    noAccessibleName: string;
-    nameFrom: string;
-    description: string;
-    selector: string;
-    focusableButHidden: string;
-    tabStopsInStage: (tabStops: number) => string;
-    tokenContrast: string;
-    noContrastPairs: string;
-    pair: string;
-    ratio: string;
-    pairsFailing: (count: number) => string;
-    automatedIsFloor: string;
     coverage: string;
     scenariosRegistered: (count: number) => string;
     scenarioContract: string;
@@ -173,13 +122,10 @@ export type Labels = {
   };
   home: {
     lead: (total: number) => string;
-    statusLegend: string;
+    componentsLead: (total: number) => string;
     withoutModule: string;
     withoutModuleHint: string;
-    emptyModule: string;
-    keyboardBadge: string;
-    noActiveWork: string;
-    noPortedReferences: string;
+    noScenarios: string;
   };
   shell: {
     restoreChrome: string;
@@ -192,39 +138,12 @@ export type Labels = {
 
 /** Português. É o padrão, não uma obrigação. */
 export const DEFAULT_LABELS: Labels = {
-  status: {
-    ported: "Portado — não validado",
-    proposed: "Proposta",
-    "in-review": "Em revisão",
-    approved: "Aprovado",
-    "in-implementation": "Em implementação",
-    implemented: "Implementado",
-    superseded: "Superado",
-  },
-
-  statusMeaning: {
-    ported:
-      "Veio do sistema existente, mas não foi validado e não representa compromisso de implementação.",
-    proposed: "Exploração ainda não aprovada.",
-    "in-review": "Aberto para validação de design, negócio ou cliente.",
-    approved: "Referência autorizada, registrada por URL de commit.",
-    "in-implementation": "Ligado a um trabalho ativo de engenharia.",
-    implemented: "Disponível no produto real e validado.",
-    superseded: "Mantido para histórico ou substituído por outra decisão.",
-  },
-
   network: {
     success: "Sucesso",
     loading: "Carregando",
     empty: "Vazio",
     error: "Erro",
     slow: "Lento",
-  },
-
-  keyboard: {
-    full: "Jornada completável só por teclado",
-    partial: "Parcialmente operável por teclado",
-    "not-applicable": "Não se aplica",
   },
 
   viewport: {
@@ -264,17 +183,7 @@ export const DEFAULT_LABELS: Labels = {
     matchCount: (total) => `${total} ${total === 1 ? "situação" : "situações"}.`,
     noComponentMatch: (query) => `Nenhum componente para "${query}".`,
     componentMatchCount: (total) => `${total} ${total === 1 ? "componente" : "componentes"}.`,
-    activeWork: "Trabalho ativo",
-    portedReferences: (total) => `Referências portadas · ${total}`,
-    viewPorted: (total) =>
-      `Ver ${total} ${total === 1 ? "referência portada" : "referências portadas"}`,
-    backToActive: "Voltar ao trabalho ativo",
-    currentView: (view) => `Visão atual: ${view}`,
-    noActiveWork: "Não há cenários no trabalho ativo.",
-    noPortedReferences: "Não há referências portadas.",
-    showPorted: "Mostrar portados",
-    activePorted: "Aberto por link direto; oculto do trabalho ativo",
-    emptyModule: "Nenhum cenário ainda.",
+    emptyScenarios: "O produto ainda não registrou cenários.",
     emptyComponents: "O produto ainda não registrou componentes.",
     withoutModule: "Sem módulo",
     scope: "Escopo ativo",
@@ -295,20 +204,12 @@ export const DEFAULT_LABELS: Labels = {
     locale: "Idioma",
     dataSource: "Fonte",
     fixturesOption: "Fixtures",
-    a11y: "Acessibilidade",
-    keyboardMode: "Teclado",
-    keyboardModeTitle:
-      "Percorrer a jornada só por teclado, com foco visível e ordem de tabulação evidenciada",
-    reducedMotion: "Movimento",
-    reducedMotionTitle: "Reduzir movimento dentro do palco",
-    textScale: "Ampliação de texto",
     none: "—",
   },
 
   inspector: {
     region: "Painel de contexto",
     tabScenario: "Cenário",
-    tabA11y: "Acessibilidade",
     tabDiagnostics: "Diagnóstico",
     diagnosticsWithErrors: (count) => `Diagnóstico (${count})`,
     noScenario:
@@ -324,8 +225,6 @@ export const DEFAULT_LABELS: Labels = {
     inheritedScope: "Contexto herdado do produto e da persona",
     inheritedScopeDescription:
       "Informações compartilhadas que ajudam a interpretar a tarefa, mas não pertencem só a ela.",
-    screenScope: "Inspeção da tela atual",
-    screenScopeDescription: "Leitura ao vivo do que está renderizado no palco agora.",
     productScope: "Verificações gerais do produto",
     productScopeDescription: "Resultados compartilhados por todo o catálogo, não só por esta tarefa.",
     situation: "Situação",
@@ -342,43 +241,8 @@ export const DEFAULT_LABELS: Labels = {
     rules: "Regras",
     actions: "Ações disponíveis",
     expected: "Critérios de aceite",
-    approval: "Aprovação",
-    approvalPendingStatus: "Aprovado — registro pendente",
-    approvalPendingMeaning:
-      "O status foi marcado como aprovado, mas ainda não há URL de commit que registre a versão autorizada.",
-    approvalMissing:
-      "A aprovação ainda não está completamente registrada. Preencha approvedAt com a URL imutável do commit aprovado.",
-    openApproved: "Abrir a versão aprovada",
     engineering: "Engenharia",
-    a11yContract: "Contrato do cenário",
-    keyboard: "Teclado",
-    contrast: "Contraste",
-    contrastTarget: (target) => `WCAG 2.2 ${target}`,
-    announces: "Precisa ser anunciado:",
-    focusedElement: "Elemento em foco",
-    keyboardModeOff:
-      "Ligue o modo teclado na barra de controles para inspecionar a árvore acessível.",
-    pressTab: (tabStops) =>
-      `Pressione Tab dentro do palco. ${tabStops} paradas de tabulação foram encontradas.`,
-    role: "Papel",
-    name: "Nome",
-    noAccessibleName: "sem nome acessível",
-    nameFrom: "Nome vem de",
-    description: "Descrição",
-    selector: "Seletor",
-    focusableButHidden:
-      "Este elemento é focável mas está escondido de tecnologia assistiva. Um leitor de tela recebe foco sem receber conteúdo.",
-    tabStopsInStage: (tabStops) => `${tabStops} paradas de tabulação no palco.`,
-    tokenContrast: "Contraste dos tokens",
-    noContrastPairs:
-      "O produto não declarou pares de contraste em theme.contrastPairs. Contraste é propriedade de par de cores: declarar aqui valida na origem, uma vez.",
-    pair: "Par",
-    ratio: "Razão",
-    pairsFailing: (count) =>
-      `${count} ${count === 1 ? "par" : "pares"} fora do alvo. O teste de tokens do produto falha o build por isso.`,
-    automatedIsFloor:
-      "Verificação automática é piso, não teto. Ordem de leitura confusa, rótulo tecnicamente presente mas sem sentido e fluxo impossível de completar com leitor de tela passam no axe.",
-    coverage: "Cobertura por status",
+    coverage: "Cobertura",
     scenariosRegistered: (count) => `${count} cenários registrados.`,
     scenarioContract: "Contrato de cenário",
     noIssues: "Nenhum problema encontrado.",
@@ -387,18 +251,18 @@ export const DEFAULT_LABELS: Labels = {
   },
 
   home: {
+    componentsLead: (total) =>
+      `Catálogo de componentes e layouts do produto, cada um com dados sintéticos próprios. ${total} ${
+        total === 1 ? "componente registrado" : "componentes registrados"
+      }.`,
     lead: (total) =>
       `Especificação executável: cada situação abaixo abre por link, com persona, dados e regras próprios. ${total} ${
         total === 1 ? "situação registrada" : "situações registradas"
       }.`,
-    statusLegend: "Legenda dos status",
     withoutModule: "Sem módulo",
     withoutModuleHint:
       "O prefixo do id não corresponde a nenhum módulo registrado, então estas situações não aparecem na navegação por módulo.",
-    emptyModule: "Nenhuma situação registrada neste módulo ainda.",
-    keyboardBadge: "teclado",
-    noActiveWork: "Não há cenários no trabalho ativo.",
-    noPortedReferences: "Não há referências portadas nesta coleção.",
+    noScenarios: "O produto ainda não registrou cenários. Os componentes ficam na aba Componentes da navegação.",
   },
 
   shell: {
@@ -413,39 +277,12 @@ export const DEFAULT_LABELS: Labels = {
 
 /** English (United States), selectable by the product through `theme.labels`. */
 export const EN_US_LABELS: Labels = {
-  status: {
-    ported: "Ported — not validated",
-    proposed: "Proposed",
-    "in-review": "In review",
-    approved: "Approved",
-    "in-implementation": "In implementation",
-    implemented: "Implemented",
-    superseded: "Superseded",
-  },
-
-  statusMeaning: {
-    ported:
-      "Imported from the existing system, but not validated and not an implementation commitment.",
-    proposed: "Exploration that has not been approved yet.",
-    "in-review": "Open for design, business, or client validation.",
-    approved: "Authorized reference, recorded with a commit URL.",
-    "in-implementation": "Linked to active engineering work.",
-    implemented: "Available in the real product and validated.",
-    superseded: "Kept for history or replaced by another decision.",
-  },
-
   network: {
     success: "Success",
     loading: "Loading",
     empty: "Empty",
     error: "Error",
     slow: "Slow",
-  },
-
-  keyboard: {
-    full: "Journey can be completed with keyboard only",
-    partial: "Partially operable with keyboard",
-    "not-applicable": "Not applicable",
   },
 
   viewport: {
@@ -485,16 +322,7 @@ export const EN_US_LABELS: Labels = {
     matchCount: (total) => `${total} ${total === 1 ? "scenario" : "scenarios"}.`,
     noComponentMatch: (query) => `No components found for "${query}".`,
     componentMatchCount: (total) => `${total} ${total === 1 ? "component" : "components"}.`,
-    activeWork: "Active work",
-    portedReferences: (total) => `Ported references · ${total}`,
-    viewPorted: (total) => `View ${total} ported ${total === 1 ? "reference" : "references"}`,
-    backToActive: "Back to active work",
-    currentView: (view) => `Current view: ${view}`,
-    noActiveWork: "There are no scenarios in active work.",
-    noPortedReferences: "There are no ported references.",
-    showPorted: "Show ported",
-    activePorted: "Opened by direct link; hidden from active work",
-    emptyModule: "No scenarios yet.",
+    emptyScenarios: "The product has not registered any scenarios yet.",
     emptyComponents: "The product has not registered any components yet.",
     withoutModule: "No module",
     scope: "Active scope",
@@ -515,20 +343,12 @@ export const EN_US_LABELS: Labels = {
     locale: "Language",
     dataSource: "Source",
     fixturesOption: "Fixtures",
-    a11y: "Accessibility",
-    keyboardMode: "Keyboard",
-    keyboardModeTitle:
-      "Complete the journey with keyboard only, showing focus and tab order",
-    reducedMotion: "Motion",
-    reducedMotionTitle: "Reduce motion inside the stage",
-    textScale: "Text size",
     none: "—",
   },
 
   inspector: {
     region: "Context panel",
     tabScenario: "Scenario",
-    tabA11y: "Accessibility",
     tabDiagnostics: "Diagnostics",
     diagnosticsWithErrors: (count) => `Diagnostics (${count})`,
     noScenario:
@@ -544,8 +364,6 @@ export const EN_US_LABELS: Labels = {
     inheritedScope: "Inherited product and persona context",
     inheritedScopeDescription:
       "Shared information that helps interpret the task but does not belong only to it.",
-    screenScope: "Current screen inspection",
-    screenScopeDescription: "A live reading of what is rendered in the stage now.",
     productScope: "Product-wide checks",
     productScopeDescription: "Results shared across the catalog, not only this task.",
     situation: "State",
@@ -562,44 +380,8 @@ export const EN_US_LABELS: Labels = {
     rules: "Rules",
     actions: "Available actions",
     expected: "Acceptance criteria",
-    approval: "Approval",
-    approvalPendingStatus: "Approved — record pending",
-    approvalPendingMeaning:
-      "The status is approved, but there is no commit URL recording the authorized version yet.",
-    approvalMissing:
-      "Approval is not fully recorded yet. Fill approvedAt with the immutable URL of the approved commit.",
-    openApproved: "Open approved version",
     engineering: "Engineering",
-    a11yContract: "Scenario contract",
-    keyboard: "Keyboard",
-    contrast: "Contrast",
-    contrastTarget: (target) => `WCAG 2.2 ${target}`,
-    announces: "Must be announced:",
-    focusedElement: "Focused element",
-    keyboardModeOff:
-      "Turn on keyboard mode in the controls to inspect the accessibility tree.",
-    pressTab: (tabStops) =>
-      `Press Tab inside the stage. ${tabStops} tab ${tabStops === 1 ? "stop was" : "stops were"} found.`,
-    role: "Role",
-    name: "Name",
-    noAccessibleName: "no accessible name",
-    nameFrom: "Name source",
-    description: "Description",
-    selector: "Selector",
-    focusableButHidden:
-      "This element is focusable but hidden from assistive technology. A screen reader receives focus without receiving content.",
-    tabStopsInStage: (tabStops) =>
-      `${tabStops} tab ${tabStops === 1 ? "stop" : "stops"} in the stage.`,
-    tokenContrast: "Token contrast",
-    noContrastPairs:
-      "The product has not declared contrast pairs in theme.contrastPairs. Contrast belongs to a pair of colors; declaring pairs here validates them once, at the source.",
-    pair: "Pair",
-    ratio: "Ratio",
-    pairsFailing: (count) =>
-      `${count} ${count === 1 ? "pair is" : "pairs are"} below the target. The product token test fails the build for this.`,
-    automatedIsFloor:
-      "Automated checks are a floor, not a ceiling. Confusing reading order, technically present but meaningless labels, and journeys that cannot be completed with a screen reader can still pass automated tools.",
-    coverage: "Coverage by status",
+    coverage: "Coverage",
     scenariosRegistered: (count) => `${count} ${count === 1 ? "scenario" : "scenarios"} registered.`,
     scenarioContract: "Scenario contract",
     noIssues: "No issues found.",
@@ -608,18 +390,18 @@ export const EN_US_LABELS: Labels = {
   },
 
   home: {
+    componentsLead: (total) =>
+      `Catalog of the product's components and layouts, each with its own synthetic data. ${total} ${
+        total === 1 ? "component registered" : "components registered"
+      }.`,
     lead: (total) =>
       `Executable specification: each state below opens from a link with its own persona, data, and rules. ${total} ${
         total === 1 ? "state registered" : "states registered"
       }.`,
-    statusLegend: "Status legend",
     withoutModule: "No module",
     withoutModuleHint:
       "The ID prefix does not match a registered module, so these states do not appear in module navigation.",
-    emptyModule: "No states have been registered in this module yet.",
-    keyboardBadge: "keyboard",
-    noActiveWork: "There are no scenarios in active work.",
-    noPortedReferences: "There are no ported references in this collection.",
+    noScenarios: "The product has not registered any scenarios yet. Components live in the Components tab of the navigation.",
   },
 
   shell: {
@@ -672,11 +454,5 @@ export function useLabels(): Labels {
  * Compatibilidade
  * ------------------------------------------------------------------ */
 
-/** @deprecated Use `useLabels().status`, ou `DEFAULT_LABELS.status` fora de React. */
-export const STATUS_LABELS = DEFAULT_LABELS.status;
-/** @deprecated Use `useLabels().statusMeaning`. */
-export const STATUS_MEANING = DEFAULT_LABELS.statusMeaning;
 /** @deprecated Use `useLabels().network`. */
 export const NETWORK_LABELS = DEFAULT_LABELS.network;
-/** @deprecated Use `useLabels().keyboard`. */
-export const KEYBOARD_LABELS = DEFAULT_LABELS.keyboard;

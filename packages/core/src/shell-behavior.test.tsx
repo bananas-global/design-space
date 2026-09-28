@@ -16,7 +16,6 @@ import type {
   ProductDefinition,
   Scenario,
 } from "./types/index.js";
-import { SCENARIO_STATUSES } from "./types/index.js";
 
 beforeAll(() => {
   const environment = globalThis as typeof globalThis & {
@@ -27,7 +26,6 @@ beforeAll(() => {
 
 const controls: ControlsState = {
   scenario: undefined,
-  view: "active",
   component: undefined,
   persona: undefined,
   fixture: undefined,
@@ -39,9 +37,6 @@ const controls: ControlsState = {
   dataSource: "fixtures",
   chromeTheme: "dark",
   chrome: true,
-  keyboardMode: false,
-  reducedMotion: false,
-  textScale: 1,
   inspector: true,
 };
 
@@ -49,10 +44,7 @@ const portedScenario: Scenario = {
   id: "requests.imported",
   title: "Imported reference",
   route: "/requests/imported",
-  persona: "reviewer",
   fixture: "request-imported",
-  a11y: { keyboard: "full", contrast: "AA" },
-  status: "ported",
 };
 
 const activeScenario: Scenario = {
@@ -61,8 +53,6 @@ const activeScenario: Scenario = {
   route: "/billing/review",
   persona: "reviewer",
   fixture: "request-imported",
-  a11y: { keyboard: "full", contrast: "AA" },
-  status: "in-review",
 };
 
 function product(overrides: Partial<ProductDefinition> = {}): ProductDefinition {
@@ -99,34 +89,32 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-describe("ported visibility in the shell", () => {
-  it("shows one active-work empty state with the references action for a ported-only product", () => {
-    const registry = createRegistry(product());
-    const markup = withLabels(
-      <Home
-        registry={registry}
-        view="active"
-        onViewChange={() => undefined}
-        onOpenScenario={() => undefined}
-      />,
-    );
+describe("navegação sem status nem coleções", () => {
+  it("exibe todo cenário registrado na Home, sem legenda de status nem módulo vazio", () => {
+    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
+    const markup = withLabels(<Home registry={registry} onOpenScenario={() => undefined} />);
 
-    expect(markup).toContain(DEFAULT_LABELS.home.noActiveWork);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
-    expect(markup).not.toContain(portedScenario.title);
-    expect(markup.match(/ds-home__empty/g)).toHaveLength(1);
+    expect(markup).toContain(activeScenario.title);
+    expect(markup).toContain(portedScenario.title);
+    expect(markup).not.toContain("data-status");
+    expect(markup).not.toContain("ds-home__legend");
     expect(markup).not.toContain("Empty module");
-    expect(markup).toContain(DEFAULT_LABELS.home.statusLegend);
-    for (const status of SCENARIO_STATUSES) {
-      expect(markup).toContain(`data-status="${status}"`);
-      expect(markup).toContain(DEFAULT_LABELS.status[status]);
-      expect(markup).toContain(DEFAULT_LABELS.statusMeaning[status]);
-    }
   });
 
-  it("shows one navigation empty state instead of empty module rows", () => {
-    const registry = createRegistry(product());
-    const markup = withLabels(
+  it("mostra um único estado vazio quando não há cenário nem componente", () => {
+    const registry = createRegistry(product({ scenarios: [] }));
+    const markup = withLabels(<Home registry={registry} onOpenScenario={() => undefined} />);
+
+    expect(markup.match(/ds-home__empty/g)).toHaveLength(1);
+    expect(markup).toContain(DEFAULT_LABELS.home.noScenarios);
+    expect(markup).not.toContain("Empty module");
+  });
+
+  it("busca em todos os cenários registrados", () => {
+    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    act(() => root.render(
       <Sidebar
         registry={registry}
         activeScenario={undefined}
@@ -134,168 +122,95 @@ describe("ported visibility in the shell", () => {
         controls={controls}
         onOpenScenario={() => undefined}
         onOpenComponent={() => undefined}
-        onViewChange={() => undefined}
       />,
-    );
-
-    expect(markup.match(/ds-sidebar__view-empty/g)).toHaveLength(1);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.noActiveWork);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
-    expect(markup).not.toContain(DEFAULT_LABELS.sidebar.emptyModule);
-    expect(markup).not.toContain("ds-module__count");
-    expect(markup).not.toContain("ds-module__chevron");
-  });
-
-  it("renders only ported scenarios in the references view", () => {
-    const registry = createRegistry(product());
-    const markup = withLabels(
-      <Home
-        registry={registry}
-        view="ported"
-        onViewChange={() => undefined}
-        onOpenScenario={() => undefined}
-      />,
-    );
-
-    expect(markup).toContain(portedScenario.title);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.backToActive);
-    expect(markup).not.toContain(DEFAULT_LABELS.home.noActiveWork);
-    expect(markup).not.toContain("Billing");
-    expect(markup).not.toContain("Empty module");
-  });
-
-  it("keeps active and ported scenarios separate in a mixed product home", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const markup = withLabels(
-      <Home
-        registry={registry}
-        view="active"
-        onViewChange={() => undefined}
-        onOpenScenario={() => undefined}
-      />,
-    );
-
-    expect(markup).toContain(activeScenario.title);
-    expect(markup).not.toContain(portedScenario.title);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
-    expect(markup).not.toContain("Requests");
-    expect(markup).not.toContain("Empty module");
-  });
-
-  it("removes empty modules and exposes an accessible textual view selector", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const container = document.createElement("div");
-    const root = createRoot(container);
-
-    act(() => root.render(
-      <Sidebar
-        registry={registry}
-        activeScenario={activeScenario}
-        activeComponent={undefined}
-        controls={{ ...controls, scenario: activeScenario.id }}
-        onOpenScenario={() => undefined}
-        onOpenComponent={() => undefined}
-        onViewChange={() => undefined}
-      />,
-    ));
-
-    expect(container.textContent).toContain(activeScenario.title);
-    expect(container.textContent).not.toContain(portedScenario.title);
-    expect(container.textContent).not.toContain("Requests");
-    expect(container.textContent).not.toContain("Empty module");
-    const switcher = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.sidebar.viewPorted(1),
-    );
-    expect(switcher).toBeDefined();
-    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
-    expect(container.querySelector('[aria-label*="Trabalho ativo"]')).not.toBeNull();
-    act(() => root.unmount());
-  });
-
-  it("scopes search to the selected view", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const container = document.createElement("div");
-    const root = createRoot(container);
-    act(() => root.render(
-      <LabelsContext.Provider value={DEFAULT_LABELS}>
-      <Sidebar
-        registry={registry}
-        activeScenario={undefined}
-        activeComponent={undefined}
-        controls={{ ...controls, view: "ported" }}
-        onOpenScenario={() => undefined}
-        onOpenComponent={() => undefined}
-        onViewChange={() => undefined}
-      />
-      </LabelsContext.Provider>,
     ));
 
     const input = container.querySelector('input[type="search"]') as HTMLInputElement;
-    act(() => setInputValue(input, "Active review"));
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.noMatch("Active review"));
-    expect(container.querySelectorAll(".ds-scenario")).toHaveLength(0);
-
     act(() => setInputValue(input, "Imported reference"));
     expect(container.textContent).toContain(portedScenario.title);
     expect(container.textContent).not.toContain(activeScenario.title);
-    expect(container.textContent).not.toContain("Empty module");
+    act(() => setInputValue(input, "nada disso"));
+    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.noMatch("nada disso"));
     act(() => root.unmount());
   });
 
-  it("restores view=ported on load and returns to active work without mixing the open collection", async () => {
-    const definition = product({ scenarios: [activeScenario, portedScenario] });
-    window.history.replaceState(null, "", "/?view=ported");
+  it("abre cenário sem persona com permissões vazias", async () => {
+    let permissions: string[] | undefined;
+    const definition = product({
+      scenarios: [portedScenario],
+      routes: [{
+        path: "/requests/:id",
+        screen: ({ context }) => {
+          permissions = context.permissions;
+          return createElement("span", null, "SCREEN");
+        },
+      }],
+    });
+    window.history.replaceState(null, "", `/requests/imported?scenario=${portedScenario.id}`);
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
     await act(async () => root.render(<DesignSpace product={definition} />));
 
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(container.textContent).toContain(portedScenario.title);
-    expect(container.textContent).not.toContain(activeScenario.title);
-    expect(window.location.search).toBe("?view=ported");
-
-    const back = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.sidebar.backToActive,
-    );
-    await act(async () => back?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-
-    expect(window.location.pathname).toBe("/");
-    expect(window.location.search).toBe("");
-    expect(container.textContent).toContain(activeScenario.title);
-    expect(container.textContent).not.toContain(portedScenario.title);
-    await act(async () => root.unmount());
-  });
-
-  it("opens legacy showPorted=1 links in the references view", async () => {
-    window.history.replaceState(null, "", "/?showPorted=1");
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={product()} />));
-
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(container.textContent).toContain(portedScenario.title);
-    await act(async () => root.unmount());
-  });
-
-  it("infers the references view for a direct ported scenario deep link", async () => {
-    window.history.replaceState(
-      null,
-      "",
-      `/requests/imported?scenario=${portedScenario.id}`,
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={product()} />));
-
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(container.textContent).toContain(portedScenario.title);
+    expect(container.textContent).toContain("SCREEN");
+    expect(permissions).toEqual([]);
     expect(container.querySelector('[aria-current="true"]')?.textContent).toContain(
       portedScenario.title,
     );
+    await act(async () => root.unmount());
+  });
+});
+
+describe("produto que é só catálogo de componentes", () => {
+  function catalogOnly(): ProductDefinition {
+    return {
+      id: "catalog",
+      name: "Catalog",
+      modules: [],
+      scenarios: [],
+      personas: [],
+      fixtures: [],
+      routes: [],
+      components: [
+        { id: "actions.button", name: "Button", group: "Actions", preview: () => null },
+        {
+          id: "layouts.page",
+          name: "Page layout",
+          group: "Layouts",
+          description: "Two columns",
+          preview: () => createElement("span", null, "PAGE LAYOUT"),
+        },
+      ],
+    };
+  }
+
+  it("abre a Home no catálogo, sem seções de cenário vazias", async () => {
+    window.history.replaceState(null, "", "/");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => root.render(<DesignSpace product={catalogOnly()} />));
+
+    const text = container.textContent ?? "";
+    expect(text).toContain(DEFAULT_LABELS.home.componentsLead(2));
+    expect(text).toContain("Actions");
+    expect(text).toContain("Layouts");
+    expect(text).toContain("Page layout");
+    expect(text).not.toContain(DEFAULT_LABELS.home.noScenarios);
+    expect(text).not.toContain(DEFAULT_LABELS.sidebar.emptyScenarios);
+    expect(container.querySelector(".ds-home__empty")).toBeNull();
+    // A navegação abre direto nos componentes, sem aba de fluxos vazia.
+    expect(container.querySelector(".ds-sidebar__tabs")).toBeNull();
+    expect(container.querySelectorAll(".ds-component-item")).toHaveLength(2);
+    // Nenhum erro no diagnóstico: produto sem rota e sem cenário é válido.
+    expect(text).not.toMatch(new RegExp(`${DEFAULT_LABELS.inspector.tabDiagnostics} \\(`));
+
+    const card = [...container.querySelectorAll(".ds-home__card")].find((button) =>
+      button.textContent?.includes("Page layout"),
+    );
+    await act(async () => card?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(window.location.search).toBe("?component=layouts.page");
+    expect(container.textContent).toContain("PAGE LAYOUT");
     await act(async () => root.unmount());
   });
 });
@@ -362,7 +277,7 @@ describe("component preview fixtures in the shell", () => {
     window.history.replaceState(
       null,
       "",
-      "/?component=actions.button&fixture=filled&viewport=mobile&theme=dark&locale=en-US&kb=1&motion=1&scale=1.5",
+      "/?component=actions.button&fixture=filled&viewport=mobile&theme=dark&locale=en-US",
     );
     const container = document.createElement("div");
     document.body.append(container);
@@ -376,9 +291,9 @@ describe("component preview fixtures in the shell", () => {
       viewport: { id: "mobile", width: 390, height: 844 },
       themeMode: "dark",
       locale: "en-US",
-      a11y: { keyboardMode: true, reducedMotion: true, textScale: 1.5 },
     });
     expect(received).not.toHaveProperty("scenario");
+    expect(received).not.toHaveProperty("a11y");
     await act(async () => root.unmount());
   });
 
@@ -445,7 +360,7 @@ describe("handoff focado no shell", () => {
     });
   }
 
-  it("filtra Home, flows, portados e componentes pela allowlist", async () => {
+  it("filtra Home, flows e componentes pela allowlist", async () => {
     const registry = createRegistry(scopedProduct());
     const handoff = {
       scenarios: [activeScenario.id, portedScenario.id],
@@ -454,7 +369,6 @@ describe("handoff focado no shell", () => {
     const home = withLabels(
       <Home
         registry={registry}
-        view="active"
         handoff={handoff}
         onOpenScenario={() => undefined}
       />,
@@ -463,7 +377,7 @@ describe("handoff focado no shell", () => {
     expect(home).toContain("Allowed step");
     expect(home).not.toContain(hiddenScenario.title);
     expect(home).not.toContain("Hidden step");
-    expect(home).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
+    expect(home).toContain(portedScenario.title);
 
     const container = document.createElement("div");
     const root = createRoot(container);
@@ -476,7 +390,6 @@ describe("handoff focado no shell", () => {
           controls={{ ...controls, handoff }}
           onOpenScenario={() => undefined}
           onOpenComponent={() => undefined}
-          onViewChange={() => undefined}
         />
       </LabelsContext.Provider>,
     ));
@@ -583,39 +496,28 @@ describe("handoff focado no shell", () => {
 });
 
 describe("escopos autoexplicativos do Inspector", () => {
-  it("separa tarefa, contexto herdado, tela e produto e sinaliza aprovação incompleta", async () => {
-    const approvedWithoutRecord: Scenario = {
+  it("separa tarefa, contexto herdado e produto, sem aba de acessibilidade", async () => {
+    const scenario: Scenario = {
       ...activeScenario,
-      status: "approved",
       permissions: ["requests.read"],
       expected: ["A decisão fica registrada."],
     };
-    const registry = createRegistry(product({ scenarios: [approvedWithoutRecord] }));
+    const registry = createRegistry(product({ scenarios: [scenario] }));
     const container = document.createElement("div");
     const root = createRoot(container);
     await act(async () => root.render(
       <LabelsContext.Provider value={DEFAULT_LABELS}>
         <Inspector
           registry={registry}
-          scenario={approvedWithoutRecord}
-          controls={{ ...controls, scenario: approvedWithoutRecord.id }}
-          focusedNode={undefined}
-          tabStopCount={0}
+          scenario={scenario}
+          controls={{ ...controls, scenario: scenario.id }}
         />
       </LabelsContext.Provider>,
     ));
 
     expect(container.textContent).toContain(DEFAULT_LABELS.inspector.taskScope);
     expect(container.textContent).toContain(DEFAULT_LABELS.inspector.inheritedScope);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.approvalPendingStatus);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.approvalMissing);
-
-    const a11y = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.inspector.tabA11y,
-    );
-    await act(async () => a11y?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.screenScope);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.productScope);
+    expect(container.querySelectorAll('[role="tab"]')).toHaveLength(2);
 
     const diagnostics = [...container.querySelectorAll("button")].find(
       (button) => button.textContent?.startsWith(DEFAULT_LABELS.inspector.tabDiagnostics),

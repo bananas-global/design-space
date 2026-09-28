@@ -4,7 +4,7 @@
  * Separado de `state.ts` porque `deploy/` também precisa deste mapa para montar
  * deep links, e importar o estado inteiro criaria dependência circular. Mais
  * importante: com o mapa em um só lugar, é impossível um override de teste
- * escrever `keyboardMode=1` quando a URL real usa `kb=1`.
+ * escrever `inspector=0` quando a URL real usa `panel=0`.
  */
 
 import type { ControlsState } from "../types/index.js";
@@ -13,8 +13,6 @@ import { applyHandoffScope } from "../handoff/index.js";
 /** Nomes curtos: a URL é colada em Slack, em ticket e em thread de revisão. */
 export const PARAM = {
   scenario: "scenario",
-  view: "view",
-  showPorted: "showPorted",
   component: "component",
   persona: "persona",
   fixture: "fixture",
@@ -26,9 +24,6 @@ export const PARAM = {
   dataSource: "source",
   chromeTheme: "appearance",
   chrome: "chrome",
-  keyboardMode: "kb",
-  reducedMotion: "motion",
-  textScale: "scale",
   inspector: "panel",
 } as const satisfies Record<Exclude<keyof ControlsState, "handoff">, string>;
 
@@ -55,10 +50,6 @@ export function applyOverrides(
     if (value === undefined || value === null) continue;
     if (key === "handoff") {
       applyHandoffScope(params, value as ControlsState["handoff"]);
-      continue;
-    }
-    if (key === "showPorted") {
-      if (value === true && overrides.view === undefined) params.set(PARAM.view, "ported");
       continue;
     }
     const param = PARAM[key as Exclude<keyof ControlsState, "handoff">];

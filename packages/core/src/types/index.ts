@@ -16,63 +16,6 @@ import type { ComponentType, ReactNode } from "react";
 import type { LabelsOverride } from "../shell/labels.js";
 
 /* ------------------------------------------------------------------ *
- * Ciclo de vida
- * ------------------------------------------------------------------ */
-
-/**
- * Estado de ciclo de vida do cenário (§18.1). Existe para evitar que a
- * referência envelheça em silêncio quando o produto real muda.
- */
-export type ScenarioStatus =
-  | "ported"
-  | "proposed"
-  | "in-review"
-  | "approved"
-  | "in-implementation"
-  | "implemented"
-  | "superseded";
-
-export const SCENARIO_STATUSES: readonly ScenarioStatus[] = [
-  "ported",
-  "proposed",
-  "in-review",
-  "approved",
-  "in-implementation",
-  "implemented",
-  "superseded",
-] as const;
-
-/* ------------------------------------------------------------------ *
- * Acessibilidade (§6.1) — dimensão de primeira classe, não auditoria final
- * ------------------------------------------------------------------ */
-
-/** Nível de conformidade alvo. O padrão interno é WCAG 2.2 AA. */
-export type ContrastTarget = "AA" | "AAA";
-
-/** Quanto da jornada precisa ser completável só por teclado. */
-export type KeyboardCoverage = "full" | "partial" | "not-applicable";
-
-export type A11yContract = {
-  /**
-   * `full` significa: a jornada declarada por este cenário é completável do
-   * início ao fim sem mouse, com foco visível em cada passo.
-   */
-  keyboard: KeyboardCoverage;
-  /** Nível de contraste exigido para os tokens em uso nesta tela. */
-  contrast: ContrastTarget;
-  /**
-   * Eventos que precisam ser anunciados para leitor de tela. São chaves de
-   * domínio, não seletores: `request.status`, `retry.result`.
-   *
-   * Um cenário de aprovação bloqueada em que a recusa não é anunciada está
-   * incompleto, não está pronto para aprovação.
-   */
-  announces?: string[];
-  /** Observação de revisão humana. O automático é piso, não teto. */
-  notes?: string;
-};
-
-/* ------------------------------------------------------------------ *
  * Persona
  * ------------------------------------------------------------------ */
 
@@ -153,8 +96,11 @@ export type Scenario = {
   title: string;
   /** Rota que o cenário abre. Precisa casar com uma rota do produto. */
   route: string;
-  /** Id de uma persona registrada no produto. */
-  persona: string;
+  /**
+   * Id de uma persona registrada no produto. Opcional: cenário sem persona tem
+   * permissões vazias, a menos que declare `permissions`.
+   */
+  persona?: string;
   /**
    * Permissões efetivas do cenário. Quando ausente, herda as da persona.
    * Declarar aqui permite representar "solicitante sem permissão de aprovar"
@@ -165,10 +111,6 @@ export type Scenario = {
   fixture: string;
   /** Ids de regras que governam esta situação. */
   rules?: string[];
-  /** Contrato de acessibilidade da situação. */
-  a11y: A11yContract;
-  /** Estado de ciclo de vida. */
-  status: ScenarioStatus;
 
   /** Intenção: o que se quer discutir ou verificar aqui. */
   intent?: string;
@@ -182,11 +124,6 @@ export type Scenario = {
   network?: NetworkState;
   /** Rótulos livres para busca: "exceção", "permissão", "vazio". */
   tags?: string[];
-  /**
-   * URL de commit que registra a aprovação (§10.2). Imutável por definição:
-   * a aprovação não pode mudar de conteúdo debaixo de quem aprovou.
-   */
-  approvedAt?: { url: string; commit: string; date: string };
   /** Ticket de engenharia, quando o cenário estiver em implementação. */
   ticket?: string;
 };
@@ -277,11 +214,6 @@ export type ComponentPreviewProps<T = unknown> = {
   themeMode: string;
   /** `default` quando o produto não declara idiomas. */
   locale: string;
-  a11y: {
-    keyboardMode: boolean;
-    reducedMotion: boolean;
-    textScale: number;
-  };
 };
 
 export type ComponentPreview<T = unknown> = {
@@ -331,15 +263,9 @@ export type DataRequest = {
 
 /**
  * O motor não impõe aparência (D-02). Recebe do produto apenas o suficiente
- * para validar contraste e oferecer os controles de tema.
+ * para oferecer os controles de tema.
  */
 export type ProductTheme = {
-  /**
-   * Pares de cores que precisam passar na validação de contraste.
-   * Contraste é propriedade de par, então validar na definição do token
-   * resolve na origem, uma vez, em vez de perseguir o problema em 30 telas.
-   */
-  contrastPairs?: ContrastPair[];
   /** Modos de tema disponíveis no produto, quando houver mais de um. */
   modes?: string[];
   /** Idiomas disponíveis, quando o produto tiver essa variação. */
@@ -356,19 +282,6 @@ export type ProductTheme = {
    * persona continuam vindo do catálogo do produto.
    */
   labels?: LabelsOverride;
-};
-
-export type ContrastPair = {
-  /** Nome do par: `fg-1 sobre bg-app`. */
-  name: string;
-  /** Cor de frente em hex, rgb() ou rgba(). */
-  foreground: string;
-  /** Cor de fundo. Precisa ser opaca. */
-  background: string;
-  /** `AA` por padrão. */
-  target?: ContrastTarget;
-  /** Texto grande (>=24px, ou >=18.66px bold) tem limiar menor. */
-  largeText?: boolean;
 };
 
 /* ------------------------------------------------------------------ *
@@ -444,7 +357,7 @@ export type DeployOverrides = {
   deploymentUrl?: string;
   /** Nome da branch, para rotular a revisão. */
   branch?: string;
-  /** Commit exato, gravado junto com o status de aprovação do cenário. */
+  /** Commit exato do deployment, usado para rastrear a revisão. */
   commit?: string;
 };
 
@@ -477,13 +390,6 @@ export type ScenarioContext = {
   viewport: ViewportSetting;
   themeMode: string | undefined;
   locale: string | undefined;
-  /** Preferências de acessibilidade ativas no painel. */
-  a11y: {
-    keyboardMode: boolean;
-    reducedMotion: boolean;
-    /** Multiplicador de tamanho de texto: 1, 1.25, 1.5, 2. */
-    textScale: number;
-  };
   /** Navega dentro do Design Space preservando os controles ativos. */
   navigate: (to: string) => void;
   /** Abre outro cenário por id. */
@@ -501,9 +407,6 @@ export type ViewportSetting = {
 
 /** Aparência do chrome do Design Space. Não altera o tema da UI do produto. */
 export type ChromeTheme = "dark" | "light";
-
-/** Coleção de cenários exibida na navegação, home, busca e contagens. */
-export type ScenarioView = "active" | "ported";
 
 /**
  * Recorte de revisão/handoff transportado pela URL.
@@ -529,10 +432,6 @@ export type ControlsState = {
   scenario: string | undefined;
   /** Allowlist de foco ativa, serializada na URL quando presente. */
   handoff?: HandoffScope;
-  /** Visão atual. `active` é o padrão e `ported` é a biblioteca de referências. */
-  view?: ScenarioView;
-  /** @deprecated Compatibilidade programática com 0.4.0. Use `view: "ported"`. */
-  showPorted?: boolean;
   /** Referência visual ativa. Opcional para preservar objetos do contrato anterior. */
   component?: string;
   persona: string | undefined;
@@ -547,9 +446,6 @@ export type ControlsState = {
   chromeTheme?: ChromeTheme;
   /** Chrome do Design Space oculto: revisão limpa e captura de tela. */
   chrome: boolean;
-  keyboardMode: boolean;
-  reducedMotion: boolean;
-  textScale: number;
   /** Painel lateral direito aberto. */
   inspector: boolean;
 };

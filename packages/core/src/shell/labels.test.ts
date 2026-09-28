@@ -14,20 +14,20 @@ describe("resolveLabels", () => {
 
   it("mescla por grupo, mantendo o resto no padrão", () => {
     const labels = resolveLabels({
-      status: { approved: "Approved" },
+      network: { success: "Success" },
       topbar: { copyLink: "Copy link" },
     });
 
-    expect(labels.status.approved).toBe("Approved");
+    expect(labels.network.success).toBe("Success");
     // O que não foi declarado continua padrão, inclusive no mesmo grupo.
-    expect(labels.status["in-review"]).toBe(DEFAULT_LABELS.status["in-review"]);
+    expect(labels.network.error).toBe(DEFAULT_LABELS.network.error);
     expect(labels.topbar.copyLink).toBe("Copy link");
     expect(labels.controls.persona).toBe(DEFAULT_LABELS.controls.persona);
   });
 
   it("não muta o padrão", () => {
-    resolveLabels({ status: { approved: "Approved" } });
-    expect(DEFAULT_LABELS.status.approved).toBe("Aprovado");
+    resolveLabels({ network: { success: "Success" } });
+    expect(DEFAULT_LABELS.network.success).toBe("Sucesso");
   });
 
   it("aceita override de rótulo interpolado", () => {
@@ -38,13 +38,14 @@ describe("resolveLabels", () => {
     expect(labels.home.lead(3)).toBe("3 scenarios");
   });
 
-  it("explica que cenário portado ainda não foi validado nem assumido como compromisso", () => {
-    expect(DEFAULT_LABELS.status.ported).toBe("Portado — não validado");
-    expect(DEFAULT_LABELS.statusMeaning.ported).toContain("não representa compromisso de implementação");
+  it("não carrega mais rótulos de status, acessibilidade ou referências portadas", () => {
+    expect(Object.keys(DEFAULT_LABELS)).not.toContain("status");
+    expect(Object.keys(DEFAULT_LABELS)).not.toContain("statusMeaning");
+    expect(Object.keys(DEFAULT_LABELS)).not.toContain("keyboard");
+    expect(JSON.stringify(Object.keys(DEFAULT_LABELS.sidebar))).not.toMatch(/ported|Ported/);
   });
 
   it("oferece um dicionário en-US completo", () => {
-    expect(EN_US_LABELS.status.ported).toBe("Ported — not validated");
     expect(EN_US_LABELS.topbar.lightMode).toBe("Light mode");
     expect(EN_US_LABELS.sidebar.componentsTab).toBe("Components");
     expect(EN_US_LABELS.inspector.noIssues).toBe("No issues found.");

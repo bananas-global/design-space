@@ -9,17 +9,16 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { ProductDefinition, ScenarioContext } from "../types/index.js";
 import { createRegistry } from "../registry/index.js";
-import { scenarioView, useDesignSpaceState } from "../controls/state.js";
+import { useDesignSpaceState } from "../controls/state.js";
 import { resolveRoute } from "../router/index.js";
 import { fixtureAdapter } from "../adapters/index.js";
 import { useScenarioData } from "../adapters/useScenarioData.js";
 import { getDeployContext } from "../deploy/index.js";
-import { useKeyboardMode } from "../a11y/useKeyboardMode.js";
 import { Sidebar } from "./Sidebar.js";
 import { Topbar } from "./Topbar.js";
 import { Controls } from "./Controls.js";
 import { Inspector } from "./Inspector.js";
-import { Stage, StageEmpty, TabOrderOverlay } from "./Stage.js";
+import { Stage, StageEmpty } from "./Stage.js";
 import { Home } from "./Home.js";
 import { LabelsContext, resolveLabels } from "./labels.js";
 import {
@@ -44,15 +43,12 @@ export function DesignSpace({ product }: DesignSpaceProps) {
     controls,
     viewport,
     setControls,
-    setScenarioView,
     navigate,
     openScenario,
     openComponent,
   } = useDesignSpaceState(registry);
-  const view = scenarioView(controls);
 
   const stageRef = useRef<HTMLDivElement>(null);
-  const { focused, tabStops } = useKeyboardMode(controls.keyboardMode, stageRef);
 
   // Links comuns da UI do produto não passam por `context.navigate`. Reescrever
   // os destinos internos no palco mantém a allowlist em navegação normal, nova
@@ -131,7 +127,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
   const { data, isLoading, error } = useScenarioData({ scenario, fixture, network: controls.network, adapter });
 
   // Atalhos globais do ambiente. Busca vive na Sidebar; aqui ficam apenas os
-  // modos de inspeção que não competem com atalhos conhecidos do navegador.
+  // atalhos que não competem com atalhos conhecidos do navegador.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -139,9 +135,6 @@ export function DesignSpace({ product }: DesignSpaceProps) {
       if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
 
       switch (event.key) {
-        case "K":
-          setControls({ keyboardMode: !controls.keyboardMode });
-          break;
         case "P":
           setControls({ inspector: !controls.inspector });
           break;
@@ -153,7 +146,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [controls.keyboardMode, controls.inspector, setControls]);
+  }, [controls.inspector, setControls]);
 
   const permissions = useMemo(() => {
     // Persona escolhida no controle manda sobre a do cenário: é assim que se
@@ -180,11 +173,6 @@ export function DesignSpace({ product }: DesignSpaceProps) {
       viewport,
       themeMode: controls.themeMode,
       locale: controls.locale,
-      a11y: {
-        keyboardMode: controls.keyboardMode,
-        reducedMotion: controls.reducedMotion,
-        textScale: controls.textScale,
-      },
       navigate,
       openScenario,
     }),
@@ -197,9 +185,6 @@ export function DesignSpace({ product }: DesignSpaceProps) {
       controls.network,
       controls.themeMode,
       controls.locale,
-      controls.keyboardMode,
-      controls.reducedMotion,
-      controls.textScale,
       isLoading,
       error,
       registry,
@@ -230,11 +215,6 @@ export function DesignSpace({ product }: DesignSpaceProps) {
       viewport={viewport}
       themeMode={controls.themeMode ?? "default"}
       locale={controls.locale ?? "default"}
-      a11y={{
-        keyboardMode: controls.keyboardMode,
-        reducedMotion: controls.reducedMotion,
-        textScale: controls.textScale,
-      }}
     />
   ) : match ? (
     <match.definition.screen params={match.params} context={context} />
@@ -268,7 +248,6 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             deploy={deploy}
             inspectorOpen={controls.inspector}
             chromeTheme={controls.chromeTheme ?? "dark"}
-            view={view}
             handoff={controls.handoff}
             onToggleInspector={() => setControls({ inspector: !controls.inspector })}
             onToggleChromeTheme={() =>
@@ -285,7 +264,6 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             controls={controls}
             onOpenScenario={openScenario}
             onOpenComponent={openComponent}
-            onViewChange={setScenarioView}
           />
         )}
 
@@ -294,20 +272,13 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             <div className="ds-stage-scroll">
               <Home
                 registry={registry}
-                view={view}
                 handoff={controls.handoff}
-                onViewChange={setScenarioView}
                 onOpenScenario={openScenario}
+                onOpenComponent={openComponent}
               />
             </div>
           ) : (
-            <Stage
-              ref={stageRef}
-              viewport={viewport}
-              textScale={controls.textScale}
-              reducedMotion={controls.reducedMotion}
-              keyboardMode={controls.keyboardMode}
-            >
+            <Stage ref={stageRef} viewport={viewport}>
               {stageContent}
             </Stage>
           )}
@@ -331,12 +302,8 @@ export function DesignSpace({ product }: DesignSpaceProps) {
             component={component}
             componentFixture={componentFixture}
             controls={controls}
-            focusedNode={focused}
-            tabStopCount={tabStops.length}
           />
         )}
-
-        {controls.keyboardMode && <TabOrderOverlay stops={tabStops} />}
 
         {/* Sem chrome não há como voltar a não ser editando a URL, o que trava
             quem recebeu o link em modo de revisão limpa. Este botão é invisível

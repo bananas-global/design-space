@@ -6,6 +6,73 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.7.0 (2026-09-28)
+
+**Major (incompatível).** O motor deixa de impor acessibilidade e ciclo de vida
+de cenário. Todo cenário registrado é simplesmente exibido. Ver
+`docs/decisions/0011-revoga-a11y-e-ciclo-de-vida.md`.
+
+### Removido
+
+- **Ciclo de vida do cenário:** `Scenario.status`, `Scenario.approvedAt`,
+  `ScenarioStatus`, `SCENARIO_STATUSES`, `ScenarioView`, `ControlsState.view` e
+  `showPorted`, a visão de referências portadas, a legenda e as contagens por
+  status na Home, na navegação e no Diagnóstico, os marcadores de status e os
+  parâmetros de URL `view` e `showPorted`. `Registry.byStatus` e
+  `Registry.coverage` saíram; `ScenarioQueryOptions` agora só tem `handoff`.
+  `useDesignSpaceState` não devolve mais `setScenarioView`. `Home` e `Sidebar`
+  perderam `view`, `onViewChange` e `showPorted`; `buildHomeUrl` perdeu o
+  parâmetro de visão.
+- **Acessibilidade:** `Scenario.a11y`, `A11yContract`, `KeyboardCoverage`,
+  `ContrastTarget`, `ContrastPair`, `ProductTheme.contrastPairs`,
+  `ScenarioContext.a11y`, `ComponentPreviewProps.a11y`, todo `src/a11y/`
+  (`contrastRatio`, `checkContrastPair(s)`, `assertContrastPairs`,
+  `CONTRAST_THRESHOLDS`, `parseColor`, `flatten`, `relativeLuminance`,
+  `readCssVariable`, `computeRole`, `describeElement`, `shortSelector`,
+  `tabbableElements`, `useKeyboardMode` e tipos), `TabOrderOverlay`, o modo
+  teclado (atalho `Shift` + `K`), redução de movimento e ampliação de texto
+  (`TEXT_SCALES`, `keyboardMode`, `reducedMotion`, `textScale` e os parâmetros
+  `kb`, `motion`, `scale`), a aba Acessibilidade do Inspector.
+  `StageProps` ficou só com `viewport` e `children`.
+- **Rótulos:** grupos `status`, `statusMeaning` e `keyboard`; exports
+  `STATUS_LABELS`, `STATUS_MEANING` e `KEYBOARD_LABELS`; as chaves de
+  referências portadas, aprovação, contraste e modo teclado em `sidebar`,
+  `controls`, `inspector` e `home`. Override em `theme.labels` que declare esses
+  grupos passa a ser erro de tipo.
+- **`/testing`:** `scenariosUnderTest`, `keyboardScenarios` e a reexportação das
+  funções de contraste. Continuam `testOrigin`, `urlFor`, `pathFor`,
+  `scenarioUrl`, `assertValidProduct`, `validateProduct`, `hasErrors` e
+  `formatIssues`.
+
+### Alterado
+
+- **`persona` é opcional em `Scenario`.** Cenário sem persona tem permissões
+  vazias, a menos que declare `permissions`. A validação só reclama de persona
+  inexistente quando ela é informada, e `scenarioUrl()` omite `persona` da URL
+  quando o cenário não declara uma.
+- **Produto só de componentes é válido.** `routes` vazio só é erro quando há
+  cenários. Sem cenários e com `components`, a Home abre no catálogo de
+  componentes agrupado por `group`, e a navegação abre direto na lista de
+  componentes, sem aba de fluxos vazia.
+- A Home sem cenário nem componente mostra um único estado vazio
+  (`home.noScenarios`); a navegação usa `sidebar.emptyScenarios`. Novo rótulo
+  `home.componentsLead`.
+
+### Migração
+
+1. Apague `a11y`, `status` e `approvedAt` de todos os cenários e
+   `theme.contrastPairs` da definição do produto.
+2. `persona` agora é opcional: mantenha onde ela decide permissões, remova onde
+   não acrescenta nada.
+3. Remova de `theme.labels` os grupos `status`, `statusMeaning` e `keyboard` e as
+   chaves listadas acima; o TypeScript aponta cada uma.
+4. Se os testes do produto usavam `scenariosUnderTest`, `keyboardScenarios` ou
+   as funções de contraste de `/testing`, troque por `product.scenarios` (ou um
+   filtro do próprio produto) e apague os testes de contraste e axe que
+   dependiam delas.
+5. Links antigos com `view=ported`, `showPorted=1`, `kb=1`, `motion=1` ou
+   `scale=…` continuam abrindo: os parâmetros são ignorados.
+
 ## 0.6.0 (2026-08-13)
 
 ### Adicionado

@@ -21,7 +21,6 @@ import type {
   ChromeTheme,
   ControlsState,
   NetworkState,
-  ScenarioView,
   ViewportSetting,
 } from "../types/index.js";
 import type { Registry } from "../registry/index.js";
@@ -41,9 +40,6 @@ export const VIEWPORTS: readonly ViewportSetting[] = [
   { id: "desktop", label: "Desktop", width: 1440, height: 900 },
   { id: "custom", label: "Personalizado" },
 ] as const;
-
-export const TEXT_SCALES = [1, 1.25, 1.5, 2] as const;
-
 
 export type DesignSpaceLocation = {
   path: string;
@@ -73,20 +69,10 @@ export function parseControls(search: string, registry: Registry): ControlsState
     : undefined;
 
   const network = params.get(PARAM.network);
-  const scale = Number(params.get(PARAM.textScale));
-  const requestedView = params.get(PARAM.view);
-  const view: ScenarioView =
-    scenario?.status === "ported" ||
-    requestedView === "ported" ||
-    params.get(PARAM.showPorted) === "1"
-      ? "ported"
-      : "active";
 
   return {
     scenario: scenario?.id,
     handoff,
-    view,
-    showPorted: view === "ported",
     component: component?.id,
     persona: params.get(PARAM.persona) ?? scenario?.persona,
     fixture: component ? componentFixture : requestedFixture ?? scenario?.fixture,
@@ -102,9 +88,6 @@ export function parseControls(search: string, registry: Registry): ControlsState
     // Chrome visível por padrão. `?chrome=0` é o modo de revisão limpa e captura
     // de tela, então precisa ser explícito para não sumir sem pedido.
     chrome: params.get(PARAM.chrome) !== "0",
-    keyboardMode: params.get(PARAM.keyboardMode) === "1",
-    reducedMotion: params.get(PARAM.reducedMotion) === "1",
-    textScale: (TEXT_SCALES as readonly number[]).includes(scale) ? scale : 1,
     inspector: params.get(PARAM.inspector) !== "0",
   };
 }
@@ -119,8 +102,6 @@ export function serializeControls(state: ControlsState, registry: Registry): str
 
   if (state.component) params.set(PARAM.component, state.component);
   else if (state.scenario) params.set(PARAM.scenario, state.scenario);
-
-  if (scenarioView(state) === "ported") params.set(PARAM.view, "ported");
 
   // Persona e fixture só entram quando divergem do cenário: um link com a
   // combinação declarada não precisa repeti-la, e um link com combinação
@@ -157,9 +138,6 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   if (state.chromeTheme === "light") params.set(PARAM.chromeTheme, "light");
 
   if (!state.chrome) params.set(PARAM.chrome, "0");
-  if (state.keyboardMode) params.set(PARAM.keyboardMode, "1");
-  if (state.reducedMotion) params.set(PARAM.reducedMotion, "1");
-  if (state.textScale !== 1) params.set(PARAM.textScale, String(state.textScale));
   if (!state.inspector) params.set(PARAM.inspector, "0");
   applyHandoffScope(params, state.handoff);
 
@@ -173,13 +151,11 @@ export type DesignSpaceState = {
   viewport: ViewportSetting;
   /** Altera um ou mais controles, preservando a rota. */
   setControls: (patch: Partial<ControlsState>) => void;
-  /** Troca entre trabalho ativo e referências portadas sem misturar coleções. */
-  setScenarioView: (view: ScenarioView) => void;
   /** Navega para uma rota, preservando os controles ativos. */
   navigate: (to: string, options?: { replace?: boolean }) => void;
   /**
    * Abre um cenário: vai para a rota dele e reseta persona, fixture e rede para
-   * o que o cenário declara. Controles de ambiente (viewport, chrome, texto)
+   * o que o cenário declara. Controles de ambiente (viewport, chrome, tema)
    * são preservados de propósito — quem está revisando no celular não quer
    * voltar ao desktop a cada troca de situação.
    */
@@ -213,42 +189,10 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
 
   const setControls = useCallback(
     (patch: Partial<ControlsState>) => {
-      const patchedView =
-        patch.view ??
-        (patch.showPorted === undefined ? undefined : patch.showPorted ? "ported" : "active");
-      const next = {
-        ...controls,
-        ...patch,
-        ...(patchedView
-          ? { view: patchedView, showPorted: patchedView === "ported" }
-          : {}),
-      };
+      const next = { ...controls, ...patch };
       // Troca de controle é replace, não push: o histórico do navegador deve
       // registrar navegação entre situações, não cada ajuste de viewport.
       push(location.path, serializeControls(next, registry), true);
-    },
-    [controls, location.path, push, registry],
-  );
-
-  const setScenarioView = useCallback(
-    (view: ScenarioView) => {
-      const scenario = registry.scenario(controls.scenario);
-      const scenarioBelongsToView =
-        !scenario || (view === "ported" ? scenario.status === "ported" : scenario.status !== "ported");
-      const next: ControlsState = {
-        ...controls,
-        view,
-        showPorted: view === "ported",
-        ...(scenarioBelongsToView
-          ? {}
-          : {
-              scenario: undefined,
-              persona: undefined,
-              fixture: undefined,
-              network: "success",
-            }),
-      };
-      push(scenarioBelongsToView ? location.path : "/", serializeControls(next, registry), false);
     },
     [controls, location.path, push, registry],
   );
@@ -277,8 +221,6 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
       const next: ControlsState = {
         ...controls,
         scenario: scenario.id,
-        view: scenario.status === "ported" ? "ported" : "active",
-        showPorted: scenario.status === "ported",
         component: undefined,
         persona: scenario.persona,
         fixture: scenario.fixture,
@@ -317,16 +259,10 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
     controls,
     viewport,
     setControls,
-    setScenarioView,
     navigate,
     openScenario,
     openComponent,
   };
-}
-
-/** Resolve objetos 0.4.0 que ainda só carregam `showPorted`. */
-export function scenarioView(state: Pick<ControlsState, "view" | "showPorted">): ScenarioView {
-  return state.view ?? (state.showPorted ? "ported" : "active");
 }
 
 export function resolveViewport(controls: ControlsState): ViewportSetting {

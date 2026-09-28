@@ -12,7 +12,6 @@
 
 import {
   NETWORK_STATES,
-  SCENARIO_STATUSES,
   type ProductDefinition,
   type Scenario,
 } from "../types/index.js";
@@ -63,49 +62,15 @@ export function validateScenario(scenario: Scenario, index?: number): Validation
     err("`route` deve começar com `/`.");
   }
 
-  if (!isNonEmptyString(scenario?.persona)) err("`persona` é obrigatório.");
+  if (scenario?.persona !== undefined && !isNonEmptyString(scenario.persona)) {
+    err("`persona`, quando informada, deve ser o id de uma persona registrada.");
+  }
   if (!isNonEmptyString(scenario?.fixture)) {
     err("`fixture` é obrigatório. O padrão do ambiente é dado sintético (D-05).");
   }
 
-  if (!SCENARIO_STATUSES.includes(scenario?.status)) {
-    err(`\`status\` deve ser um de: ${SCENARIO_STATUSES.join(", ")}.`);
-  }
-
   if (scenario?.network && !NETWORK_STATES.includes(scenario.network)) {
     err(`\`network\` deve ser um de: ${NETWORK_STATES.join(", ")}.`);
-  }
-
-  const a11y = scenario?.a11y;
-  if (!a11y || typeof a11y !== "object") {
-    err(
-      "`a11y` é obrigatório. Acessibilidade é campo do contrato, não auditoria de fim de projeto (D-15).",
-    );
-  } else {
-    if (!["full", "partial", "not-applicable"].includes(a11y.keyboard)) {
-      err("`a11y.keyboard` deve ser `full`, `partial` ou `not-applicable`.");
-    }
-    if (!["AA", "AAA"].includes(a11y.contrast)) {
-      err("`a11y.contrast` deve ser `AA` ou `AAA`. O padrão interno é WCAG 2.2 AA.");
-    }
-    if (a11y.announces !== undefined && !Array.isArray(a11y.announces)) {
-      err("`a11y.announces` deve ser uma lista de chaves de evento de domínio.");
-    }
-  }
-
-  // Gate do roadmap: não aprovar cenário de jornada crítica sem acessibilidade
-  // verificada. O motor não sabe o que é crítico, então checa o que dá:
-  // aprovado com teclado parcial é sinal de aprovação apressada.
-  if (scenario?.status === "approved" && a11y?.keyboard === "partial") {
-    warn(
-      "Cenário aprovado com `a11y.keyboard: \"partial\"`. Confirme que esta jornada não é crítica.",
-    );
-  }
-
-  if (scenario?.status === "approved" && !scenario.approvedAt) {
-    warn(
-      "Aprovação incompleta: cenário `approved` sem `approvedAt`. Registre a URL imutável do commit aprovado (§10.2); sem ela, a versão autorizada não é rastreável.",
-    );
   }
 
   if (!scenario?.expected?.length) {
@@ -134,7 +99,10 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
 
   if (!isNonEmptyString(product.id)) push("error", "product", "`id` é obrigatório.");
   if (!isNonEmptyString(product.name)) push("error", "product", "`name` é obrigatório.");
-  if (!product.routes?.length) {
+  // Um produto que é só catálogo de componentes e layouts não precisa de rota:
+  // o preview de componente renderiza sem roteamento. Sem rota, o problema só
+  // existe quando há cenário que precisa abrir uma tela.
+  if (!product.routes?.length && product.scenarios?.length) {
     push("error", "product", "`routes` está vazio: nenhum cenário conseguirá renderizar.");
   }
 

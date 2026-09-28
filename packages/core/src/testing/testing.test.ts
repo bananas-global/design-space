@@ -1,40 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProductDefinition, RouteDefinition, Scenario } from "../types/index.js";
-import { scenariosUnderTest } from "./index.js";
+import type { Scenario } from "../types/index.js";
+import { pathFor } from "./index.js";
 
-const screen = (() => null) as unknown as RouteDefinition["screen"];
+describe("pathFor", () => {
+  it("monta o caminho relativo sem exigir persona", () => {
+    const scenario: Scenario = {
+      id: "requests.queue",
+      title: "Fila",
+      route: "/requests",
+      fixture: "queue",
+    };
 
-function scenario(id: string, status: Scenario["status"]): Scenario {
-  return {
-    id: `requests.${id}`,
-    title: id,
-    route: `/requests/${id}`,
-    persona: "reviewer",
-    fixture: id,
-    a11y: { keyboard: "full", contrast: "AA" },
-    status,
-  };
-}
+    expect(pathFor(scenario)).toBe("/requests?scenario=requests.queue&fixture=queue");
+  });
 
-describe("scenariosUnderTest", () => {
-  it("não transforma cenário apenas portado em compromisso de jornada automatizada", () => {
-    const ported = scenario("ported", "ported");
-    const approved = scenario("approved", "approved");
-    const product = {
-      id: "example",
-      name: "Example",
-      modules: [{ id: "requests", name: "Solicitações" }],
-      scenarios: [ported, approved],
-      personas: [{ id: "reviewer", name: "Pessoa revisora", permissions: [] }],
-      fixtures: [
-        { id: "ported", label: "Portado", data: {} },
-        { id: "approved", label: "Aprovado", data: {} },
-      ],
-      routes: [{ path: "/requests/:id", screen }],
-    } satisfies ProductDefinition;
+  it("inclui a persona quando o cenário declara uma", () => {
+    const path = pathFor({
+      id: "requests.queue",
+      title: "Fila",
+      route: "/requests",
+      persona: "reviewer",
+      fixture: "queue",
+    });
 
-    expect(scenariosUnderTest(product)).toEqual([approved]);
-    expect(scenariosUnderTest(product, ["ported"])).toEqual([ported]);
+    expect(new URL(path, "http://x.invalid").searchParams.get("persona")).toBe("reviewer");
   });
 });

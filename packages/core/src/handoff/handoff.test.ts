@@ -15,8 +15,6 @@ const scenario: Scenario = {
   route: "/requests/REQ-20",
   persona: "reviewer",
   fixture: "request",
-  a11y: { keyboard: "full", contrast: "AA" },
-  status: "in-review",
 };
 
 describe("escopo de handoff", () => {

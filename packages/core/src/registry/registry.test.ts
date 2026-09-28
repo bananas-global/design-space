@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createRegistry } from "./index.js";
 import { hasErrors, validateProduct, validateScenario } from "./validate.js";
-import {
-  SCENARIO_STATUSES,
-  type ProductDefinition,
-  type RouteDefinition,
-  type Scenario,
-} from "../types/index.js";
+import type { ProductDefinition, RouteDefinition, Scenario } from "../types/index.js";
 
 const screen = (() => null) as unknown as RouteDefinition["screen"];
 
@@ -18,8 +13,6 @@ function scenario(overrides: Partial<Scenario> = {}): Scenario {
     persona: "approver",
     fixture: "request-blocked",
     rules: ["retry-after-document-review"],
-    a11y: { keyboard: "full", contrast: "AA", announces: ["request.status"] },
-    status: "in-review",
     expected: ["O bloqueio é anunciado para leitor de tela."],
     ...overrides,
   };
@@ -44,28 +37,19 @@ describe("validateScenario", () => {
     expect(validateScenario(scenario()).filter((i) => i.level === "error")).toEqual([]);
   });
 
-  it("aceita cenário portado sem tratá-lo como proposta ou compromisso", () => {
-    expect(validateScenario(scenario({ status: "ported" })).filter((i) => i.level === "error"))
-      .toEqual([]);
+  it("aceita cenário sem persona", () => {
+    const { persona: _persona, ...withoutPersona } = scenario();
+    expect(validateScenario(withoutPersona).filter((i) => i.level === "error")).toEqual([]);
   });
 
-  it("exige o contrato de acessibilidade", () => {
-    const issues = validateScenario({ ...scenario(), a11y: undefined as never });
-    expect(issues.some((i) => i.level === "error" && i.message.includes("`a11y`"))).toBe(true);
+  it("não exige mais contrato de acessibilidade nem status", () => {
+    const issues = validateScenario(scenario());
+    expect(issues.some((i) => /a11y|status/.test(i.message))).toBe(false);
   });
 
   it("recusa id fora do padrão", () => {
     const issues = validateScenario(scenario({ id: "Requests.ApproveBlocked" }));
     expect(hasErrors(issues)).toBe(true);
-  });
-
-  it("avisa quando um cenário aprovado não registra a URL de commit", () => {
-    const issues = validateScenario(scenario({ status: "approved" }));
-    expect(issues.some((i) =>
-      i.level === "warning" &&
-      i.message.includes("Aprovação incompleta") &&
-      i.message.includes("approvedAt"),
-    )).toBe(true);
   });
 
   it("avisa quando falta critério de aceite", () => {
@@ -85,6 +69,32 @@ describe("validateProduct", () => {
     expect(messages.some((m) => m.includes("Persona não registrada"))).toBe(true);
     expect(messages.some((m) => m.includes("Fixture não registrada"))).toBe(true);
     expect(messages.some((m) => m.includes("Regra não registrada"))).toBe(true);
+  });
+
+  it("aceita produto só de componentes, sem módulos, cenários, fixtures nem rotas", () => {
+    const issues = validateProduct({
+      id: "acme",
+      name: "Acme",
+      modules: [],
+      scenarios: [],
+      personas: [],
+      fixtures: [],
+      routes: [],
+      components: [{ id: "actions.button", name: "Botão", preview: () => null }],
+    });
+    expect(issues.filter((i) => i.level === "error")).toEqual([]);
+  });
+
+  it("exige rota quando há cenário para renderizar", () => {
+    const issues = validateProduct(product({ routes: [] }));
+    expect(issues.some((i) => i.level === "error" && i.message.includes("`routes` está vazio")))
+      .toBe(true);
+  });
+
+  it("não reclama de persona quando o cenário não informa uma", () => {
+    const { persona: _persona, ...withoutPersona } = scenario();
+    const issues = validateProduct(product({ scenarios: [withoutPersona] }));
+    expect(issues.filter((i) => i.level === "error")).toEqual([]);
   });
 
   it("aponta rota que nenhuma rota declarada atende", () => {
@@ -187,6 +197,22 @@ describe("createRegistry", () => {
     ]);
   });
 
+  it("dá permissões vazias a cenário sem persona e sem permissões", () => {
+    const { persona: _persona, ...withoutPersona } = scenario();
+    const custom = createRegistry(product({ scenarios: [withoutPersona] }));
+    expect(custom.permissionsOf(custom.scenario("requests.approve-blocked"))).toEqual([]);
+  });
+
+  it("usa as permissões declaradas em cenário sem persona", () => {
+    const { persona: _persona, ...withoutPersona } = scenario();
+    const custom = createRegistry(
+      product({ scenarios: [{ ...withoutPersona, permissions: ["requests.approve"] }] }),
+    );
+    expect(custom.permissionsOf(custom.scenario("requests.approve-blocked"))).toEqual([
+      "requests.approve",
+    ]);
+  });
+
   it("respeita as permissões do cenário quando declaradas", () => {
     const custom = createRegistry(
       product({ scenarios: [scenario({ permissions: ["requests.read", "requests.approve"] })] }),
@@ -203,7 +229,7 @@ describe("createRegistry", () => {
     expect(registry.search("nada disso")).toEqual([]);
   });
 
-  it("aplica o handoff a busca, árvore, cobertura, status e componentes", () => {
+  it("aplica o handoff a busca, árvore e componentes", () => {
     const custom = createRegistry(product({
       scenarios: [
         scenario({ id: "requests.allowed", title: "Permitido" }),
@@ -223,83 +249,26 @@ describe("createRegistry", () => {
     expect(custom.treeFor({ handoff })[0]?.scenarios.map((item) => item.id)).toEqual([
       "requests.allowed",
     ]);
-    expect(custom.coverage({ handoff })["in-review"]).toBe(1);
-    expect(custom.byStatus("in-review", { handoff }).map((item) => item.id)).toEqual([
+    expect(custom.activeScenarios({ handoff }).map((item) => item.id)).toEqual([
       "requests.allowed",
     ]);
     expect(custom.componentsFor(handoff).map((item) => item.id)).toEqual(["feedback.allowed"]);
   });
 
-  it("esconde portados das consultas de trabalho ativo por padrão", () => {
+  it("exibe todo cenário registrado, sem separar coleções", () => {
     const custom = createRegistry(product({
       scenarios: [
-        scenario({ id: "requests.imported", title: "Referência importada", status: "ported" }),
+        scenario({ id: "requests.imported", title: "Referência importada" }),
         scenario({ id: "requests.review", title: "Trabalho em revisão" }),
       ],
     }));
 
-    expect(custom.activeScenarios().map((item) => item.id)).toEqual(["requests.review"]);
-    expect(custom.search("importada")).toEqual([]);
-    expect(custom.treeFor()[0]?.scenarios.map((item) => item.id)).toEqual(["requests.review"]);
-    expect(custom.scenariosForRoute("/requests/REQ-2043").map((item) => item.id))
-      .toEqual(["requests.review"]);
-    expect(custom.coverage().ported).toBe(0);
-
-    expect(custom.activeScenarios({ view: "ported" }).map((item) => item.id)).toEqual([
+    expect(custom.activeScenarios().map((item) => item.id)).toEqual([
       "requests.imported",
+      "requests.review",
     ]);
-    expect(custom.search("revisão", { view: "ported" })).toEqual([]);
-    expect(custom.search("importada", { view: "ported" })).toHaveLength(1);
-    expect(custom.treeFor({ view: "ported" })[0]?.scenarios.map((item) => item.id)).toEqual([
-      "requests.imported",
-    ]);
-    expect(custom.coverage({ view: "ported" }).ported).toBe(1);
-    expect(custom.coverage({ view: "ported" })["in-review"]).toBe(0);
-
-    expect(custom.activeScenarios({ includePorted: true })).toHaveLength(2);
-    expect(custom.search("importada", { includePorted: true })).toHaveLength(1);
-    expect(custom.treeFor({ includePorted: true })[0]?.scenarios).toHaveLength(2);
-    expect(custom.coverage({ includePorted: true }).ported).toBe(1);
-  });
-
-  it("mantém o portado ativo compreensível na árvore de um deep link", () => {
-    const custom = createRegistry(product({
-      scenarios: [scenario({ id: "requests.imported", status: "ported" })],
-    }));
-
-    expect(custom.activeScenarios()).toEqual([]);
-    expect(custom.treeFor({ activeScenario: "requests.imported" })[0]?.scenarios.map((item) => item.id))
-      .toEqual(["requests.imported"]);
-  });
-
-  it("conta cobertura por status", () => {
-    expect(registry.coverage()["in-review"]).toBe(1);
-    expect(registry.coverage().approved).toBe(0);
-  });
-
-  it("conta cenários portados separadamente dos seis estados existentes", () => {
-    const custom = createRegistry(
-      product({ scenarios: [scenario({ status: "ported" }), scenario({ id: "requests.review" })] }),
-    );
-
-    expect(custom.coverage({ includePorted: true })).toEqual({
-      ported: 1,
-      proposed: 0,
-      "in-review": 1,
-      approved: 0,
-      "in-implementation": 0,
-      implemented: 0,
-      superseded: 0,
-    });
-    expect(custom.byStatus("ported")).toHaveLength(1);
-    expect(SCENARIO_STATUSES).toEqual([
-      "ported",
-      "proposed",
-      "in-review",
-      "approved",
-      "in-implementation",
-      "implemented",
-      "superseded",
-    ]);
+    expect(custom.search("importada")).toHaveLength(1);
+    expect(custom.treeFor()[0]?.scenarios).toHaveLength(2);
+    expect(custom.scenariosForRoute("/requests/REQ-2043")).toHaveLength(2);
   });
 });

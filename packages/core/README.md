@@ -1,9 +1,9 @@
 # @brucesantos/design-space
 
-Motor neutro do Bananas Design Space. Fornece o ambiente — navegação por cenário,
-deep links, controles de persona/dados/viewport/rede, painel de contexto e
-ferramentas de acessibilidade — sem impor nenhum componente visual, token ou
-identidade ao produto.
+Motor neutro do Bananas Design Space. Fornece o ambiente — catálogo de
+componentes e layouts, navegação por cenário, deep links, controles de
+persona/dados/viewport/rede e painel de contexto — sem impor nenhum componente
+visual, token ou identidade ao produto.
 
 ```bash
 pnpm add @brucesantos/design-space
@@ -40,61 +40,16 @@ export const approveBlocked: Scenario = {
   permissions: ["requests.read", "requests.approve"],
   fixture: "request-without-document",
   rules: ["approval-needs-document"],
-  a11y: {
-    keyboard: "full",
-    contrast: "AA",
-    announces: ["request.status", "approval.result"],
-  },
-  status: "approved",
-  approvedAt: {
-    url: "https://review.example.test/commit/0123456/requests/REQ-2043",
-    commit: "0123456789abcdef",
-    date: "2026-08-13",
-  },
+  expected: ["O motivo do bloqueio aparece junto da ação indisponível."],
 };
 ```
 
 O vocabulário do exemplo é genérico de propósito: o domínio é do produto, nunca do
 motor.
 
-`a11y` é obrigatório. Acessibilidade é campo do contrato, não auditoria de fim de
-projeto: um cenário de ação bloqueada em que o bloqueio não é anunciado para leitor
-de tela está incompleto, não está pronto para aprovação.
-
-### Ciclo de vida
-
-O estado diz o que o cenário representa; importar uma tela existente não a torna
-proposta nem compromisso de implementação.
-
-| Valor | Rótulo padrão | Significado |
-| --- | --- | --- |
-| `ported` | Portado — não validado | Veio do sistema existente, mas não foi validado e não representa compromisso de implementação. |
-| `proposed` | Proposta | Exploração ainda não aprovada. |
-| `in-review` | Em revisão | Aberto para validação de design, negócio ou cliente. |
-| `approved` | Aprovado | Referência autorizada, registrada por URL de commit. |
-| `in-implementation` | Em implementação | Ligado a um trabalho ativo de engenharia. |
-| `implemented` | Implementado | Disponível no produto real e validado. |
-| `superseded` | Superado | Mantido para histórico ou substituído por outra decisão. |
-
-`approved` só representa uma aprovação completamente registrada quando
-`approvedAt` contém a URL imutável do commit, o SHA e a data. Sem esse registro, o
-Inspector mostra **Aprovado — registro pendente** e o validador emite o warning
-“Aprovação incompleta”; a referência não é apresentada como plenamente
-autorizada.
-
-`scenariosUnderTest()` inclui por padrão apenas `approved`, `in-implementation` e
-`implemented`. Cenários `ported` ficam fora até serem promovidos, mas podem ser
-selecionados explicitamente pelo segundo argumento.
-
-Na interface, `ported` vive numa coleção separada. **Trabalho ativo** mostra apenas
-cenários não portados; **Referências portadas** mostra apenas portados. A entrada
-textual “Ver N referências portadas” troca de coleção e grava `view=ported` na URL.
-Busca, home, módulos e contagens seguem a visão atual, sem renderizar módulos
-vazios. Um deep link direto para um portado infere a visão de referências mesmo
-sem o parâmetro. Links 0.4.0 com `showPorted=1` continuam sendo lidos e são
-normalizados para a nova visão. O diagnóstico sempre avalia o catálogo completo.
-A home também apresenta uma legenda estável com a cor, o rótulo e o significado
-de cada status; os chips de contagem continuam mostrando apenas a visão atual.
+`persona` é opcional. Cenário sem persona tem permissões vazias, a menos que
+declare `permissions`. Todo cenário registrado aparece na navegação: não há
+estado de ciclo de vida nem coleção separada (decisão 0011).
 
 ## A URL é o estado
 
@@ -105,20 +60,15 @@ rede declarados no cenário.
 | Parâmetro | Efeito |
 | --- | --- |
 | `scenario` | Cenário ativo. Define os padrões dos demais. |
-| `view=ported` | Abre a coleção de referências portadas. Omitido significa trabalho ativo. |
 | `component` | Referência ativa no catálogo visual do produto. |
 | `persona` | Troca o papel e as permissões. |
 | `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. |
-| `showPorted=1` | Compatibilidade de leitura com links 0.4.0; equivale a `view=ported`. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
 | `viewport` | `fit`, `mobile`, `tablet`, `desktop`, `custom`. |
 | `w` | Largura, quando `viewport=custom`. |
 | `theme`, `locale`, `source` | Variações declaradas pelo produto. |
 | `appearance` | Aparência do chrome: omitido para dark, `light` para modo claro. |
 | `chrome=0` | Revisão limpa: oculta o chrome do ambiente. |
-| `kb=1` | Modo teclado, com ordem de tabulação evidenciada. |
-| `motion=1` | Movimento reduzido no palco. |
-| `scale` | Ampliação de texto: `1`, `1.25`, `1.5`, `2`. |
 | `panel=0` | Oculta o painel de contexto. |
 | `handoff=1` | Ativa um recorte explícito de revisão/handoff. |
 | `allowScenario` | Cenário permitido; pode ser repetido e autoriza também a rota do cenário. |
@@ -128,7 +78,7 @@ rede declarados no cenário.
 ## Handoff focado por URL
 
 O handoff é uma allowlist transportada junto dos demais controles. Ela filtra
-Home, navegação, busca, flows, referências portadas e componentes. A raiz abre a
+Home, navegação, busca, flows e componentes. A raiz abre a
 Home já filtrada; uma tentativa de abrir cenário, rota ou componente fora da
 lista mostra um bloqueio claro sem montar a tela solicitada.
 
@@ -168,21 +118,19 @@ produto que publica o preview.
 
 ### Escopo no Inspector
 
-Na aba Cenário, **Dados desta tarefa** reúne situação, reprodução, regras,
-critérios e aprovação; **Contexto herdado do produto e da persona** reúne objetivo
-e permissões efetivas. Em Acessibilidade, o contrato da tarefa, a inspeção da tela
-atual e os pares globais do produto têm agrupamentos próprios. Diagnóstico
-continua deliberadamente geral e identifica que avalia o catálogo inteiro,
-inclusive fora do handoff.
+Na aba Cenário, **Dados desta tarefa** reúne situação, reprodução, regras e
+critérios; **Contexto herdado do produto e da persona** reúne objetivo e
+permissões efetivas. Diagnóstico continua deliberadamente geral e identifica que
+avalia o catálogo inteiro, inclusive fora do handoff.
 
 ## API
 
 ### Shell
 
 - `DesignSpace` — o ambiente completo.
-- `Home` — mapa de situações, usado na raiz.
-- `Stage`, `StageEmpty`, `TabOrderOverlay` — partes do palco, expostas para casos
-  fora do padrão.
+- `Home` — mapa de situações, usado na raiz. Em produto sem cenários, lista o
+  catálogo de componentes.
+- `Stage`, `StageEmpty` — partes do palco, expostas para casos fora do padrão.
 
 ### Rótulos do chrome
 
@@ -192,7 +140,7 @@ não for declarado fica no padrão.
 ```ts
 theme: {
   labels: {
-    status: { approved: "Approved", "in-review": "In review" },
+    network: { success: "Success", error: "Error" },
     topbar: { copyLink: "Copy link" },
     home: { lead: (total) => `${total} scenarios, each one a link.` },
   },
@@ -231,21 +179,22 @@ e a revisão limpa preservam a aparência escolhida.
 ### Registry e validação
 
 - `createRegistry(product)` — índice consultável: busca por vocabulário de
-  negócio, árvore de módulos, cobertura por status.
-- `activeScenarios()`, `treeFor()`, `orphansFor()`, `search()` e `coverage()` —
-  consultam trabalho ativo por padrão e aceitam `{ view: "ported" }` para a
-  biblioteca de referências. `{ includePorted: true }` permanece disponível para
-  diagnóstico e consultas do catálogo completo. `tree` e `issues` continuam
-  completos. Todas aceitam também `{ handoff }`; `componentsFor(handoff)` aplica
-  o mesmo recorte ao catálogo visual.
+  negócio, árvore de módulos, permissões efetivas.
+- `activeScenarios()`, `treeFor()`, `orphansFor()` e `search()` — devolvem todo
+  cenário registrado e aceitam `{ handoff }` para aplicar o recorte;
+  `componentsFor(handoff)` aplica o mesmo recorte ao catálogo visual. `tree` e
+  `issues` continuam completos.
 - `validateProduct(product)` / `validateScenario(scenario)` — validação em runtime
   do contrato. Pega fixture, persona, regra ou rota inexistente, que o TypeScript
-  não alcança.
+  não alcança. `persona` é opcional; `routes` vazio só é erro quando há
+  cenários, então um produto que é só catálogo de componentes é válido.
 
 ### Catálogo de componentes
 
-O catálogo é opcional. O motor fornece navegação, busca e deep link; cada preview
-continua sendo UI do produto:
+O motor fornece navegação, busca e deep link; cada preview continua sendo UI do
+produto. Um produto pode ser só catálogo: com `modules`, `scenarios`, `fixtures` e
+`routes` vazios, a Home lista os componentes por `group` e a navegação abre
+direto neles.
 
 ```tsx
 type ButtonData = {
@@ -259,7 +208,6 @@ function PrimaryButtonPreview({
   viewport,
   themeMode,
   locale,
-  a11y,
 }: ComponentPreviewProps<ButtonData>) {
   return (
     <button disabled={data?.disabled} data-viewport={viewport.id}>
@@ -342,7 +290,7 @@ omite branch e commit.
   consome.
 - `scenarioUrl(scenario, options)` — URL absoluta reproduzível.
 - `componentUrl(component, options)` — URL absoluta do componente com sua fixture.
-- `commitUrl(scenario, { template })` — URL imutável para registrar aprovação. O
+- `commitUrl(scenario, { template })` — URL imutável do cenário num commit. O
   template é do produto, com `{commit}` ou `{shortCommit}`.
 
 ### Dados
@@ -350,15 +298,6 @@ omite branch e commit.
 - `fixtureAdapter` — o padrão. Materializa os cinco estados de rede.
 - `createHttpAdapter(options)` — adapter REST/GraphQL com fallback para fixture.
 - `useScenarioData(...)` — resolução do cenário ativo pelo adapter selecionado.
-
-### Acessibilidade
-
-- `contrastRatio(fg, bg)`, `checkContrastPairs(pairs)`, `assertContrastPairs(pairs)`
-  — razão de contraste do WCAG 2.x, com composição de alfa sobre o fundo.
-  `assertContrastPairs` falha o build a partir de um teste do produto.
-- `describeElement(el)` — papel, nome acessível, origem do nome e estados.
-- `tabbableElements(root)` — ordem de tabulação real.
-- `useKeyboardMode(enabled, ref)` — foco observado e ordem de tabulação medida.
 
 ### Testes
 
@@ -370,8 +309,6 @@ preview.
 - `testOrigin(fallback)` — lê `PREVIEW_URL` quando existe um ambiente publicado
   para testar; sem ela, o Playwright roda contra o dev server local.
 - `assertValidProduct(product)` — falha o teste quando o contrato tem erro.
-- `scenariosUnderTest(product)`, `keyboardScenarios(product)` — recortes para
-  parametrizar jornadas.
 
 ## Atalhos
 
@@ -379,7 +316,6 @@ preview.
 | --- | --- |
 | `Command/Ctrl` + `K` ou `F` | Foco na busca da lateral |
 | `↑` / `↓` | Percorrer resultados filtrados |
-| `Shift` + `K` | Modo teclado |
 | `Shift` + `P` | Painel de contexto |
 
 ## Créditos

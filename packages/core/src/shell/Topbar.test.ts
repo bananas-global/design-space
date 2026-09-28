@@ -24,14 +24,8 @@ describe("retorno para a home", () => {
     expect(buildHomeUrl("https://example.test", "dark")).toBe("https://example.test/");
   });
 
-  it("preserva a visão de referências portadas ao voltar para a home", () => {
-    expect(buildHomeUrl("https://example.test", "dark", "ported")).toBe(
-      "https://example.test/?view=ported",
-    );
-  });
-
   it("preserva o escopo de handoff ao voltar para a Home filtrada", () => {
-    const url = new URL(buildHomeUrl("https://example.test", "dark", "active", {
+    const url = new URL(buildHomeUrl("https://example.test", "dark", {
       scenarios: ["requests.queue"],
       components: ["feedback.notice"],
     }));

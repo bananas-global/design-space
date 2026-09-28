@@ -48,14 +48,19 @@ produto dentro de um `<iframe>`. Ver
   não registrado gera aviso.
 - **`ComponentPreview.source`**: origem no sistema real, texto livre.
 - **Chrome novo, preto e branco**, claro e escuro, sem cor de cliente e sem
-  logo. Barra superior numa linha: nome do produto; viewport (Celular 375,
-  Tablet 768, Desktop 1280, Ajustar), girar, zoom de 25% a 150%, copiar link,
-  revisão limpa (`Shift` + `C`), tema, painel (`Shift` + `P`) e indicador de
-  diagnóstico. Lateral esquerda com **Telas | Componentes**, busca
-  (`Cmd`/`Ctrl` + `K`) e componentes agrupados por `group`, com grupos
-  recolhíveis. Lateral direita com **Variações | Informações** e o botão
-  **Copiar para o PR**. As duas laterais são redimensionáveis, e a largura é
-  lembrada no navegador.
+  logo. Seleção por tom (a cor do texto a 10%), grupos e abas em cápsula,
+  controles de 36px.
+  - Barra superior em três partes: o nome do produto e a versão do motor, com
+    link para o pacote; no centro, viewport (Celular 375, Tablet 768, Desktop
+    1280, Ajustar), girar (só celular e tablet), zoom de 25% a 150% e revisão
+    limpa (`Shift` + `C`); à direita, copiar link, tema e o indicador de
+    diagnóstico. Em 100%, um viewport mais largo que a área encolhe até caber.
+  - Lateral esquerda: busca (`Cmd`/`Ctrl` + `K`) e as abas **Telas |
+    Componentes**, sempre visíveis; componentes agrupados por `group`, com
+    grupos recolhíveis.
+  - Lateral direita, sempre aberta com o chrome: filtro (`Cmd`/`Ctrl` + `F`)
+    e as abas **Variações | Informações**, com o botão **Copiar para o PR**.
+  - As duas laterais são redimensionáveis, e a largura é lembrada no navegador.
 - **Quadro (`<iframe>`)**: a UI do produto roda na mesma origem e no mesmo
   bundle, com `ds-frame=1`. A largura do viewport é a largura real da janela do
   produto. Protocolo por `postMessage` validando origem e janela nos dois lados.

@@ -118,7 +118,7 @@ pergunte.
 | --- | --- |
 | `Command/Ctrl` + `K` | Foca a busca da lateral |
 | `Shift` + `C` | Revisão limpa: esconde e mostra o chrome |
-| `Shift` + `P` | Mostra ou oculta o painel direito |
+| `Command/Ctrl` + `F` | Foca o filtro do painel direito |
 
 A UI do produto roda num `<iframe>` com a largura do viewport. Use media queries
 normais; nos testes e2e, a UI fica em `page.frameLocator(FRAME_SELECTOR)`.

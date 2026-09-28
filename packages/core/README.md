@@ -390,10 +390,10 @@ await expect(page).toHaveURL(/scenario=/); // o chrome fica em `page`
 | --- | --- |
 | `Command/Ctrl` + `K` | Foco na busca da lateral |
 | `Shift` + `C` | Revisão limpa: esconde e mostra o chrome |
-| `Shift` + `P` | Abre e fecha o painel direito |
+| `Command/Ctrl` + `F` | Foco no filtro do painel direito |
 
-`Shift` + `C` e `Shift` + `P` funcionam também com o foco dentro do quadro, fora
-de campos de texto.
+Os três funcionam também com o foco dentro do quadro; `Shift` + `C`, fora de
+campos de texto.
 
 ## Créditos
 

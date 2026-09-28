@@ -86,7 +86,9 @@ describe("fronteira visual", () => {
       .filter((name) => !name.startsWith("ds-"));
     expect([...new Set(classes)]).toEqual([]);
 
-    const properties = [...css.matchAll(/(--[\w-]+)\s*:/g)]
+    // Declaração de custom property: começa a linha ou vem depois de `{`/`;`.
+    // Um seletor como `.ds-item--stacked::before` não é declaração.
+    const properties = [...css.matchAll(/(?:^|[{;])\s*(--[\w-]+)\s*:/gm)]
       .map((match) => match[1]!)
       .filter((name) => !name.startsWith("--ds-"));
     expect([...new Set(properties)]).toEqual([]);
@@ -110,7 +112,8 @@ describe("fronteira visual", () => {
     expect(light).toContain("--ds-muted: #737373");
     expect(light).toContain("--ds-border: #e5e5e5");
     expect(light).toContain("--ds-surface: #fafafa");
-    expect(light).toContain("--ds-radius: 6px");
+    expect(light).toContain("--ds-radius: 8px");
+    expect(light).toContain("--ds-tint: rgb(10 10 10 / 0.1)");
     expect(light).toContain("--ds-fs: 13px");
     expect(light).toContain("--ds-fs-sm: 12px");
 
@@ -120,6 +123,7 @@ describe("fronteira visual", () => {
     expect(dark).toContain("--ds-muted: #a3a3a3");
     expect(dark).toContain("--ds-border: #262626");
     expect(dark).toContain("--ds-surface: #171717");
+    expect(dark).toContain("--ds-tint: rgb(250 250 250 / 0.12)");
   });
 
   it("a única cor além do preto, branco e cinzas é o vermelho do diagnóstico", () => {
@@ -133,9 +137,10 @@ describe("fronteira visual", () => {
     expect(ruleBody(".ds-diagnostics__trigger[data-level=\"error\"]")).toContain("var(--ds-danger)");
   });
 
-  it("seleção é inversão: fundo na cor do texto", () => {
-    expect(ruleBody('.ds-tab[aria-selected="true"]')).toContain("background: var(--ds-fg)");
-    expect(css).toMatch(/\.ds-item\[aria-current="true"\][^{]*\{\s*background: var\(--ds-fg\);\s*color: var\(--ds-bg\)/);
+  it("seleção é por tom: fundo a 10% da cor do texto, texto cheio", () => {
+    expect(css).toMatch(
+      /\.ds-item\[aria-current="true"\][^{]*\.ds-tab\[aria-selected="true"\]\s*\{\s*background: var\(--ds-tint\);\s*color: var\(--ds-fg\)/,
+    );
   });
 });
 

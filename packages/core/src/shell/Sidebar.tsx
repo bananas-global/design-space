@@ -2,9 +2,9 @@
  * Lateral esquerda: Telas e Componentes.
  *
  * Uma tela é uma rota; um componente é uma referência do catálogo. A busca vale
- * para as duas abas ao mesmo tempo, sem diferenciar acento nem caixa, e a
- * contagem de cada aba mostra quantos itens casam — quem busca "botao" na aba
- * Telas vê que a resposta está em Componentes.
+ * para as duas abas ao mesmo tempo, sem diferenciar acento nem caixa, e durante
+ * a busca cada aba mostra quantos itens casam — quem busca "botao" na aba Telas
+ * vê que a resposta está em Componentes.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -120,13 +120,13 @@ export function Sidebar({
         <TabButton
           selected={currentTab === "screens"}
           label={s.screensTab}
-          count={screens.length}
+          count={searching ? screens.length : undefined}
           onSelect={() => setTab("screens")}
         />
         <TabButton
           selected={currentTab === "components"}
           label={s.componentsTab}
-          count={components.length}
+          count={searching ? components.length : undefined}
           onSelect={() => setTab("components")}
         />
       </div>
@@ -211,7 +211,8 @@ function TabButton({
 }: {
   selected: boolean;
   label: string;
-  count: number;
+  /** Só durante a busca: diz em qual aba estão os resultados. */
+  count?: number;
   onSelect: () => void;
 }) {
   return (
@@ -224,7 +225,7 @@ function TabButton({
       onClick={onSelect}
     >
       <span>{label}</span>
-      <span className="ds-count">{count}</span>
+      {count !== undefined && <span className="ds-count">{count}</span>}
     </button>
   );
 }

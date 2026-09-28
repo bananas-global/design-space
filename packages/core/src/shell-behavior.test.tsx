@@ -162,7 +162,7 @@ describe("chrome", () => {
     // as telas entram.
     expect(container.querySelector(".ds-sidebar [role='tablist']")).not.toBeNull();
     expect(container.querySelector(".ds-sidebar")?.textContent).toContain("Button");
-    await click(button(container, `${DEFAULT_LABELS.sidebar.screensTab}0`));
+    await click(button(container, DEFAULT_LABELS.sidebar.screensTab));
     expect(container.querySelector(".ds-sidebar")?.textContent).toContain(DEFAULT_LABELS.sidebar.emptyScreens);
   });
 
@@ -197,15 +197,12 @@ describe("chrome", () => {
     expect(container.querySelector(".ds-panel")?.textContent).toContain(DEFAULT_LABELS.panel.noMatch("zzzz-nada"));
   });
 
-  it("mostra Telas e Componentes com contagem e destaca o item ativo", async () => {
+  it("mostra Telas e Componentes, sem contagem fora da busca, e destaca o item ativo", async () => {
     const container = await mount("/requests?scenario=queue");
     const tabs = [...container.querySelectorAll(".ds-sidebar [role='tab']")].map((tab) =>
       tab.textContent?.replace(/\s+/g, " ").trim(),
     );
-    expect(tabs).toEqual([
-      `${DEFAULT_LABELS.sidebar.screensTab}2`,
-      `${DEFAULT_LABELS.sidebar.componentsTab}2`,
-    ]);
+    expect(tabs).toEqual([DEFAULT_LABELS.sidebar.screensTab, DEFAULT_LABELS.sidebar.componentsTab]);
     const active = container.querySelector(".ds-sidebar [aria-current='true']");
     expect(active?.textContent).toContain("Request queue");
   });
@@ -362,7 +359,7 @@ describe("chrome", () => {
     const sidebar = container.querySelector(".ds-sidebar")!;
     expect(sidebar.textContent).toContain("Request detail");
     expect(sidebar.textContent).not.toContain("Request queue");
-    await click(button(container, `${DEFAULT_LABELS.sidebar.componentsTab}1`));
+    await click(button(container, DEFAULT_LABELS.sidebar.componentsTab));
     expect(sidebar.textContent).toContain("Notice");
     expect(sidebar.textContent).not.toContain("Button");
   });

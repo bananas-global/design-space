@@ -56,7 +56,7 @@ export function DesignSpace({ product }: DesignSpaceProps) {
 }
 
 /** Larguras das laterais: padrão, mínimo e máximo, em px. */
-const LEFT = { initial: 260, min: 200, max: 480 } as const;
+const LEFT = { initial: 290, min: 200, max: 480 } as const;
 const RIGHT = { initial: 320, min: 260, max: 560 } as const;
 
 function Chrome({ product, registry }: { product: ProductDefinition; registry: Registry }) {

@@ -28,14 +28,22 @@
   --ds-hover: #f0f0f0;
   --ds-danger: #dc2626;
   --ds-frame-bg: #ffffff;
+  /* O tom de seleção: a cor do texto a 10%. Fundo do item ativo, da busca e
+     borda dos grupos. */
+  --ds-tint: rgb(10 10 10 / 0.1);
+  --ds-tint-hover: rgb(10 10 10 / 0.05);
+  /* Texto de item não selecionado. */
+  --ds-soft: rgb(10 10 10 / 0.6);
 
   --ds-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
   --ds-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --ds-fs: 13px;
   --ds-fs-sm: 12px;
-  --ds-radius: 6px;
+  --ds-radius: 8px;
   --ds-control-h: 28px;
+  /* Controles dos painéis laterais: busca, abas e itens. */
+  --ds-row-h: 36px;
   --ds-topbar-h: 52px;
 
   position: fixed;
@@ -67,6 +75,9 @@
   --ds-canvas: #121212;
   --ds-hover: #1f1f1f;
   --ds-danger: #f87171;
+  --ds-tint: rgb(250 250 250 / 0.12);
+  --ds-tint-hover: rgb(250 250 250 / 0.06);
+  --ds-soft: rgb(250 250 250 / 0.6);
   color-scheme: dark;
 }
 
@@ -199,18 +210,23 @@
   justify-self: end;
 }
 
+/* Grupo em cápsula: borda no tom de seleção, 2px de respiro e raio externo
+   = raio do controle + respiro. Vale para a barra e para as abas. */
 .ds-group {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 2px;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius);
+  border: 1px solid var(--ds-tint);
+  border-radius: calc(var(--ds-radius) + 2px);
 }
 
 .ds-group .ds-btn {
   height: calc(var(--ds-control-h) - 6px);
   border-color: transparent;
+  border-radius: calc(var(--ds-radius) - 2px);
+  background: none;
+  color: var(--ds-soft);
 }
 
 /* ----------------------------------------------------------- buttons */
@@ -222,9 +238,9 @@
   gap: 6px;
   height: var(--ds-control-h);
   padding: 0 10px;
-  border: 1px solid var(--ds-border);
+  border: 1px solid var(--ds-tint);
   border-radius: var(--ds-radius);
-  background: var(--ds-bg);
+  background: none;
   color: var(--ds-fg);
   font-size: var(--ds-fs);
   line-height: 1;
@@ -233,7 +249,8 @@
 }
 
 .ds-btn:hover:not(:disabled) {
-  background: var(--ds-hover);
+  background: var(--ds-tint-hover);
+  color: var(--ds-fg);
 }
 
 .ds-btn:disabled {
@@ -263,13 +280,14 @@
   margin-top: 4px;
 }
 
-/* Seleção por inversão: fundo na cor do texto. */
+/* Seleção por tom: fundo a 10% da cor do texto, texto cheio. */
 .ds-btn[aria-pressed="true"],
 .ds-btn[aria-pressed="true"]:hover:not(:disabled),
 .ds-item[aria-current="true"],
-.ds-item[aria-current="true"]:hover {
-  background: var(--ds-fg);
-  color: var(--ds-bg);
+.ds-item[aria-current="true"]:hover,
+.ds-tab[aria-selected="true"] {
+  background: var(--ds-tint);
+  color: var(--ds-fg);
 }
 
 .ds-link {
@@ -383,26 +401,33 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin: 10px 10px 6px;
+  margin: 10px 10px 0;
   color: var(--ds-muted);
+  flex: none;
 }
 
 .ds-search > .ds-icon {
   position: absolute;
-  left: 9px;
+  left: 12px;
   pointer-events: none;
 }
 
 .ds-input.ds-search__input {
-  padding-left: 28px;
-  padding-right: 36px;
+  height: var(--ds-row-h);
+  padding-left: 34px;
+  padding-right: 44px;
+  border-color: var(--ds-tint);
+  background: var(--ds-tint);
 }
 
 .ds-kbd {
   position: absolute;
-  right: 8px;
+  right: 12px;
   color: var(--ds-muted);
+  font-family: var(--ds-mono);
   font-size: 11px;
+  letter-spacing: 2px;
+  line-height: 1;
   pointer-events: none;
 }
 
@@ -412,11 +437,24 @@
   width: 100%;
   height: var(--ds-control-h);
   padding: 0 8px;
-  border: 1px solid var(--ds-border);
+  border: 1px solid var(--ds-tint);
   border-radius: var(--ds-radius);
   background: var(--ds-bg);
   color: var(--ds-fg);
   font-size: var(--ds-fs);
+}
+
+.ds-panel .ds-select {
+  height: var(--ds-row-h);
+  padding: 0 10px;
+  border-color: var(--ds-tint);
+  background-color: var(--ds-tint);
+}
+
+.ds-input:focus,
+.ds-select:focus {
+  border-color: var(--ds-soft);
+  outline: none;
 }
 
 .ds-input::placeholder {
@@ -441,16 +479,12 @@
 
 .ds-tabs {
   display: flex;
-  gap: 2px;
-  margin: 0 10px;
+  gap: 0;
+  margin: 6px 10px 0;
   padding: 2px;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius);
+  border: 1px solid var(--ds-tint);
+  border-radius: calc(var(--ds-radius) + 2px);
   flex: none;
-}
-
-.ds-panel > .ds-tabs {
-  margin-top: 10px;
 }
 
 .ds-tab {
@@ -459,13 +493,17 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: calc(var(--ds-control-h) - 4px);
-  padding: 0 8px;
+  height: var(--ds-row-h);
+  padding: 0 12px;
   border: 0;
-  border-radius: calc(var(--ds-radius) - 2px);
+  border-radius: var(--ds-radius);
   background: none;
-  color: var(--ds-muted);
+  color: var(--ds-soft);
   font-size: var(--ds-fs);
+  font-weight: 500;
+  letter-spacing: 1px;
+  line-height: 1;
+  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -473,12 +511,11 @@
   color: var(--ds-fg);
 }
 
-.ds-tab[aria-selected="true"] {
-  background: var(--ds-fg);
-  color: var(--ds-bg);
+.ds-tab .ds-count {
+  letter-spacing: normal;
 }
 
-.ds-tab[aria-selected="true"] .ds-count {
+.ds-count {
   color: inherit;
   opacity: 0.7;
 }
@@ -495,25 +532,41 @@
   gap: 1px;
 }
 
+/* Item de lista: 36px, raio 8, um traço de 8px à esquerda e texto a 60% —
+   cheio quando selecionado. */
 .ds-item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  min-height: var(--ds-control-h);
-  padding: 5px 8px;
+  min-height: var(--ds-row-h);
+  padding: 8px 8px 8px 26px;
   border: 0;
   border-radius: var(--ds-radius);
   background: none;
-  color: var(--ds-fg);
+  color: var(--ds-soft);
   font-size: var(--ds-fs);
+  line-height: 1.45;
   text-align: left;
   cursor: pointer;
 }
 
+.ds-item::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--ds-row-h) / 2);
+  left: 10px;
+  width: 8px;
+  height: 1px;
+  background: var(--ds-fg);
+  opacity: 0.2;
+}
+
 .ds-item:hover {
-  background: var(--ds-hover);
+  background: var(--ds-tint-hover);
+  color: var(--ds-fg);
 }
 
 .ds-item[aria-current="true"] .ds-count,
@@ -526,7 +579,10 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
-  padding: 7px 9px;
+}
+
+.ds-item--stacked::before {
+  top: 17px;
 }
 
 .ds-item__title {
@@ -552,6 +608,7 @@
   align-items: center;
   gap: 6px;
   width: 100%;
+  height: var(--ds-row-h);
   padding: 6px 8px 4px;
   border: 0;
   background: none;
@@ -560,6 +617,13 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+}
+
+.ds-group-section__head > span:first-of-type {
+  letter-spacing: 1px;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: 0.6;
 }
 
 .ds-group-section__head:hover {

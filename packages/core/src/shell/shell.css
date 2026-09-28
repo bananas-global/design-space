@@ -41,10 +41,11 @@
   --ds-fs: 13px;
   --ds-fs-sm: 12px;
   --ds-radius: 8px;
-  --ds-control-h: 28px;
-  /* Controles dos painéis laterais: busca, abas e itens. */
-  --ds-row-h: 36px;
-  --ds-topbar-h: 52px;
+  /* Botões, campos, abas e itens: tudo com 36px; os quadrados, 36×36. */
+  --ds-control-h: 36px;
+  --ds-row-h: var(--ds-control-h);
+  /* Cabe um grupo de 36px com 2px de respiro e borda (42px), com folga. */
+  --ds-topbar-h: 56px;
 
   position: fixed;
   inset: 0;
@@ -215,16 +216,16 @@
 .ds-group {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
   padding: 2px;
   border: 1px solid var(--ds-tint);
   border-radius: calc(var(--ds-radius) + 2px);
 }
 
 .ds-group .ds-btn {
-  height: calc(var(--ds-control-h) - 6px);
-  border-color: transparent;
-  border-radius: calc(var(--ds-radius) - 2px);
+  height: var(--ds-control-h);
+  border: 0;
+  border-radius: var(--ds-radius);
   background: none;
   color: var(--ds-soft);
 }
@@ -265,7 +266,7 @@
 }
 
 .ds-group .ds-btn--icon {
-  width: calc(var(--ds-control-h) - 4px);
+  width: var(--ds-control-h);
 }
 
 .ds-btn--zoom {

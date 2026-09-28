@@ -19,19 +19,22 @@ pnpm dev
 A porta é derivada do nome em `package.json`, então é sempre a mesma para este
 projeto e não colide com outros Design Spaces abertos ao mesmo tempo.
 
-Abra a raiz: ela mostra o produto como mapa de situações. Cada situação abre por
-URL própria.
+Abra a raiz: ela abre a primeira tela. À esquerda ficam **Telas** e
+**Componentes**; à direita, as **Variações** da tela aberta e as
+**Informações** para implementar, com o botão **Copiar para o PR**. Cada
+variação abre por URL própria.
 
 ## Criar um produto a partir deste template
 
 1. Copie o diretório para um repositório novo, `<produto>-design-space`.
 2. Troque `name` no `package.json` — isso muda a porta de dev automaticamente.
 3. Troque a dependência do motor de `workspace:*` para a versão publicada
-   (`^0.7.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
+   (`^0.8.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
    `pnpm install` falha.
 4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente.
-5. Reescreva `src/app/catalog.ts` com o vocabulário do cliente — módulos, jornadas
-   e cenários — e ajuste as rotas em `src/app/product.ts`.
+5. Reescreva `src/app/catalog.ts` com o vocabulário do cliente e ajuste as rotas
+   em `src/app/product.ts`. Cada rota é uma tela — dê a ela um `name` —, e os
+   cenários da rota são as variações dela.
 6. Substitua domínio, personas, fixtures, regras e cenários.
 7. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/` — só o que
    for específico deste produto. As decisões do modelo já estão no repositório do
@@ -61,7 +64,7 @@ docs/
 └── decisions/
 tests/
 ├── product.test.ts   # contrato de cenário e regras
-└── e2e/              # jornadas Playwright
+└── e2e/              # jornadas Playwright, com a UI dentro do iframe do chrome
 hosting/              # arquivos por provedor, instalados por escolha explícita
 └── vercel/
 ```
@@ -145,14 +148,19 @@ cobre padrão, preenchido, vazio, carregando, erro, desabilitado e conteúdo lon
 Estado interativo efêmero, como foco ou modal aberto, permanece local ao preview.
 
 Para entrega à engenharia, `HandoffScope` limita por URL os cenários, padrões de
-rota e componentes autorizados. O motor aplica a allowlist à Home, busca,
-navegação, flows e catálogo visual e bloqueia tentativas fora do
-recorte. O modelo está em [`docs/handoff.md`](docs/handoff.md). Esse mecanismo é
+rota e componentes autorizados. O motor aplica a allowlist a telas, variações,
+busca e catálogo visual e bloqueia tentativas fora do recorte. O modelo está em [`docs/handoff.md`](docs/handoff.md). Esse mecanismo é
 foco de UX, não isolamento: preview que precisa ocultar o catálogo exige build
 separado ou autenticação/autorização próprias.
 
-O chrome do template usa en-US e oferece dark/light mode na topbar. A aparência
-é independente do tema do produto e viaja no deep link como `appearance=light`.
+O chrome é o do motor, preto e branco, igual em todo produto; o template o usa em
+en-US. O tema claro/escuro do chrome segue o sistema, é independente do tema do
+produto e viaja no deep link como `appearance=`.
+
+A UI do produto roda num `<iframe>` com a largura do viewport escolhido, então
+media queries (`md:`, `lg:`) respondem como em produção — não use container
+queries para contornar o palco. Nos testes de ponta a ponta, a UI fica em
+`page.frameLocator(FRAME_SELECTOR)`, de `@brucesantos/design-space/testing`.
 
 ## Ver também
 

@@ -22,12 +22,16 @@ aparece na navegação e na busca, e o time passa a traduzir mentalmente.
 | Decisão | Aprovar ou recusar, sempre com registro. |
 | Documento | Anexo que comprova valor ou necessidade. |
 
-## Módulos
+## Telas
 
-### Solicitações
+Cada rota é uma tela; os cenários da rota são as variações dela.
 
-Registro, análise e decisão. Um único módulo de propósito: o template mostra a
-estrutura, não a extensão.
+| Tela | Rota | Variações |
+| --- | --- | --- |
+| Fila de solicitações | `/requests` | fila cheia, fila vazia |
+| Detalhe da solicitação | `/requests/:id` | aprovação permitida, bloqueada por regra, sem permissão |
+
+Duas telas de propósito: o template mostra a estrutura, não a extensão.
 
 ## Personas
 

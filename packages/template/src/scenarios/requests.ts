@@ -1,12 +1,15 @@
 import type { Scenario } from "@brucesantos/design-space";
 
 /**
- * Cenários do módulo de solicitações.
+ * Cenários de solicitações.
  *
- * Cinco situações, não cinco telas: a fila cheia, a fila vazia, a decisão
- * permitida, a decisão bloqueada por regra e a decisão bloqueada por permissão.
- * A última é a que costuma faltar em protótipo, e é a que a engenharia mais
- * pergunta.
+ * Cinco situações em duas telas. A fila (`/requests`) tem duas variações: cheia
+ * e vazia. O detalhe (`/requests/:id`) tem três: decisão permitida, bloqueada
+ * por regra e bloqueada por permissão. A última é a que costuma faltar em
+ * protótipo, e é a que a engenharia mais pergunta.
+ *
+ * `components` lista o que cada tela usa do catálogo: é o que aparece em
+ * "Componentes usados" e na tabela do "Copiar para o PR".
  */
 export const scenarios: Scenario[] = [
   {
@@ -17,6 +20,7 @@ export const scenarios: Scenario[] = [
     persona: "approver",
     fixture: "requests-standard",
     actions: ["Abrir uma solicitação"],
+    components: ["feedback.status"],
     expected: [
       "As cinco solicitações aparecem com valor, solicitante e situação.",
       "A situação tem rótulo textual, não só cor.",
@@ -31,6 +35,7 @@ export const scenarios: Scenario[] = [
     persona: "approver",
     fixture: "requests-empty",
     expected: ["A tela explica por que está vazia e o que faz aparecer conteúdo."],
+    components: ["feedback.status"],
     tags: ["vazio"],
   },
   {
@@ -43,6 +48,7 @@ export const scenarios: Scenario[] = [
     rules: ["approval-requires-attachment"],
     preconditions: ["Solicitação em análise, com documento anexado."],
     actions: ["Aprovar", "Recusar", "Voltar para a fila"],
+    components: ["actions.buttons", "feedback.status"],
     expected: [
       "O botão Aprovar está habilitado.",
       "Ao aprovar, o resultado é anunciado por região de status.",
@@ -63,6 +69,7 @@ export const scenarios: Scenario[] = [
       "O botão Aprovar está desabilitado.",
       "O motivo aparece na tela e é associado ao botão para leitor de tela.",
     ],
+    components: ["actions.buttons", "feedback.status"],
     tags: ["exceção", "regra"],
   },
   {
@@ -76,6 +83,7 @@ export const scenarios: Scenario[] = [
       "As ações de decisão aparecem desabilitadas, com o motivo.",
       "Nenhum dado da solicitação é escondido: a restrição é de ação, não de leitura.",
     ],
+    components: ["actions.buttons", "feedback.status"],
     tags: ["permissão", "exceção"],
   },
 ];

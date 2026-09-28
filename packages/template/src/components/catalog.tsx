@@ -71,6 +71,9 @@ const buttons: ComponentPreview<ButtonPreviewData> = {
     name: "Botões",
     group: "Ações",
     description: "Variações e indisponibilidade",
+    // Origem no sistema real, em texto livre. Aqui o "sistema real" é o próprio
+    // template; num produto, aponte para o componente do repositório de produção.
+    source: "src/components/primitives.tsx → Button",
     preview: ButtonPreview,
     defaultFixture: "default",
     fixtures: [
@@ -156,6 +159,7 @@ export const components: ComponentPreview<any>[] = [
     name: "Status",
     group: "Feedback",
     description: "Estados comunicados por texto e cor",
+    source: "src/components/primitives.tsx → StatusBadge",
     preview: StatusPreview,
   },
 ];

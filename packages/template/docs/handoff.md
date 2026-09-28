@@ -23,10 +23,18 @@ assumir que deve portar o React para o stack real linha por linha.
    e como abrir cada um por URL.
 6. **Assets** exclusivos, quando houver.
 
+## Copiar para o PR
+
+Na aba **Informações** de qualquer tela, **Copiar para o PR** gera o markdown
+pronto: nome da tela, link absoluto de cada variação no deployment atual (com o
+commit, quando o build informa), a tabela componente → origem (`source`) e o
+comportamento esperado (`expected`) de cada variação. Cole na descrição do PR.
+
 ## URL focada no trabalho autorizado
 
 Monte o endereço entregue à engenharia com um `HandoffScope`. Cenários listados
-aparecem na Home, busca, flows e navegação e autorizam as próprias rotas. Rotas
+aparecem como variações das suas telas, na busca e na navegação, e autorizam as
+próprias rotas. Rotas
 sem cenário e componentes isolados entram nas listas correspondentes.
 
 ```ts
@@ -48,8 +56,8 @@ const implementationUrl = scenarioUrl(blockedScenario, {
 ```
 
 O link continua reproduzindo viewport, tema, idioma e controles quando eles forem
-incluídos nos overrides. Home, busca, jornadas e catálogo
-visual mostram somente a allowlist. Abrir algo fora dela produz uma mensagem
+incluídos nos overrides. Telas, variações, busca e catálogo visual mostram
+somente a allowlist. Abrir algo fora dela produz uma mensagem
 explícita em vez de montar a tela solicitada.
 
 Esse recorte reduz ambiguidade e distração; **não é segurança**. O catálogo e o

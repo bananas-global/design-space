@@ -1,4 +1,4 @@
-import type { Fixture, Module, Rule, Scenario } from "@brucesantos/design-space";
+import type { Fixture, Rule, Scenario } from "@brucesantos/design-space";
 
 import { personas } from "../personas/index.js";
 import { fixtures as requestFixtures } from "../fixtures/requests.js";
@@ -20,34 +20,10 @@ import { scenarios as requestScenarios } from "../scenarios/requests.js";
  * O ganho secundário é conceitual: fica explícito o que é especificação e o que é
  * implementação. Quem vai criar um cenário mexe aqui; quem vai mudar uma tela
  * mexe em `product.ts`.
+ *
+ * Não existe módulo nem jornada: cada rota de `product.ts` é uma tela, e os
+ * cenários cuja `route` casa com ela são as variações dela.
  */
-
-export const modules: Module[] = [
-  {
-    id: "requests",
-    name: "Solicitações",
-    description: "Registro, análise e decisão de solicitações de compra.",
-    flows: [
-      {
-        id: "decide-request",
-        title: "Decidir uma solicitação",
-        description: "Da fila até a decisão, com as duas ramificações de bloqueio.",
-        steps: [
-          { scenario: "requests.queue", label: "Escolher na fila" },
-          {
-            scenario: "requests.approve-allowed",
-            label: "Analisar e decidir",
-            decision: "A solicitação atende à regra de documentação?",
-            branches: {
-              "Falta documento": "requests.approve-blocked-by-rule",
-              "Perfil sem permissão": "requests.approve-no-permission",
-            },
-          },
-        ],
-      },
-    ],
-  },
-];
 
 export const scenarios: Scenario[] = requestScenarios;
 export const fixtures: Fixture[] = requestFixtures as Fixture[];

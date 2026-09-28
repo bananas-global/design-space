@@ -152,12 +152,14 @@ export function AppShell({
         Pular para o conteúdo
       </a>
 
-      <header className="border-b border-ink-100 bg-surface px-6 py-5">
+      {/* `md:` é media query de verdade: desde a 0.8 a tela roda num iframe com a
+          largura do viewport escolhido no chrome. */}
+      <header className="border-b border-ink-100 bg-surface px-4 py-5 md:px-8">
         <h1 className="m-0 text-xl font-semibold text-ink-900">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}
       </header>
 
-      <main id="conteudo" className="px-6 py-6">
+      <main id="conteudo" className="px-4 py-6 md:px-8">
         {children}
       </main>
     </div>

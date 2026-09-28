@@ -11,8 +11,9 @@ por link. Não é um sistema de produção, não é um design system universal e
 promessa de reuso de código — quando o stack real for diferente, a engenharia
 traduz esta especificação.
 
-A unidade central é o **cenário**, não a tela. Um cenário combina intenção,
-persona, permissões, pré-condições, dados, ações, regras e resultado esperado.
+**Uma tela é uma rota**, e as **variações** da tela são os cenários cuja `route`
+casa com ela. Um cenário combina intenção, persona, permissões, pré-condições,
+dados, ações, regras, resultado esperado e os componentes que a tela usa.
 
 ## Comandos
 
@@ -34,9 +35,9 @@ um Design Space que roda só local é caso suportado, não pendência.
 
 | Caminho | Conteúdo |
 | --- | --- |
-| `src/app/catalog.ts` | Módulos, jornadas, cenários, personas, fixtures e regras. **Livre de React e de `import.meta`.** Comece aqui. |
-| `src/app/product.ts` | O catálogo mais rotas, tema e contexto de deployment. É o que o motor recebe. |
-| `src/scenarios/` | Cenários registráveis, um arquivo por módulo. |
+| `src/app/catalog.ts` | Cenários, personas, fixtures e regras. **Livre de React e de `import.meta`.** Comece aqui. |
+| `src/app/product.ts` | O catálogo mais rotas (as telas, com `name`), tema e contexto de deployment. É o que o motor recebe. |
+| `src/scenarios/` | Cenários registráveis, um arquivo por área do produto. |
 | `src/screens/` | Composições de tela. Recebem `params` e `context` do motor. |
 | `src/components/` | Componentes exclusivos e previews do catálogo visual deste produto. |
 | `src/fixtures/` | Dados sintéticos e determinísticos. |
@@ -45,15 +46,14 @@ um Design Space que roda só local é caso suportado, não pendência.
 | `src/contracts/` | Tipos e schemas do domínio. |
 | `src/tokens/` | Identidade visual: `tokens.css`. |
 | `hosting/` | Arquivos por provedor de hospedagem, instalados por `pnpm setup:hosting`. |
-| `docs/product.md` | Visão, módulos, vocabulário e personas. |
+| `docs/product.md` | Visão, telas, vocabulário e personas. |
 | `docs/decisions/` | Decisões **deste produto**. As do modelo vivem no repositório do motor. |
 | `docs/handoff.md` | Modelo de entrega para engenharia. |
 
 ## Como criar um cenário
 
-1. Escolha o id no formato `modulo.situacao`, em kebab-case, com o prefixo
-   correspondendo a um módulo registrado — o motor usa o prefixo para montar a
-   navegação.
+1. Escolha um id estável e único, minúsculo, em kebab-case com pontos
+   opcionais: `requests.approve-blocked`. O prefixo é só convenção de leitura.
 2. Use o **vocabulário do negócio** no `title`. "Aprovação bloqueada por falta de
    documento", não "ApprovalBlockedState".
 3. Aponte `fixture` para um id que já existe. `persona` é opcional: informe
@@ -61,7 +61,12 @@ um Design Space que roda só local é caso suportado, não pendência.
    Diagnóstico se um id informado não existir.
 4. Preencha `expected`. Sem critério de aceite, o cenário não vira caso
    verificável no handoff — é tela bonita.
-5. Garanta que `route` casa com uma rota declarada em `product.ts`.
+5. Garanta que `route` casa com uma rota declarada em `product.ts`: é ela que
+   define de qual tela o cenário é variação. Uma tela nova é uma rota nova, com
+   `name`.
+6. Liste em `components` os ids do catálogo que a tela usa, e dê `source` a cada
+   componente novo em `src/components/catalog.tsx`. É o que o "Copiar para o
+   PR" leva para a engenharia.
 
 **Por que `catalog.ts` é separado de `product.ts`:** o Playwright carrega os testes
 com esbuild puro, sem os plugins do Vite. Um `import` de SVG, de CSS ou um
@@ -111,6 +116,9 @@ pergunte.
 
 | Atalho | Efeito |
 | --- | --- |
-| `Command/Ctrl` + `K` ou `F` | Foca a busca da lateral |
-| `↑` / `↓` | Percorre os resultados filtrados |
-| `Shift` + `P` | Mostra ou oculta o painel de contexto |
+| `Command/Ctrl` + `K` | Foca a busca da lateral |
+| `Shift` + `C` | Revisão limpa: esconde e mostra o chrome |
+| `Shift` + `P` | Mostra ou oculta o painel direito |
+
+A UI do produto roda num `<iframe>` com a largura do viewport. Use media queries
+normais; nos testes e2e, a UI fica em `page.frameLocator(FRAME_SELECTOR)`.

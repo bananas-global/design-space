@@ -38,6 +38,25 @@ describe("catálogo e fixtures de componente", () => {
     expect(registry.activeScenarios()).toHaveLength(productDefinition.scenarios.length);
   });
 
+  it("organiza as situações em duas telas, cada uma com suas variações", () => {
+    expect(registry.screens.map((screen) => [screen.name, screen.variations.length])).toEqual([
+      ["Fila de solicitações", 2],
+      ["Detalhe da solicitação", 3],
+    ]);
+  });
+
+  it("todo cenário declara os componentes que usa, e todo componente tem origem", () => {
+    for (const scenario of productDefinition.scenarios) {
+      expect(scenario.components?.length, scenario.id).toBeGreaterThan(0);
+    }
+    for (const component of productDefinition.components ?? []) {
+      expect(component.source, component.id).toBeTruthy();
+    }
+    expect(registry.usagesOf("actions.buttons").map((screen) => screen.id)).toEqual([
+      "/requests/:id",
+    ]);
+  });
+
   it("cobre componente legado sem fixture e componente com múltiplas fixtures", () => {
     expect(registry.component("feedback.status")?.fixtures).toBeUndefined();
     expect(registry.component("actions.buttons")?.fixtures?.length).toBeGreaterThan(1);

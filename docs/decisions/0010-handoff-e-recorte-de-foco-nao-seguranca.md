@@ -1,5 +1,13 @@
 # D-10 — Handoff por URL é recorte de foco, não fronteira de segurança
 
+> **Nota (2026-09-28):** partes desta decisão que citam `status`, `approvedAt`, referências portadas ou acessibilidade foram superadas pela [0011](0011-revoga-a11y-e-ciclo-de-vida.md).
+
+> **Revogada em parte (2026-09-28) pela [0012](0012-chrome-unico-telas-como-rotas-e-iframe.md).**
+> A allowlist continua valendo como está. O que caiu: Home, árvore, jornadas e o
+> Inspector com Diagnóstico. Na 0.8 o recorte filtra telas, variações e
+> componentes; a raiz abre o primeiro item permitido, e o diagnóstico é um
+> indicador na barra superior, sobre o catálogo inteiro.
+
 ## Contexto
 
 `chrome=0` remove as ferramentas do ambiente, mas não define o que foi entregue

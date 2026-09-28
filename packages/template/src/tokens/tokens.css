@@ -6,11 +6,6 @@
    Este arquivo é exclusivo do produto e nunca sobe para o motor (D-02).
    Substitua os valores pela identidade real do cliente: o que o template
    entrega é a estrutura, não a aparência.
-
-   Todo par de cores que vira texto sobre fundo precisa estar declarado em
-   `src/tokens/contrast.ts`. Contraste é propriedade de par, então validar
-   na definição resolve na origem, uma vez — e `tests/tokens.test.ts`
-   quebra o build quando um par cai abaixo do alvo.
    ===================================================================== */
 
 @theme {

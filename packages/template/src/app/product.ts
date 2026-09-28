@@ -1,7 +1,6 @@
 import { EN_US_LABELS, type ProductDefinition } from "@brucesantos/design-space";
 
-import { fixtures, modules, personas, rules, scenarios } from "./catalog.js";
-import { contrastPairs } from "../tokens/contrast.js";
+import { fixtures, personas, rules, scenarios } from "./catalog.js";
 import { RequestList } from "../screens/RequestList.js";
 import { RequestDetail } from "../screens/RequestDetail.js";
 import { components } from "../components/catalog.js";
@@ -9,32 +8,41 @@ import { components } from "../components/catalog.js";
 /**
  * A única coisa que o produto entrega ao motor.
  *
- * A especificação — módulos, jornadas, cenários, personas, fixtures e regras —
- * vive em `catalog.ts`, livre de React. Aqui ela é combinada com as telas que a
+ * A especificação — cenários, personas, fixtures e regras — vive em
+ * `catalog.ts`, livre de React. Aqui ela é combinada com as telas que a
  * materializam. Ver o comentário de `catalog.ts` para o porquê da separação.
  */
 export const productDefinition: ProductDefinition = {
   id: "template",
   name: "Design Space",
-  tagline: "Template — replace with your product",
 
-  modules,
   scenarios,
   personas,
   fixtures,
   rules,
   components,
 
-  // Não existe rota para `/`: a raiz é o mapa de situações do motor.
+  // Cada rota é uma tela na lista de Telas; os cenários da rota são as
+  // variações dela. Sem rota para `/`, a raiz abre a primeira tela.
   routes: [
-    { path: "/requests", screen: RequestList },
-    { path: "/requests/:id", screen: RequestDetail },
+    {
+      path: "/requests",
+      screen: RequestList,
+      name: "Fila de solicitações",
+      description: "Solicitações aguardando análise e decisão.",
+    },
+    {
+      path: "/requests/:id",
+      screen: RequestDetail,
+      name: "Detalhe da solicitação",
+      description: "Análise e decisão de uma solicitação.",
+    },
   ],
 
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build
   // deste repositório. Quem tem acesso ao próprio build é o produto, então o
   // contexto vem daqui — sem isso o cabeçalho da revisão fica sem branch nem
-  // commit, e é o commit que torna uma aprovação rastreável.
+  // commit, e é o commit que torna uma revisão rastreável.
   //
   // Sem hospedagem os três chegam vazios e o motor trata como desenvolvimento
   // local, que é um caso suportado. Ver `vite.config.ts` para a origem dos
@@ -46,7 +54,6 @@ export const productDefinition: ProductDefinition = {
   },
 
   theme: {
-    contrastPairs,
     locales: ["pt-BR"],
     labels: EN_US_LABELS,
 

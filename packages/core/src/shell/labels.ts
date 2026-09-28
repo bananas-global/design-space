@@ -3,11 +3,11 @@
  *
  * O motor é neutro quanto ao produto e agora também quanto ao idioma. A razão é
  * concreta: o chrome fica na mesma tela que a UI do cliente, então um Design
- * Space revisado em inglês misturava "Em revisão" e "Copiar link" com a
- * interface dele. Traduzir só os status seria pior que não traduzir — o rótulo em
- * outro idioma vira ruído no meio da revisão.
+ * Space revisado em inglês misturava "Copiar link" e "Revisão limpa" com a
+ * interface dele. Traduzir só parte do chrome seria pior que não traduzir — o
+ * rótulo em outro idioma vira ruído no meio da revisão.
  *
- * Rótulo de **produto** continua vindo do produto: nome de módulo, título de
+ * Rótulo de **produto** continua vindo do produto: nome de tela, título de
  * cenário, nome de persona, rótulo de fixture. O que vive aqui é rótulo de
  * **mecanismo**.
  *
@@ -17,7 +17,7 @@
  * ```ts
  * theme: {
  *   labels: {
- *     status: { approved: "Approved", "in-review": "In review" },
+ *     network: { success: "Success", error: "Error" },
  *     topbar: { copyLink: "Copy link" },
  *   },
  * }
@@ -26,205 +26,136 @@
 
 import { createContext, useContext } from "react";
 
-import type { KeyboardCoverage, NetworkState, ScenarioStatus } from "../types/index.js";
+import type { NetworkState } from "../types/index.js";
 
 export type Labels = {
-  status: Record<ScenarioStatus, string>;
-  statusMeaning: Record<ScenarioStatus, string>;
   network: Record<NetworkState, string>;
-  keyboard: Record<KeyboardCoverage, string>;
   /** Rótulo de viewport por id: `fit`, `mobile`, `tablet`, `desktop`, `custom`. */
   viewport: Record<string, string>;
   topbar: {
-    homeTitle: (product: string) => string;
-    toggleNav: string;
+    region: string;
+    viewportGroup: string;
+    rotate: string;
+    zoomOut: string;
+    zoomIn: string;
+    zoomReset: string;
+    zoomValue: (percent: number) => string;
     copyLink: string;
     copied: string;
     copyPrompt: string;
     cleanReview: string;
-    cleanReviewTitle: string;
-    panel: string;
     lightMode: string;
     darkMode: string;
+    engineVersion: (version: string) => string;
+    diagnostics: (errors: number, warnings: number) => string;
     branchTitle: (branch: string) => string;
     commitTitle: (commit: string) => string;
     envTitle: (env: string) => string;
   };
   sidebar: {
     region: string;
-    flowsTab: string;
+    tabs: string;
+    screensTab: string;
     componentsTab: string;
     searchPlaceholder: string;
     searchLabel: string;
-    componentSearchPlaceholder: string;
-    componentSearchLabel: string;
     searchShortcut: string;
     noMatch: (query: string) => string;
-    matchCount: (total: number) => string;
-    noComponentMatch: (query: string) => string;
-    componentMatchCount: (total: number) => string;
-    activeWork: string;
-    portedReferences: (total: number) => string;
-    viewPorted: (total: number) => string;
-    backToActive: string;
-    currentView: (view: string) => string;
-    noActiveWork: string;
-    noPortedReferences: string;
-    /** @deprecated Mantido para overrides escritos para 0.4.0. */
-    showPorted: string;
-    /** @deprecated Deep links portados agora abrem a visão correspondente. */
-    activePorted: string;
-    /** @deprecated Grupos vazios não são mais renderizados. */
-    emptyModule: string;
+    emptyScreens: string;
     emptyComponents: string;
-    withoutModule: string;
-    scope: string;
-    scopeData: string;
-    scopePersona: string;
-    scopeNetwork: string;
+    ungrouped: string;
+    toggleGroup: (group: string) => string;
+    resize: string;
   };
-  controls: {
+  panel: {
     region: string;
+    searchPlaceholder: string;
+    searchLabel: string;
+    searchShortcut: string;
+    noMatch: (query: string) => string;
+    tabs: string;
+    variationsTab: string;
+    infoTab: string;
+    resize: string;
+    variationsList: string;
+    defaultVariation: string;
+    defaultVariationHint: string;
+    noVariations: string;
+    noComponentVariations: string;
+    nothingSelected: string;
     persona: string;
-    fixture: string;
-    componentFixture: string;
     network: string;
-    viewport: string;
-    customWidth: string;
     theme: string;
     locale: string;
     dataSource: string;
     fixturesOption: string;
-    a11y: string;
-    keyboardMode: string;
-    keyboardModeTitle: string;
-    reducedMotion: string;
-    reducedMotionTitle: string;
-    textScale: string;
     none: string;
+    fixtureFallback: (requested: string, fallback: string) => string;
   };
-  inspector: {
-    region: string;
-    tabScenario: string;
-    tabA11y: string;
-    tabDiagnostics: string;
-    diagnosticsWithErrors: (count: number) => string;
-    noScenario: string;
-    componentReference: string;
-    componentGroup: string;
-    componentFixture: string;
-    componentFixtureDescription: string;
-    componentFixtureFallback: (requested: string, fallback: string) => string;
-    taskScope: string;
-    taskScopeDescription: string;
-    inheritedScope: string;
-    inheritedScopeDescription: string;
-    screenScope: string;
-    screenScopeDescription: string;
-    productScope: string;
-    productScopeDescription: string;
-    situation: string;
-    reproduction: string;
+  info: {
+    screen: string;
+    variation: string;
+    component: string;
+    name: string;
     id: string;
+    group: string;
+    description: string;
+    source: string;
+    usedIn: string;
+    notUsed: string;
     route: string;
     persona: string;
-    personaSwapped: string;
-    data: string;
-    network: string;
-    goal: (goal: string) => string;
     permissions: string;
+    intent: string;
     preconditions: string;
-    rules: string;
     actions: string;
     expected: string;
-    approval: string;
-    approvalPendingStatus: string;
-    approvalPendingMeaning: string;
-    approvalMissing: string;
-    openApproved: string;
-    engineering: string;
-    a11yContract: string;
-    keyboard: string;
-    contrast: string;
-    contrastTarget: (target: string) => string;
-    announces: string;
-    focusedElement: string;
-    keyboardModeOff: string;
-    pressTab: (tabStops: number) => string;
-    role: string;
-    name: string;
-    noAccessibleName: string;
-    nameFrom: string;
-    description: string;
-    selector: string;
-    focusableButHidden: string;
-    tabStopsInStage: (tabStops: number) => string;
-    tokenContrast: string;
-    noContrastPairs: string;
-    pair: string;
-    ratio: string;
-    pairsFailing: (count: number) => string;
-    automatedIsFloor: string;
-    coverage: string;
-    scenariosRegistered: (count: number) => string;
-    scenarioContract: string;
-    noIssues: string;
-    diagnosticsProductNotice: string;
+    rules: string;
+    components: string;
+    ticket: string;
+    copyForPr: string;
+    copiedForPr: string;
+    copyPrompt: string;
   };
-  home: {
-    lead: (total: number) => string;
-    statusLegend: string;
-    withoutModule: string;
-    withoutModuleHint: string;
-    emptyModule: string;
-    keyboardBadge: string;
-    noActiveWork: string;
-    noPortedReferences: string;
+  diagnostics: {
+    title: string;
+    noIssues: string;
+    error: string;
+    warning: string;
+    close: string;
+  };
+  /** Texto do markdown gerado por "Copiar para o PR". */
+  pr: {
+    variations: string;
+    components: string;
+    component: string;
+    source: string;
+    expected: string;
+    commit: (shortCommit: string) => string;
+    immutableLink: string;
+    noExpected: string;
+    empty: string;
   };
   shell: {
     restoreChrome: string;
+    frameTitle: (product: string) => string;
     noRoute: string;
     noRouteHint: string;
     outsideHandoff: string;
     outsideHandoffHint: string;
+    empty: string;
+    emptyHint: string;
   };
 };
 
 /** Português. É o padrão, não uma obrigação. */
 export const DEFAULT_LABELS: Labels = {
-  status: {
-    ported: "Portado — não validado",
-    proposed: "Proposta",
-    "in-review": "Em revisão",
-    approved: "Aprovado",
-    "in-implementation": "Em implementação",
-    implemented: "Implementado",
-    superseded: "Superado",
-  },
-
-  statusMeaning: {
-    ported:
-      "Veio do sistema existente, mas não foi validado e não representa compromisso de implementação.",
-    proposed: "Exploração ainda não aprovada.",
-    "in-review": "Aberto para validação de design, negócio ou cliente.",
-    approved: "Referência autorizada, registrada por URL de commit.",
-    "in-implementation": "Ligado a um trabalho ativo de engenharia.",
-    implemented: "Disponível no produto real e validado.",
-    superseded: "Mantido para histórico ou substituído por outra decisão.",
-  },
-
   network: {
     success: "Sucesso",
     loading: "Carregando",
     empty: "Vazio",
     error: "Erro",
     slow: "Lento",
-  },
-
-  keyboard: {
-    full: "Jornada completável só por teclado",
-    partial: "Parcialmente operável por teclado",
-    "not-applicable": "Não se aplica",
   },
 
   viewport: {
@@ -236,216 +167,139 @@ export const DEFAULT_LABELS: Labels = {
   },
 
   topbar: {
-    homeTitle: (product) => `Ir para a página inicial de ${product}`,
-    toggleNav: "Mostrar ou ocultar a navegação",
+    region: "Barra do Design Space",
+    viewportGroup: "Viewport",
+    rotate: "Girar",
+    zoomOut: "Diminuir zoom",
+    zoomIn: "Aumentar zoom",
+    zoomReset: "Voltar o zoom para 100%",
+    zoomValue: (percent) => `${percent}%`,
     copyLink: "Copiar link",
     copied: "Link copiado",
-    copyPrompt: "Copie o link do cenário:",
-    cleanReview: "Revisão limpa",
-    cleanReviewTitle: "Abrir a situação em uma nova aba, sem o chrome do Design Space",
-    panel: "Painel",
-    lightMode: "Modo claro",
-    darkMode: "Modo escuro",
+    copyPrompt: "Copie o link:",
+    cleanReview: "Revisão limpa (Shift+C)",
+    lightMode: "Tema claro",
+    darkMode: "Tema escuro",
+    engineVersion: (version) => `Design Space ${version}`,
+    diagnostics: (errors, warnings) =>
+      `Diagnóstico: ${errors} ${errors === 1 ? "erro" : "erros"}, ${warnings} ${
+        warnings === 1 ? "aviso" : "avisos"
+      }`,
     branchTitle: (branch) => `Branch: ${branch}`,
     commitTitle: (commit) => `Commit: ${commit}`,
     envTitle: (env) => `Ambiente: ${env}`,
   },
 
   sidebar: {
-    region: "Cenários do produto",
-    flowsTab: "Fluxos",
+    region: "Navegação",
+    tabs: "Telas e componentes",
+    screensTab: "Telas",
     componentsTab: "Componentes",
-    searchPlaceholder: "Buscar situação…",
-    searchLabel: "Buscar cenário pelo vocabulário do produto",
-    componentSearchPlaceholder: "Buscar componente…",
-    componentSearchLabel: "Buscar componente do produto",
+    searchPlaceholder: "Buscar",
+    searchLabel: "Buscar telas e componentes",
     searchShortcut: "⌘K",
-    noMatch: (query) => `Nenhuma situação para "${query}".`,
-    matchCount: (total) => `${total} ${total === 1 ? "situação" : "situações"}.`,
-    noComponentMatch: (query) => `Nenhum componente para "${query}".`,
-    componentMatchCount: (total) => `${total} ${total === 1 ? "componente" : "componentes"}.`,
-    activeWork: "Trabalho ativo",
-    portedReferences: (total) => `Referências portadas · ${total}`,
-    viewPorted: (total) =>
-      `Ver ${total} ${total === 1 ? "referência portada" : "referências portadas"}`,
-    backToActive: "Voltar ao trabalho ativo",
-    currentView: (view) => `Visão atual: ${view}`,
-    noActiveWork: "Não há cenários no trabalho ativo.",
-    noPortedReferences: "Não há referências portadas.",
-    showPorted: "Mostrar portados",
-    activePorted: "Aberto por link direto; oculto do trabalho ativo",
-    emptyModule: "Nenhum cenário ainda.",
+    noMatch: (query) => `Nada encontrado para "${query}".`,
+    emptyScreens: "Nenhuma tela neste branch. Telas de feature entram por PR, enquanto estão em desenho.",
     emptyComponents: "O produto ainda não registrou componentes.",
-    withoutModule: "Sem módulo",
-    scope: "Escopo ativo",
-    scopeData: "Dados",
-    scopePersona: "Persona",
-    scopeNetwork: "Rede",
+    ungrouped: "Outros",
+    toggleGroup: (group) => `Mostrar ou ocultar ${group}`,
+    resize: "Redimensionar a navegação",
   },
 
-  controls: {
-    region: "Controles do cenário",
+  panel: {
+    region: "Painel",
+    searchPlaceholder: "Filtrar",
+    searchLabel: "Filtrar variações e informações",
+    searchShortcut: "⌘F",
+    noMatch: (query) => `Nada neste painel para "${query}".`,
+    tabs: "Variações e informações",
+    variationsTab: "Variações",
+    infoTab: "Informações",
+    resize: "Redimensionar o painel",
+    variationsList: "Variações da tela",
+    defaultVariation: "Padrão",
+    defaultVariationHint: "A tela sem cenário declarado, sem fixture.",
+    noVariations: "Esta tela não tem variações.",
+    noComponentVariations: "Este componente não declara variações de dados.",
+    nothingSelected: "Escolha uma tela ou um componente na navegação.",
     persona: "Persona",
-    fixture: "Dados",
-    componentFixture: "Dados do componente",
-    network: "Rede",
-    viewport: "Viewport",
-    customWidth: "Largura personalizada em pixels",
+    network: "Estado de rede",
     theme: "Tema",
     locale: "Idioma",
-    dataSource: "Fonte",
+    dataSource: "Fonte de dados",
     fixturesOption: "Fixtures",
-    a11y: "Acessibilidade",
-    keyboardMode: "Teclado",
-    keyboardModeTitle:
-      "Percorrer a jornada só por teclado, com foco visível e ordem de tabulação evidenciada",
-    reducedMotion: "Movimento",
-    reducedMotionTitle: "Reduzir movimento dentro do palco",
-    textScale: "Ampliação de texto",
     none: "—",
+    fixtureFallback: (requested, fallback) =>
+      `A variação \`${requested}\` não existe neste componente. Exibindo \`${fallback}\`.`,
   },
 
-  inspector: {
-    region: "Painel de contexto",
-    tabScenario: "Cenário",
-    tabA11y: "Acessibilidade",
-    tabDiagnostics: "Diagnóstico",
-    diagnosticsWithErrors: (count) => `Diagnóstico (${count})`,
-    noScenario:
-      "Nenhum cenário ativo. Escolha uma situação na navegação para ver contexto, regras e critérios.",
-    componentReference: "Componente",
-    componentGroup: "Grupo",
-    componentFixture: "Fixture ativa",
-    componentFixtureDescription: "Descrição da fixture",
-    componentFixtureFallback: (requested, fallback) =>
-      `A fixture \`${requested}\` não existe neste componente. Exibindo \`${fallback}\` como fallback.`,
-    taskScope: "Dados desta tarefa",
-    taskScopeDescription: "Contrato e estado autorizados para a situação ativa.",
-    inheritedScope: "Contexto herdado do produto e da persona",
-    inheritedScopeDescription:
-      "Informações compartilhadas que ajudam a interpretar a tarefa, mas não pertencem só a ela.",
-    screenScope: "Inspeção da tela atual",
-    screenScopeDescription: "Leitura ao vivo do que está renderizado no palco agora.",
-    productScope: "Verificações gerais do produto",
-    productScopeDescription: "Resultados compartilhados por todo o catálogo, não só por esta tarefa.",
-    situation: "Situação",
-    reproduction: "Reprodução",
+  info: {
+    screen: "Tela",
+    variation: "Variação",
+    component: "Componente",
+    name: "Nome",
     id: "Id",
+    group: "Grupo",
+    description: "Descrição",
+    source: "Origem",
+    usedIn: "Usado em",
+    notUsed: "Nenhuma tela declara este componente.",
     route: "Rota",
     persona: "Persona",
-    personaSwapped: "trocada",
-    data: "Dados",
-    network: "Rede",
-    goal: (goal) => `Objetivo: ${goal}`,
-    permissions: "Permissões efetivas",
+    permissions: "Permissões",
+    intent: "Intenção",
     preconditions: "Pré-condições",
+    actions: "Ações",
+    expected: "Comportamento esperado",
     rules: "Regras",
-    actions: "Ações disponíveis",
-    expected: "Critérios de aceite",
-    approval: "Aprovação",
-    approvalPendingStatus: "Aprovado — registro pendente",
-    approvalPendingMeaning:
-      "O status foi marcado como aprovado, mas ainda não há URL de commit que registre a versão autorizada.",
-    approvalMissing:
-      "A aprovação ainda não está completamente registrada. Preencha approvedAt com a URL imutável do commit aprovado.",
-    openApproved: "Abrir a versão aprovada",
-    engineering: "Engenharia",
-    a11yContract: "Contrato do cenário",
-    keyboard: "Teclado",
-    contrast: "Contraste",
-    contrastTarget: (target) => `WCAG 2.2 ${target}`,
-    announces: "Precisa ser anunciado:",
-    focusedElement: "Elemento em foco",
-    keyboardModeOff:
-      "Ligue o modo teclado na barra de controles para inspecionar a árvore acessível.",
-    pressTab: (tabStops) =>
-      `Pressione Tab dentro do palco. ${tabStops} paradas de tabulação foram encontradas.`,
-    role: "Papel",
-    name: "Nome",
-    noAccessibleName: "sem nome acessível",
-    nameFrom: "Nome vem de",
-    description: "Descrição",
-    selector: "Seletor",
-    focusableButHidden:
-      "Este elemento é focável mas está escondido de tecnologia assistiva. Um leitor de tela recebe foco sem receber conteúdo.",
-    tabStopsInStage: (tabStops) => `${tabStops} paradas de tabulação no palco.`,
-    tokenContrast: "Contraste dos tokens",
-    noContrastPairs:
-      "O produto não declarou pares de contraste em theme.contrastPairs. Contraste é propriedade de par de cores: declarar aqui valida na origem, uma vez.",
-    pair: "Par",
-    ratio: "Razão",
-    pairsFailing: (count) =>
-      `${count} ${count === 1 ? "par" : "pares"} fora do alvo. O teste de tokens do produto falha o build por isso.`,
-    automatedIsFloor:
-      "Verificação automática é piso, não teto. Ordem de leitura confusa, rótulo tecnicamente presente mas sem sentido e fluxo impossível de completar com leitor de tela passam no axe.",
-    coverage: "Cobertura por status",
-    scenariosRegistered: (count) => `${count} cenários registrados.`,
-    scenarioContract: "Contrato de cenário",
-    noIssues: "Nenhum problema encontrado.",
-    diagnosticsProductNotice:
-      "Este diagnóstico avalia o catálogo inteiro do produto, inclusive itens fora da tarefa e do handoff ativos.",
+    components: "Componentes usados",
+    ticket: "Ticket",
+    copyForPr: "Copiar para o PR",
+    copiedForPr: "Copiado",
+    copyPrompt: "Copie o texto para o PR:",
   },
 
-  home: {
-    lead: (total) =>
-      `Especificação executável: cada situação abaixo abre por link, com persona, dados e regras próprios. ${total} ${
-        total === 1 ? "situação registrada" : "situações registradas"
-      }.`,
-    statusLegend: "Legenda dos status",
-    withoutModule: "Sem módulo",
-    withoutModuleHint:
-      "O prefixo do id não corresponde a nenhum módulo registrado, então estas situações não aparecem na navegação por módulo.",
-    emptyModule: "Nenhuma situação registrada neste módulo ainda.",
-    keyboardBadge: "teclado",
-    noActiveWork: "Não há cenários no trabalho ativo.",
-    noPortedReferences: "Não há referências portadas nesta coleção.",
+  diagnostics: {
+    title: "Diagnóstico",
+    noIssues: "Nenhum problema encontrado.",
+    error: "Erro",
+    warning: "Aviso",
+    close: "Fechar diagnóstico",
+  },
+
+  pr: {
+    variations: "Variações",
+    components: "Componentes",
+    component: "Componente",
+    source: "Origem",
+    expected: "Comportamento esperado",
+    commit: (shortCommit) => `Commit \`${shortCommit}\``,
+    immutableLink: "link deste deployment",
+    noExpected: "Sem comportamento esperado declarado.",
+    empty: "—",
   },
 
   shell: {
-    restoreChrome: "Mostrar controles",
+    restoreChrome: "Mostrar o chrome (Shift+C)",
+    frameTitle: (product) => `Pré-visualização de ${product}`,
     noRoute: "Nenhuma rota para este endereço",
-    noRouteHint: "não casa com nenhuma rota declarada. Escolha uma situação na navegação.",
+    noRouteHint: "não casa com nenhuma rota declarada. Escolha uma tela na navegação.",
     outsideHandoff: "Fora do escopo deste handoff",
     outsideHandoffHint:
       "Este link permite revisar somente os cenários, rotas e componentes listados no handoff. Escolha um item disponível na navegação.",
+    empty: "Nada para mostrar ainda",
+    emptyHint: "O produto ainda não registrou telas nem componentes.",
   },
 };
 
 /** English (United States), selectable by the product through `theme.labels`. */
 export const EN_US_LABELS: Labels = {
-  status: {
-    ported: "Ported — not validated",
-    proposed: "Proposed",
-    "in-review": "In review",
-    approved: "Approved",
-    "in-implementation": "In implementation",
-    implemented: "Implemented",
-    superseded: "Superseded",
-  },
-
-  statusMeaning: {
-    ported:
-      "Imported from the existing system, but not validated and not an implementation commitment.",
-    proposed: "Exploration that has not been approved yet.",
-    "in-review": "Open for design, business, or client validation.",
-    approved: "Authorized reference, recorded with a commit URL.",
-    "in-implementation": "Linked to active engineering work.",
-    implemented: "Available in the real product and validated.",
-    superseded: "Kept for history or replaced by another decision.",
-  },
-
   network: {
     success: "Success",
     loading: "Loading",
     empty: "Empty",
     error: "Error",
     slow: "Slow",
-  },
-
-  keyboard: {
-    full: "Journey can be completed with keyboard only",
-    partial: "Partially operable with keyboard",
-    "not-applicable": "Not applicable",
   },
 
   viewport: {
@@ -457,178 +311,128 @@ export const EN_US_LABELS: Labels = {
   },
 
   topbar: {
-    homeTitle: (product) => `Go to ${product} home`,
-    toggleNav: "Show or hide navigation",
+    region: "Design Space bar",
+    viewportGroup: "Viewport",
+    rotate: "Rotate",
+    zoomOut: "Zoom out",
+    zoomIn: "Zoom in",
+    zoomReset: "Reset zoom to 100%",
+    zoomValue: (percent) => `${percent}%`,
     copyLink: "Copy link",
     copied: "Link copied",
-    copyPrompt: "Copy the scenario link:",
-    cleanReview: "Clean review",
-    cleanReviewTitle: "Open this state in a new tab without the Design Space chrome",
-    panel: "Panel",
-    lightMode: "Light mode",
-    darkMode: "Dark mode",
+    copyPrompt: "Copy the link:",
+    cleanReview: "Clean review (Shift+C)",
+    lightMode: "Light theme",
+    darkMode: "Dark theme",
+    engineVersion: (version) => `Design Space ${version}`,
+    diagnostics: (errors, warnings) =>
+      `Diagnostics: ${errors} ${errors === 1 ? "error" : "errors"}, ${warnings} ${
+        warnings === 1 ? "warning" : "warnings"
+      }`,
     branchTitle: (branch) => `Branch: ${branch}`,
     commitTitle: (commit) => `Commit: ${commit}`,
     envTitle: (env) => `Environment: ${env}`,
   },
 
   sidebar: {
-    region: "Product scenarios",
-    flowsTab: "Flows",
+    region: "Navigation",
+    tabs: "Screens and components",
+    screensTab: "Screens",
     componentsTab: "Components",
-    searchPlaceholder: "Search scenarios…",
-    searchLabel: "Search scenarios using product language",
-    componentSearchPlaceholder: "Search components…",
-    componentSearchLabel: "Search product components",
+    searchPlaceholder: "Search",
+    searchLabel: "Search screens and components",
     searchShortcut: "⌘K",
-    noMatch: (query) => `No scenarios found for "${query}".`,
-    matchCount: (total) => `${total} ${total === 1 ? "scenario" : "scenarios"}.`,
-    noComponentMatch: (query) => `No components found for "${query}".`,
-    componentMatchCount: (total) => `${total} ${total === 1 ? "component" : "components"}.`,
-    activeWork: "Active work",
-    portedReferences: (total) => `Ported references · ${total}`,
-    viewPorted: (total) => `View ${total} ported ${total === 1 ? "reference" : "references"}`,
-    backToActive: "Back to active work",
-    currentView: (view) => `Current view: ${view}`,
-    noActiveWork: "There are no scenarios in active work.",
-    noPortedReferences: "There are no ported references.",
-    showPorted: "Show ported",
-    activePorted: "Opened by direct link; hidden from active work",
-    emptyModule: "No scenarios yet.",
+    noMatch: (query) => `Nothing found for "${query}".`,
+    emptyScreens: "No screens on this branch. Feature screens come in through a pull request while they are being designed.",
     emptyComponents: "The product has not registered any components yet.",
-    withoutModule: "No module",
-    scope: "Active scope",
-    scopeData: "Data",
-    scopePersona: "Persona",
-    scopeNetwork: "Network",
+    ungrouped: "Other",
+    toggleGroup: (group) => `Show or hide ${group}`,
+    resize: "Resize navigation",
   },
 
-  controls: {
-    region: "Scenario controls",
+  panel: {
+    region: "Panel",
+    searchPlaceholder: "Filter",
+    searchLabel: "Filter variations and details",
+    searchShortcut: "⌘F",
+    noMatch: (query) => `Nothing in this panel for "${query}".`,
+    tabs: "Variations and information",
+    variationsTab: "Variations",
+    infoTab: "Information",
+    resize: "Resize panel",
+    variationsList: "Screen variations",
+    defaultVariation: "Default",
+    defaultVariationHint: "The screen without a declared scenario or fixture.",
+    noVariations: "This screen has no variations.",
+    noComponentVariations: "This component does not declare data variations.",
+    nothingSelected: "Choose a screen or a component in the navigation.",
     persona: "Persona",
-    fixture: "Data",
-    componentFixture: "Component data",
-    network: "Network",
-    viewport: "Viewport",
-    customWidth: "Custom width in pixels",
+    network: "Network state",
     theme: "Theme",
     locale: "Language",
-    dataSource: "Source",
+    dataSource: "Data source",
     fixturesOption: "Fixtures",
-    a11y: "Accessibility",
-    keyboardMode: "Keyboard",
-    keyboardModeTitle:
-      "Complete the journey with keyboard only, showing focus and tab order",
-    reducedMotion: "Motion",
-    reducedMotionTitle: "Reduce motion inside the stage",
-    textScale: "Text size",
     none: "—",
+    fixtureFallback: (requested, fallback) =>
+      `Variation \`${requested}\` does not exist for this component. Showing \`${fallback}\`.`,
   },
 
-  inspector: {
-    region: "Context panel",
-    tabScenario: "Scenario",
-    tabA11y: "Accessibility",
-    tabDiagnostics: "Diagnostics",
-    diagnosticsWithErrors: (count) => `Diagnostics (${count})`,
-    noScenario:
-      "No active scenario. Choose a state in the navigation to see its context, rules, and criteria.",
-    componentReference: "Component",
-    componentGroup: "Group",
-    componentFixture: "Active fixture",
-    componentFixtureDescription: "Fixture description",
-    componentFixtureFallback: (requested, fallback) =>
-      `Fixture \`${requested}\` does not exist for this component. Showing \`${fallback}\` as fallback.`,
-    taskScope: "This task",
-    taskScopeDescription: "The contract and authorized state for the active scenario.",
-    inheritedScope: "Inherited product and persona context",
-    inheritedScopeDescription:
-      "Shared information that helps interpret the task but does not belong only to it.",
-    screenScope: "Current screen inspection",
-    screenScopeDescription: "A live reading of what is rendered in the stage now.",
-    productScope: "Product-wide checks",
-    productScopeDescription: "Results shared across the catalog, not only this task.",
-    situation: "State",
-    reproduction: "Reproduction",
+  info: {
+    screen: "Screen",
+    variation: "Variation",
+    component: "Component",
+    name: "Name",
     id: "ID",
+    group: "Group",
+    description: "Description",
+    source: "Source",
+    usedIn: "Used in",
+    notUsed: "No screen declares this component.",
     route: "Route",
     persona: "Persona",
-    personaSwapped: "changed",
-    data: "Data",
-    network: "Network",
-    goal: (goal) => `Goal: ${goal}`,
-    permissions: "Effective permissions",
+    permissions: "Permissions",
+    intent: "Intent",
     preconditions: "Preconditions",
+    actions: "Actions",
+    expected: "Expected behavior",
     rules: "Rules",
-    actions: "Available actions",
-    expected: "Acceptance criteria",
-    approval: "Approval",
-    approvalPendingStatus: "Approved — record pending",
-    approvalPendingMeaning:
-      "The status is approved, but there is no commit URL recording the authorized version yet.",
-    approvalMissing:
-      "Approval is not fully recorded yet. Fill approvedAt with the immutable URL of the approved commit.",
-    openApproved: "Open approved version",
-    engineering: "Engineering",
-    a11yContract: "Scenario contract",
-    keyboard: "Keyboard",
-    contrast: "Contrast",
-    contrastTarget: (target) => `WCAG 2.2 ${target}`,
-    announces: "Must be announced:",
-    focusedElement: "Focused element",
-    keyboardModeOff:
-      "Turn on keyboard mode in the controls to inspect the accessibility tree.",
-    pressTab: (tabStops) =>
-      `Press Tab inside the stage. ${tabStops} tab ${tabStops === 1 ? "stop was" : "stops were"} found.`,
-    role: "Role",
-    name: "Name",
-    noAccessibleName: "no accessible name",
-    nameFrom: "Name source",
-    description: "Description",
-    selector: "Selector",
-    focusableButHidden:
-      "This element is focusable but hidden from assistive technology. A screen reader receives focus without receiving content.",
-    tabStopsInStage: (tabStops) =>
-      `${tabStops} tab ${tabStops === 1 ? "stop" : "stops"} in the stage.`,
-    tokenContrast: "Token contrast",
-    noContrastPairs:
-      "The product has not declared contrast pairs in theme.contrastPairs. Contrast belongs to a pair of colors; declaring pairs here validates them once, at the source.",
-    pair: "Pair",
-    ratio: "Ratio",
-    pairsFailing: (count) =>
-      `${count} ${count === 1 ? "pair is" : "pairs are"} below the target. The product token test fails the build for this.`,
-    automatedIsFloor:
-      "Automated checks are a floor, not a ceiling. Confusing reading order, technically present but meaningless labels, and journeys that cannot be completed with a screen reader can still pass automated tools.",
-    coverage: "Coverage by status",
-    scenariosRegistered: (count) => `${count} ${count === 1 ? "scenario" : "scenarios"} registered.`,
-    scenarioContract: "Scenario contract",
-    noIssues: "No issues found.",
-    diagnosticsProductNotice:
-      "These diagnostics evaluate the entire product catalog, including items outside the active task and handoff.",
+    components: "Components used",
+    ticket: "Ticket",
+    copyForPr: "Copy for PR",
+    copiedForPr: "Copied",
+    copyPrompt: "Copy the text for the PR:",
   },
 
-  home: {
-    lead: (total) =>
-      `Executable specification: each state below opens from a link with its own persona, data, and rules. ${total} ${
-        total === 1 ? "state registered" : "states registered"
-      }.`,
-    statusLegend: "Status legend",
-    withoutModule: "No module",
-    withoutModuleHint:
-      "The ID prefix does not match a registered module, so these states do not appear in module navigation.",
-    emptyModule: "No states have been registered in this module yet.",
-    keyboardBadge: "keyboard",
-    noActiveWork: "There are no scenarios in active work.",
-    noPortedReferences: "There are no ported references in this collection.",
+  diagnostics: {
+    title: "Diagnostics",
+    noIssues: "No issues found.",
+    error: "Error",
+    warning: "Warning",
+    close: "Close diagnostics",
+  },
+
+  pr: {
+    variations: "Variations",
+    components: "Components",
+    component: "Component",
+    source: "Source",
+    expected: "Expected behavior",
+    commit: (shortCommit) => `Commit \`${shortCommit}\``,
+    immutableLink: "this deployment",
+    noExpected: "No expected behavior declared.",
+    empty: "—",
   },
 
   shell: {
-    restoreChrome: "Show controls",
+    restoreChrome: "Show chrome (Shift+C)",
+    frameTitle: (product) => `${product} preview`,
     noRoute: "No route for this address",
-    noRouteHint: "does not match any declared route. Choose a state from the navigation.",
+    noRouteHint: "does not match any declared route. Choose a screen from the navigation.",
     outsideHandoff: "Outside this handoff scope",
     outsideHandoffHint:
       "This link only allows review of the scenarios, routes, and components listed in the handoff. Choose an available item from the navigation.",
+    empty: "Nothing to show yet",
+    emptyHint: "The product has not registered any screens or components yet.",
   },
 };
 
@@ -659,8 +463,8 @@ export function resolveLabels(override?: LabelsOverride): Labels {
 /**
  * Rótulos resolvidos, para o chrome inteiro.
  *
- * O padrão do contexto é o português, então `Home` e `Stage` — exportados e
- * montáveis fora do `DesignSpace` — continuam funcionando sem provider.
+ * O padrão do contexto é o português, então `StageEmpty` — exportado e
+ * montável fora do `DesignSpace` — continua funcionando sem provider.
  */
 export const LabelsContext = createContext<Labels>(DEFAULT_LABELS);
 
@@ -672,11 +476,5 @@ export function useLabels(): Labels {
  * Compatibilidade
  * ------------------------------------------------------------------ */
 
-/** @deprecated Use `useLabels().status`, ou `DEFAULT_LABELS.status` fora de React. */
-export const STATUS_LABELS = DEFAULT_LABELS.status;
-/** @deprecated Use `useLabels().statusMeaning`. */
-export const STATUS_MEANING = DEFAULT_LABELS.statusMeaning;
 /** @deprecated Use `useLabels().network`. */
 export const NETWORK_LABELS = DEFAULT_LABELS.network;
-/** @deprecated Use `useLabels().keyboard`. */
-export const KEYBOARD_LABELS = DEFAULT_LABELS.keyboard;

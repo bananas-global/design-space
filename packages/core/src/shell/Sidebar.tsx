@@ -1,54 +1,69 @@
-/** Navegação entre fluxos e componentes do produto. */
+/**
+ * Lateral esquerda: Telas e Componentes.
+ *
+ * Uma tela é uma rota; um componente é uma referência do catálogo. A busca vale
+ * para as duas abas ao mesmo tempo, sem diferenciar acento nem caixa, e durante
+ * a busca cada aba mostra quantos itens casam — quem busca "botao" na aba Telas
+ * vê que a resposta está em Componentes.
+ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Registry } from "../registry/index.js";
-import type {
-  ComponentPreview,
-  ControlsState,
-  Scenario,
-  ScenarioView,
-} from "../types/index.js";
-import { scenarioView } from "../controls/state.js";
+import type { Registry, ScreenNode } from "../registry/index.js";
+import type { ComponentPreview, HandoffScope } from "../types/index.js";
+import { Icon } from "./icons.js";
 import { useLabels } from "./labels.js";
+import { Resizer } from "./Resizer.js";
 
-type SidebarMode = "flows" | "components";
+type SidebarTab = "screens" | "components";
 
 export type SidebarProps = {
   registry: Registry;
-  activeScenario: Scenario | undefined;
+  handoff: HandoffScope | undefined;
+  activeScreen: string | undefined;
   activeComponent: string | undefined;
-  controls: ControlsState;
-  onOpenScenario: (scenarioId: string) => void;
+  onOpenScreen: (screenId: string) => void;
   onOpenComponent: (componentId: string) => void;
-  onViewChange: (view: ScenarioView) => void;
+  width: number;
+  onResize: (width: number) => void;
+  onResizeStart: () => void;
+  onResizeEnd: () => void;
 };
 
 export function Sidebar({
   registry,
-  activeScenario,
+  handoff,
+  activeScreen,
   activeComponent,
-  controls,
-  onOpenScenario,
+  onOpenScreen,
   onOpenComponent,
-  onViewChange,
+  width,
+  onResize,
+  onResizeStart,
+  onResizeEnd,
 }: SidebarProps) {
   const labels = useLabels();
-  const [mode, setMode] = useState<SidebarMode>(activeComponent ? "components" : "flows");
+  const s = labels.sidebar;
   const [query, setQuery] = useState("");
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const searchRef = useRef<HTMLInputElement>(null);
-  const itemRefs = useRef(new Map<string, HTMLButtonElement>());
-  const view = scenarioView(controls);
-  const handoff = controls.handoff;
-  const portedTotal = registry.byStatus("ported", { handoff }).length;
-  const viewTotal = registry.activeScenarios({ view, handoff }).length;
-  const viewLabel =
-    view === "ported" ? labels.sidebar.portedReferences(portedTotal) : labels.sidebar.activeWork;
 
+  const allScreens = registry.screensFor({ handoff });
+  const allComponents = registry.componentsFor(handoff);
+  const hasScreens = allScreens.length > 0;
+  const hasComponents = allComponents.length > 0;
+
+  const [tab, setTab] = useState<SidebarTab>(() =>
+    activeComponent || !hasScreens ? "components" : "screens",
+  );
+
+  // A aba segue o item aberto: um link de componente abre em Componentes. As
+  // duas abas aparecem sempre, mesmo vazias — a aba vazia diz onde as telas
+  // entram.
   useEffect(() => {
-    if (activeComponent) setMode("components");
-    else if (activeScenario) setMode("flows");
-  }, [activeComponent, activeScenario]);
+    if (activeComponent && hasComponents) setTab("components");
+    else if (activeScreen && hasScreens) setTab("screens");
+  }, [activeComponent, activeScreen, hasComponents, hasScreens]);
+  const currentTab = tab;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -61,354 +76,207 @@ export function Sidebar({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const scenarioMatches = useMemo(() => {
-    if (!query.trim()) return undefined;
-    return new Set(
-      registry.search(query, { view, handoff }).map((scenario) => scenario.id),
-    );
-  }, [handoff, query, registry, view]);
+  const screens = useMemo(
+    () => registry.searchScreens(query, { handoff }),
+    [handoff, query, registry],
+  );
+  const components = useMemo(
+    () => registry.searchComponents(query, handoff),
+    [handoff, query, registry],
+  );
+  const groups = useMemo(() => groupComponents(components, s.ungrouped), [components, s.ungrouped]);
+  const searching = query.trim().length > 0;
 
-  const componentMatches = useMemo(() => {
-    const needle = normalize(query);
-    return registry.componentsFor(handoff).filter((component) =>
-      normalize([component.name, component.id, component.group, component.description].join(" ")).includes(
-        needle,
-      ),
-    );
-  }, [handoff, query, registry]);
-
-  const visible = (scenarios: Scenario[]) =>
-    scenarioMatches ? scenarios.filter((scenario) => scenarioMatches.has(scenario.id)) : scenarios;
-
-  const navigationOptions = {
-    view,
-    handoff,
-  };
-  const nodes = registry.treeFor(navigationOptions)
-    .map((node) => ({ ...node, scenarios: visible(node.scenarios) }))
-    .filter((node) => node.scenarios.length > 0);
-  const orphans = visible(registry.orphansFor(navigationOptions));
-  const scenarioTotal =
-    nodes.reduce((sum, node) => sum + node.scenarios.length, 0) + orphans.length;
-
-  const groupedComponents = groupComponents(componentMatches);
-  const visibleItemIds =
-    mode === "flows"
-      ? [...nodes.flatMap((node) => node.scenarios), ...orphans].map((scenario) => scenario.id)
-      : componentMatches.map((component) => component.id);
-
-  const focusItem = (currentId: string | undefined, offset: number) => {
-    if (visibleItemIds.length === 0) return;
-    const next = nextItemId(visibleItemIds, currentId, offset);
-    if (next) itemRefs.current.get(next)?.focus();
-  };
-
-  const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      focusItem(undefined, 1);
-    } else if (event.key === "Escape") {
-      setQuery("");
-    }
-  };
-
-  const onItemKeyDown = (id: string, event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    event.preventDefault();
-    focusItem(id, event.key === "ArrowDown" ? 1 : -1);
-  };
-
-  const setItemRef = (id: string, element: HTMLButtonElement | null) => {
-    if (element) itemRefs.current.set(id, element);
-    else itemRefs.current.delete(id);
-  };
-
-  const toggle = (moduleId: string) =>
+  const toggleGroup = (group: string) =>
     setCollapsed((current) => {
       const next = new Set(current);
-      if (next.has(moduleId)) next.delete(moduleId);
-      else next.add(moduleId);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
       return next;
     });
 
   return (
-    <nav className="ds-chrome ds-sidebar" aria-label={labels.sidebar.region}>
-      <div className="ds-sidebar__tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "flows"}
-          onClick={() => {
-            setMode("flows");
-            setQuery("");
-          }}
-        >
-          {labels.sidebar.flowsTab}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "components"}
-          onClick={() => {
-            setMode("components");
-            setQuery("");
-          }}
-        >
-          {labels.sidebar.componentsTab}
-        </button>
-      </div>
-
-      <div className="ds-sidebar__search">
+    <nav className="ds-sidebar" aria-label={s.region} style={{ width }}>
+      <div className="ds-search">
+        <Icon name="search" size={14} />
         <input
           ref={searchRef}
-          className="ds-input ds-input--search"
+          className="ds-input ds-search__input"
           type="search"
           value={query}
-          placeholder={
-            mode === "flows"
-              ? labels.sidebar.searchPlaceholder
-              : labels.sidebar.componentSearchPlaceholder
-          }
-          aria-label={
-            mode === "flows" ? labels.sidebar.searchLabel : labels.sidebar.componentSearchLabel
-          }
+          placeholder={s.searchPlaceholder}
+          aria-label={s.searchLabel}
           onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={onSearchKeyDown}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setQuery("");
+          }}
         />
-        <kbd>{labels.sidebar.searchShortcut}</kbd>
+        <kbd className="ds-kbd" aria-hidden="true">
+          {s.searchShortcut}
+        </kbd>
       </div>
 
-      <div
-        className="ds-sidebar__tree"
-        role="tabpanel"
-        aria-label={mode === "flows" ? labels.sidebar.currentView(viewLabel) : undefined}
-      >
-        {mode === "flows" && (
-          <header className="ds-sidebar__view-header">
-            <h2>{viewLabel}</h2>
-            {view === "ported" && (
-              <button
-                type="button"
-                className="ds-text-action"
-                onClick={() => onViewChange("active")}
-              >
-                {labels.sidebar.backToActive}
-              </button>
-            )}
-          </header>
-        )}
+      <div className="ds-tabs" role="tablist" aria-label={s.tabs}>
+        <TabButton
+          selected={currentTab === "screens"}
+          label={s.screensTab}
+          count={searching ? screens.length : undefined}
+          onSelect={() => setTab("screens")}
+        />
+        <TabButton
+          selected={currentTab === "components"}
+          label={s.componentsTab}
+          count={searching ? components.length : undefined}
+          onSelect={() => setTab("components")}
+        />
+      </div>
 
-        {query.trim() !== "" && (
-          <p className="ds-sidebar__empty" role="status">
-            {mode === "flows"
-              ? scenarioTotal === 0
-                ? labels.sidebar.noMatch(query)
-                : labels.sidebar.matchCount(scenarioTotal)
-              : componentMatches.length === 0
-                ? labels.sidebar.noComponentMatch(query)
-                : labels.sidebar.componentMatchCount(componentMatches.length)}
-          </p>
-        )}
-
-        {mode === "flows" && query.trim() === "" && viewTotal === 0 ? (
-          <div className="ds-sidebar__view-empty">
-            <p>
-              {view === "ported"
-                ? labels.sidebar.noPortedReferences
-                : labels.sidebar.noActiveWork}
-            </p>
-            {view === "active" && portedTotal > 0 && (
-              <button
-                type="button"
-                className="ds-text-action"
-                onClick={() => onViewChange("ported")}
-              >
-                {labels.sidebar.viewPorted(portedTotal)}
-              </button>
-            )}
-          </div>
-        ) : mode === "flows" ? (
-          <ScenarioTree
-            nodes={nodes}
-            orphans={orphans}
-            matches={scenarioMatches}
-            collapsed={collapsed}
-            activeScenario={activeScenario?.id}
-            withoutModuleLabel={labels.sidebar.withoutModule}
-            onToggle={toggle}
-            onOpen={onOpenScenario}
-            onKeyDown={onItemKeyDown}
-            setItemRef={setItemRef}
-          />
-        ) : groupedComponents.length === 0 && !query ? (
-          <p className="ds-sidebar__empty">{labels.sidebar.emptyComponents}</p>
+      <div className="ds-sidebar__list" role="tabpanel">
+        {currentTab === "screens" ? (
+          !hasScreens ? (
+            <p className="ds-empty">{s.emptyScreens}</p>
+          ) : screens.length === 0 ? (
+            <p className="ds-empty">{s.noMatch(query)}</p>
+          ) : (
+            <ul className="ds-items">
+              {screens.map((screen) => (
+                <ScreenItem
+                  key={screen.id}
+                  screen={screen}
+                  active={screen.id === activeScreen && !activeComponent}
+                  onOpen={onOpenScreen}
+                />
+              ))}
+            </ul>
+          )
+        ) : !hasComponents ? (
+          <p className="ds-empty">{s.emptyComponents}</p>
+        ) : components.length === 0 ? (
+          <p className="ds-empty">{s.noMatch(query)}</p>
         ) : (
-          groupedComponents.map(([group, components]) => (
-            <section className="ds-component-group" key={group}>
-              <h2>{group}</h2>
-              <ul>
-                {components.map((component) => (
-                  <li key={component.id}>
-                    <button
-                      ref={(element) => setItemRef(component.id, element)}
-                      type="button"
-                      className="ds-component-item"
-                      aria-current={component.id === activeComponent}
-                      onClick={() => onOpenComponent(component.id)}
-                      onKeyDown={(event) => onItemKeyDown(component.id, event)}
-                    >
-                      <span>{component.name}</span>
-                      {component.description && <small>{component.description}</small>}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
+          groups.map(({ group, items }) => {
+            const isCollapsed = collapsed.has(group) && !searching;
+            return (
+              <section key={group} className="ds-group-section">
+                <button
+                  type="button"
+                  className="ds-group-section__head"
+                  aria-expanded={!isCollapsed}
+                  aria-label={s.toggleGroup(group)}
+                  onClick={() => toggleGroup(group)}
+                >
+                  <Icon name="chevron" size={12} />
+                  <span>{group}</span>
+                  <span className="ds-count">{items.length}</span>
+                </button>
+                {!isCollapsed && (
+                  <ul className="ds-items">
+                    {items.map((component) => (
+                      <li key={component.id}>
+                        <button
+                          type="button"
+                          className="ds-item"
+                          aria-current={component.id === activeComponent ? "true" : undefined}
+                          onClick={() => onOpenComponent(component.id)}
+                        >
+                          <span className="ds-item__title">{component.name}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })
         )}
       </div>
 
-      {mode === "flows" && view === "active" && viewTotal > 0 && portedTotal > 0 && (
-        <div className="ds-sidebar__view-footer">
-          <button
-            type="button"
-            className="ds-text-action"
-            onClick={() => onViewChange("ported")}
-          >
-            {labels.sidebar.viewPorted(portedTotal)}
-          </button>
-        </div>
-      )}
-
-      {mode === "flows" && activeScenario && (
-        <aside className="ds-sidebar__scope" aria-label={labels.sidebar.scope}>
-          <h2>{labels.sidebar.scope}</h2>
-          <dl>
-            <dt>{labels.sidebar.scopeData}</dt>
-            <dd>{registry.fixture(controls.fixture ?? activeScenario.fixture)?.label ?? labels.controls.none}</dd>
-            <dt>{labels.sidebar.scopePersona}</dt>
-            <dd>{registry.persona(controls.persona ?? activeScenario.persona)?.name ?? labels.controls.none}</dd>
-            <dt>{labels.sidebar.scopeNetwork}</dt>
-            <dd>{labels.network[controls.network]}</dd>
-          </dl>
-        </aside>
-      )}
+      <Resizer
+        side="left"
+        label={s.resize}
+        value={width}
+        onChange={onResize}
+        onStart={onResizeStart}
+        onEnd={onResizeEnd}
+      />
     </nav>
   );
 }
 
-type ScenarioTreeProps = {
-  nodes: Registry["tree"];
-  orphans: Scenario[];
-  matches: Set<string> | undefined;
-  collapsed: Set<string>;
-  activeScenario: string | undefined;
-  withoutModuleLabel: string;
-  onToggle: (id: string) => void;
-  onOpen: (id: string) => void;
-  onKeyDown: (id: string, event: React.KeyboardEvent<HTMLButtonElement>) => void;
-  setItemRef: (id: string, element: HTMLButtonElement | null) => void;
-};
-
-function ScenarioTree(props: ScenarioTreeProps) {
+function TabButton({
+  selected,
+  label,
+  count,
+  onSelect,
+}: {
+  selected: boolean;
+  label: string;
+  /** Só durante a busca: diz em qual aba estão os resultados. */
+  count?: number;
+  onSelect: () => void;
+}) {
   return (
-    <>
-      {props.nodes.map((node) => {
-        const isOpen = !props.collapsed.has(node.module.id) || Boolean(props.matches);
-        return (
-          <section className="ds-module" key={node.module.id}>
-            <button
-              type="button"
-              className="ds-module__header"
-              aria-expanded={isOpen}
-              onClick={() => props.onToggle(node.module.id)}
-            >
-              <span className="ds-module__chevron" aria-hidden="true">▶</span>
-              <span>{node.module.name}</span>
-              <span className="ds-module__count">{node.scenarios.length}</span>
-            </button>
-            {isOpen && (
-              <ul className="ds-module__scenarios">
-                {node.scenarios.map((scenario) => (
-                  <ScenarioItem key={scenario.id} scenario={scenario} {...props} />
-                ))}
-              </ul>
-            )}
-          </section>
-        );
-      })}
-      {props.orphans.length > 0 && (
-        <section className="ds-module">
-          <div className="ds-module__header" aria-hidden="true">
-            <span className="ds-module__chevron">▶</span>
-            <span>{props.withoutModuleLabel}</span>
-            <span className="ds-module__count">{props.orphans.length}</span>
-          </div>
-          <ul className="ds-module__scenarios">
-            {props.orphans.map((scenario) => <ScenarioItem key={scenario.id} scenario={scenario} {...props} />)}
-          </ul>
-        </section>
-      )}
-    </>
+    <button
+      type="button"
+      role="tab"
+      className="ds-tab"
+      aria-selected={selected}
+      tabIndex={selected ? 0 : -1}
+      onClick={onSelect}
+    >
+      <span>{label}</span>
+      {count !== undefined && <span className="ds-count">{count}</span>}
+    </button>
   );
 }
 
-function ScenarioItem({
-  scenario,
-  activeScenario,
+function ScreenItem({
+  screen,
+  active,
   onOpen,
-  onKeyDown,
-  setItemRef,
-}: ScenarioTreeProps & { scenario: Scenario }) {
-  const labels = useLabels();
-  const approvalIncomplete = scenario.status === "approved" && !scenario.approvedAt;
-  const status = approvalIncomplete
-    ? labels.inspector.approvalPendingStatus
-    : labels.status[scenario.status];
+}: {
+  screen: ScreenNode;
+  active: boolean;
+  onOpen: (screenId: string) => void;
+}) {
   return (
     <li>
       <button
-        ref={(element) => setItemRef(scenario.id, element)}
         type="button"
-        className="ds-scenario"
-        aria-current={scenario.id === activeScenario}
-        onClick={() => onOpen(scenario.id)}
-        onKeyDown={(event) => onKeyDown(scenario.id, event)}
+        className="ds-item"
+        aria-current={active ? "true" : undefined}
+        onClick={() => onOpen(screen.id)}
       >
-        <span
-          className="ds-status-dot"
-          data-status={scenario.status}
-          data-approval={approvalIncomplete ? "incomplete" : undefined}
-          title={status}
-        />
-        <span className="ds-scenario__title">{scenario.title}</span>
-        <span className="ds-visually-hidden">{status}</span>
+        <span className="ds-item__title">{screen.name}</span>
+        {screen.variations.length > 1 && <span className="ds-count">{screen.variations.length}</span>}
       </button>
     </li>
   );
 }
 
-function groupComponents(components: ComponentPreview[]): [string, ComponentPreview[]][] {
+/** Componentes agrupados por `group`, na ordem em que cada grupo aparece. */
+export function groupComponents(
+  components: ComponentPreview[],
+  ungrouped: string,
+): { group: string; items: ComponentPreview[] }[] {
   const groups = new Map<string, ComponentPreview[]>();
   for (const component of components) {
-    const group = component.group ?? "Componentes";
-    groups.set(group, [...(groups.get(group) ?? []), component]);
+    const group = component.group?.trim() || ungrouped;
+    const list = groups.get(group) ?? [];
+    list.push(component);
+    groups.set(group, list);
   }
-  return [...groups.entries()];
+  return [...groups].map(([group, items]) => ({ group, items }));
 }
 
-function normalize(value: string): string {
-  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-}
-
-export function isSearchShortcut(event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">): boolean {
-  const key = event.key.toLowerCase();
-  return (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && (key === "k" || key === "f");
-}
-
-export function nextItemId(ids: string[], currentId: string | undefined, offset: number): string | undefined {
-  if (ids.length === 0) return undefined;
-  const current = currentId ? ids.indexOf(currentId) : -1;
-  const next = Math.max(0, Math.min(ids.length - 1, current + offset));
-  return ids[next];
+/** Command/Ctrl + K, sem outros modificadores. */
+export function isSearchShortcut(
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">,
+): boolean {
+  return (
+    (event.metaKey || event.ctrlKey) &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.key.toLowerCase() === "k"
+  );
 }

@@ -10,8 +10,6 @@ const scenario: Scenario = {
   route: "/orders/1042",
   persona: "analyst",
   fixture: "order-blocked",
-  status: "in-review",
-  a11y: { keyboard: "full", announces: ["motivo do bloqueio"], contrast: "AA" },
   expected: ["O motivo aparece junto da ação indisponível."],
 };
 
@@ -97,16 +95,12 @@ describe("scenarioUrl", () => {
     expect(url.searchParams.get("appearance")).toBe("light");
   });
 
-  it("identifica semanticamente a visão de um cenário portado", () => {
-    const url = new URL(
-      scenarioUrl(
-        { ...scenario, status: "ported" },
-        { origin: "https://acme.example.app" },
-      ),
-    );
+  it("omite a persona quando o cenário não declara uma", () => {
+    const { persona: _persona, ...withoutPersona } = scenario;
+    const url = new URL(scenarioUrl(withoutPersona, { origin: "https://acme.example.app" }));
 
-    expect(url.searchParams.get("view")).toBe("ported");
-    expect(url.searchParams.has("showPorted")).toBe(false);
+    expect(url.searchParams.has("persona")).toBe(false);
+    expect(url.searchParams.get("fixture")).toBe("order-blocked");
   });
 
   it("serializa o recorte de handoff junto do cenário", () => {

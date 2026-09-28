@@ -6,6 +6,183 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.8.0 (2026-09-28)
+
+**Major (incompatível).** Chrome novo, modelo de organização novo e a UI do
+produto dentro de um `<iframe>`. Ver
+`docs/decisions/0012-chrome-unico-telas-como-rotas-e-iframe.md`.
+
+> **Primeira publicação depois da 0.6.0.** A 0.7.0 nunca foi publicada no npm:
+> quem está em `^0.6.0` recebe as mudanças da 0.7.0 (acima, na seção dela) e as
+> desta versão de uma vez. Leia os dois guias de migração, na ordem 0.7 → 0.8.
+
+### Removido
+
+- **Módulos e jornadas:** `Module`, `Flow`, `FlowStep`, `ProductDefinition.modules`,
+  `ModuleNode`, `Registry.tree`, `Registry.orphans`, `Registry.treeFor`,
+  `Registry.orphansFor`, `Registry.module` e `Registry.flow`. A validação não
+  exige mais prefixo de módulo no id nem avisa quando falta; passos e
+  ramificações de jornada deixam de ser validados.
+- **Home e palco inline:** `Home`, `HomeProps`, `Stage`, `StageProps`. A raiz
+  abre o primeiro item. `StageEmpty` continua exportado.
+- **Rótulos:** os grupos `controls`, `inspector` e `home` e as chaves de fluxo e
+  de módulo em `sidebar` e `topbar` (`flowsTab`, `withoutModule`, `homeTitle`,
+  `toggleNav`, `panel`, `cleanReviewTitle`, `copyPrompt` de cenário…). Override
+  em `theme.labels` que declare esses grupos passa a ser erro de tipo.
+- `buildHomeUrl`, `buildCleanReviewUrl`, `nextItemId` (eram exports internos do
+  shell, usados só em teste).
+
+### Adicionado
+
+- **Telas e variações.** Uma tela é uma rota; as variações são os cenários cuja
+  `route` casa com o `path` (mesmo casamento e especificidade do roteador). Rota
+  sem cenário é tela com variação implícita "Padrão". `RouteDefinition.name` e
+  `RouteDefinition.description`. Nome da tela: `name` ?? título do primeiro
+  cenário ?? `path`.
+- **Registry:** `screens`, `screen`, `screenForPath`, `screenOf`, `screensFor`
+  (com handoff), `searchScreens`, `searchComponents` (nome, descrição, grupo, id
+  e `source`, sem acento nem caixa), `componentsOfScreen`, `usagesOf`. Tipo
+  `ScreenNode`. `normalizeSearch` exportado.
+- **`Scenario.components`**: ids de `ComponentPreview` usados na tela. Alimenta
+  "Componentes usados", o "Usado em" do componente e o "Copiar para o PR". Id
+  não registrado gera aviso.
+- **`ComponentPreview.source`**: origem no sistema real, texto livre.
+- **Chrome novo, preto e branco**, claro e escuro, sem cor de cliente e sem
+  logo. Seleção por tom (a cor do texto a 10%), grupos e abas em cápsula,
+  controles de 36px.
+  - Barra superior em três partes: o nome do produto e a versão do motor, com
+    link para o pacote; no centro, viewport (Celular 375, Tablet 768, Desktop
+    1280, Ajustar), girar (só celular e tablet), zoom de 25% a 150% e revisão
+    limpa (`Shift` + `C`); à direita, copiar link, tema e o indicador de
+    diagnóstico. Em 100%, um viewport mais largo que a área encolhe até caber.
+  - Lateral esquerda: busca (`Cmd`/`Ctrl` + `K`) e as abas **Telas |
+    Componentes**, sempre visíveis; componentes agrupados por `group`, com
+    grupos recolhíveis.
+  - Lateral direita, sempre aberta com o chrome: filtro (`Cmd`/`Ctrl` + `F`)
+    e as abas **Variações | Informações**, com o botão **Copiar para o PR**.
+  - As duas laterais são redimensionáveis, e a largura é lembrada no navegador.
+- **Quadro (`<iframe>`)**: a UI do produto roda na mesma origem e no mesmo
+  bundle, com `ds-frame=1`. A largura do viewport é a largura real da janela do
+  produto. Protocolo por `postMessage` validando origem e janela nos dois lados.
+  Exports `FRAME_PARAM` e `FRAME_ATTRIBUTE`; em `/testing`, `FRAME_SELECTOR`.
+- **Estado na URL:** `zoom`, `rotate`, `tab` (aba do painel). `appearance` aceita
+  `dark` e `light`; sem ele, o tema segue a última escolha e, na falta dela, o
+  sistema. `ControlsState` ganha `zoom`, `rotated` e `panelTab`; tipo
+  `PanelTab`. `ZOOM_MIN`, `ZOOM_MAX`, `ZOOM_DEFAULT` e `clampZoom`.
+- `useDesignSpaceState(registry, { frame })`; o retorno ganha `openScreen` e
+  `go`, e `openComponent` aceita `{ replace }`.
+- **Validação de rotas:** `path` duplicado, `path` sem `/` inicial e `screen`
+  ausente são erro; `modules` ainda declarado vira aviso.
+
+### Alterado
+
+- **`VIEWPORTS`**: `mobile` 375×812, `tablet` 768×1024, `desktop` 1280×800.
+  `custom` continua, só por URL (`viewport=custom&w=…`).
+- **`ControlsState.chromeTheme`** fica `undefined` quando a URL não informa, em
+  vez de `dark`.
+- **`scenariosForRoute`** devolve as variações da tela que renderiza o endereço,
+  pelo casamento de rota, e não mais cenários com o mesmo texto de caminho.
+- **`validateScenario`**: id é minúsculo, kebab-case com pontos opcionais; não
+  precisa de prefixo.
+- **`ProductDefinition.tagline`** continua no tipo, mas o chrome não o exibe.
+- **CSS:** todos os seletores começam em `.ds-`; `.ds-root` agora define fundo,
+  fonte e cor e cobre a janela, porque o palco não é mais descendente dele. Os
+  tokens `--ds-*` foram todos renomeados para a paleta preto e branco.
+
+### Migração
+
+1. **Remova `modules`** da `ProductDefinition` (e os `flows` dentro dele). O
+   TypeScript aponta onde; se sobrar em JavaScript, o diagnóstico avisa.
+2. **Dê `name` às rotas** — é o nome da tela na lista. Opcionalmente, uma
+   `description`. Sem `name`, a tela usa o título do primeiro cenário da rota.
+3. **Ids de cenário continuam válidos.** O prefixo de módulo deixa de ter
+   significado, mas não precisa mudar: links antigos continuam abrindo.
+4. **Opcional:** liste em `components` de cada cenário os ids de componente que
+   a tela usa, e preencha `source` em cada `ComponentPreview`. É o que alimenta
+   "Componentes usados" e o "Copiar para o PR".
+5. **Troque container queries por media queries** onde elas existiam só porque
+   o palco não era uma janela. Dentro do quadro, `md:`/`lg:` respondem à largura
+   do viewport escolhido.
+6. **Testes de ponta a ponta:** a UI do produto está num iframe. Use
+   `page.frameLocator(FRAME_SELECTOR)` (de `@brucesantos/design-space/testing`)
+   para a UI e `page` para o chrome. Links do produto dentro do quadro navegam
+   sem recarregar e atualizam a URL do chrome.
+7. **Rótulos:** se `theme.labels` sobrescrevia `controls`, `inspector` ou `home`,
+   mova para `panel`, `info`, `diagnostics` e `shell`; o TypeScript aponta cada
+   chave. `EN_US_LABELS` já traz o dicionário novo completo.
+8. **CSS global do produto:** nada a fazer. O chrome define os próprios estilos
+   e ignora preflight e `body { … }` do produto. Se o produto dependia de algo
+   do chrome herdado no palco, isso acabou — o que é o objetivo.
+9. Links antigos com `module`, `flow`, `view`, `showPorted` ou parâmetros de
+   acessibilidade abrem sem erro: os parâmetros são ignorados.
+
+## 0.7.0 (2026-09-28) — não publicada
+
+**Major (incompatível).** O motor deixa de impor acessibilidade e ciclo de vida
+de cenário. Todo cenário registrado é simplesmente exibido. Ver
+`docs/decisions/0011-revoga-a11y-e-ciclo-de-vida.md`.
+
+### Removido
+
+- **Ciclo de vida do cenário:** `Scenario.status`, `Scenario.approvedAt`,
+  `ScenarioStatus`, `SCENARIO_STATUSES`, `ScenarioView`, `ControlsState.view` e
+  `showPorted`, a visão de referências portadas, a legenda e as contagens por
+  status na Home, na navegação e no Diagnóstico, os marcadores de status e os
+  parâmetros de URL `view` e `showPorted`. `Registry.byStatus` e
+  `Registry.coverage` saíram; `ScenarioQueryOptions` agora só tem `handoff`.
+  `useDesignSpaceState` não devolve mais `setScenarioView`. `Home` e `Sidebar`
+  perderam `view`, `onViewChange` e `showPorted`; `buildHomeUrl` perdeu o
+  parâmetro de visão.
+- **Acessibilidade:** `Scenario.a11y`, `A11yContract`, `KeyboardCoverage`,
+  `ContrastTarget`, `ContrastPair`, `ProductTheme.contrastPairs`,
+  `ScenarioContext.a11y`, `ComponentPreviewProps.a11y`, todo `src/a11y/`
+  (`contrastRatio`, `checkContrastPair(s)`, `assertContrastPairs`,
+  `CONTRAST_THRESHOLDS`, `parseColor`, `flatten`, `relativeLuminance`,
+  `readCssVariable`, `computeRole`, `describeElement`, `shortSelector`,
+  `tabbableElements`, `useKeyboardMode` e tipos), `TabOrderOverlay`, o modo
+  teclado (atalho `Shift` + `K`), redução de movimento e ampliação de texto
+  (`TEXT_SCALES`, `keyboardMode`, `reducedMotion`, `textScale` e os parâmetros
+  `kb`, `motion`, `scale`), a aba Acessibilidade do Inspector.
+  `StageProps` ficou só com `viewport` e `children`.
+- **Rótulos:** grupos `status`, `statusMeaning` e `keyboard`; exports
+  `STATUS_LABELS`, `STATUS_MEANING` e `KEYBOARD_LABELS`; as chaves de
+  referências portadas, aprovação, contraste e modo teclado em `sidebar`,
+  `controls`, `inspector` e `home`. Override em `theme.labels` que declare esses
+  grupos passa a ser erro de tipo.
+- **`/testing`:** `scenariosUnderTest`, `keyboardScenarios` e a reexportação das
+  funções de contraste. Continuam `testOrigin`, `urlFor`, `pathFor`,
+  `scenarioUrl`, `assertValidProduct`, `validateProduct`, `hasErrors` e
+  `formatIssues`.
+
+### Alterado
+
+- **`persona` é opcional em `Scenario`.** Cenário sem persona tem permissões
+  vazias, a menos que declare `permissions`. A validação só reclama de persona
+  inexistente quando ela é informada, e `scenarioUrl()` omite `persona` da URL
+  quando o cenário não declara uma.
+- **Produto só de componentes é válido.** `routes` vazio só é erro quando há
+  cenários. Sem cenários e com `components`, a Home abre no catálogo de
+  componentes agrupado por `group`, e a navegação abre direto na lista de
+  componentes, sem aba de fluxos vazia.
+- A Home sem cenário nem componente mostra um único estado vazio
+  (`home.noScenarios`); a navegação usa `sidebar.emptyScenarios`. Novo rótulo
+  `home.componentsLead`.
+
+### Migração
+
+1. Apague `a11y`, `status` e `approvedAt` de todos os cenários e
+   `theme.contrastPairs` da definição do produto.
+2. `persona` agora é opcional: mantenha onde ela decide permissões, remova onde
+   não acrescenta nada.
+3. Remova de `theme.labels` os grupos `status`, `statusMeaning` e `keyboard` e as
+   chaves listadas acima; o TypeScript aponta cada uma.
+4. Se os testes do produto usavam `scenariosUnderTest`, `keyboardScenarios` ou
+   as funções de contraste de `/testing`, troque por `product.scenarios` (ou um
+   filtro do próprio produto) e apague os testes de contraste e axe que
+   dependiam delas.
+5. Links antigos com `view=ported`, `showPorted=1`, `kb=1`, `motion=1` ou
+   `scale=…` continuam abrindo: os parâmetros são ignorados.
+
 ## 0.6.0 (2026-08-13)
 
 ### Adicionado

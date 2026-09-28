@@ -36,7 +36,7 @@ export type DeployContext = {
   deploymentUrl: string | undefined;
   /** Nome da branch, para rotular a revisão na interface. */
   branch: string | undefined;
-  /** Commit exato, gravado junto com o status de aprovação do cenário. */
+  /** Commit exato do deployment, para rastrear a versão revisada. */
   commit: string | undefined;
   /** Primeiros 7 caracteres do commit. */
   shortCommit: string | undefined;
@@ -59,7 +59,7 @@ export function getDeployContext(overrides: DeployOverrides = {}): DeployContext
 
   // Preferência deliberada: a URL de branch é estável e sempre reflete o último
   // commit daquela branch, que é o que se quer ao circular um cenário em
-  // revisão (§10.2). A URL de commit entra no registro de aprovação, não aqui.
+  // revisão (§10.2). A URL de commit é montada por `commitUrl`, não aqui.
   const origin =
     (branchUrl && `https://${branchUrl}`) ||
     (deploymentUrl && `https://${deploymentUrl}`) ||
@@ -90,9 +90,8 @@ export function scenarioUrl(
   const url = new URL(scenario.route, origin);
 
   url.searchParams.set(PARAM.scenario, scenario.id);
-  url.searchParams.set(PARAM.persona, scenario.persona);
+  if (scenario.persona) url.searchParams.set(PARAM.persona, scenario.persona);
   url.searchParams.set(PARAM.fixture, scenario.fixture);
-  if (scenario.status === "ported") url.searchParams.set(PARAM.view, "ported");
   if (scenario.network && scenario.network !== "success") {
     url.searchParams.set(PARAM.network, scenario.network);
   }
@@ -126,8 +125,8 @@ export function componentUrl(
 }
 
 /**
- * URL imutável de aprovação (§10.2). Aponta para o commit exato, então a
- * aprovação não muda de conteúdo debaixo de quem aprovou.
+ * URL imutável de um cenário num commit exato (§10.2). Serve para citar em
+ * ticket ou thread uma versão que não muda de conteúdo depois de discutida.
  *
  * O formato da URL é do provedor, não do motor, então vem do produto como
  * template com `{commit}` ou `{shortCommit}`:
@@ -137,7 +136,7 @@ export function componentUrl(
  * commitUrl(scenario, { template: "https://{commit}.review.acme.dev" });
  * ```
  *
- * Sem commit não há aprovação rastreável, e a função devolve `undefined` em vez
+ * Sem commit não há versão rastreável, e a função devolve `undefined` em vez
  * de um link que aponta para o lugar errado.
  */
 export function commitUrl(

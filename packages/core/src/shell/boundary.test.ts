@@ -3,27 +3,28 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { SCENARIO_STATUSES } from "../types/index.js";
-import { contrastRatio } from "../a11y/contrast.js";
 
 /**
  * Trava da fronteira visual do motor.
  *
- * Existe por causa de um bug real: `.ds-root` definia `color` e `font-family`, e
- * como o palco é descendente dele, todo elemento do produto que não declarava cor
- * própria herdava o cinza-claro do chrome. O sintoma apareceu no axe do produto
- * piloto — tabelas reprovadas por contraste de 1.21:1 contra uma cor que o
- * cliente nunca escolheu.
+ * Desde a 0.8 a UI do produto roda num `<iframe>`, então o CSS do chrome não
+ * alcança o produto por herança. Continua alcançando por outro caminho: o mesmo
+ * bundle carrega `shell.css` também no documento do quadro. A garantia é que
+ * todo seletor comece em `.ds-` — no quadro não existe elemento `ds-` fora do
+ * estado vazio, então nada casa.
  *
- * O teste lê o CSS como texto de propósito. Não existe unidade de React que pegue
- * isso, e o custo de a regressão voltar é alto: ela reprova o CI de um produto por
- * um problema que não é dele.
+ * No sentido inverso, o CSS global do produto também carrega no documento do
+ * chrome. Por isso `.ds-root` precisa definir fundo, fonte e cor por conta
+ * própria, em vez de herdar do `body` que o produto estilizou.
+ *
+ * O teste lê o CSS como texto de propósito: não existe unidade de React que
+ * pegue isso.
  */
 
 const css = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "shell.css"),
   "utf8",
-);
+).replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** Corpo de uma regra CSS, pelo seletor exato. */
 function ruleBody(selector: string): string {
@@ -33,13 +34,7 @@ function ruleBody(selector: string): string {
   return css.slice(start, css.indexOf("}", start));
 }
 
-/**
- * Propriedades declaradas em uma regra, ignorando custom properties.
- *
- * Definir `--ds-font` em `.ds-root` é correto e necessário: custom property não
- * pinta nada por si, e as regiões do chrome precisam herdá-la. O que não pode é
- * `font:` de verdade.
- */
+/** Propriedades declaradas em uma regra, ignorando custom properties. */
 function declaredProperties(selector: string): string[] {
   return ruleBody(selector)
     .split(";")
@@ -48,91 +43,104 @@ function declaredProperties(selector: string): string[] {
     .map((property) => property.replace(/^\{\s*/, ""));
 }
 
+/** Todos os seletores do arquivo, um por item de lista, sem at-rules. */
+function selectors(): string[] {
+  return [...css.matchAll(/([^{}]+)\{/g)]
+    .map((match) => match[1]!.trim())
+    .filter((selector) => selector.length > 0 && !selector.startsWith("@"))
+    .flatMap((selector) => splitSelectorList(selector));
+}
+
+function splitSelectorList(selector: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of selector) {
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    if (char === "," && depth === 0) {
+      parts.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
 describe("fronteira visual", () => {
-  it("`.ds-root` não define propriedade herdável", () => {
-    const declared = declaredProperties(".ds-root");
-
-    // Layout e fundo podem ficar em `.ds-root`, porque não são herdados. Tudo que
-    // cascateia precisa viver em `.ds-chrome`, que o palco não é.
-    const inherited = [
-      "color",
-      "font",
-      "font-family",
-      "font-size",
-      "font-weight",
-      "line-height",
-      "letter-spacing",
-      "text-align",
-      "visibility",
-    ];
-
-    expect(
-      declared.filter((property) => inherited.includes(property)),
-      "Propriedade herdável em .ds-root vaza para a UI do produto. Mova para .ds-chrome.",
-    ).toEqual([]);
+  it("todo seletor começa numa classe `ds-`", () => {
+    const offenders = selectors().filter((selector) => !selector.startsWith(".ds-"));
+    expect(offenders, "Seletor fora do escopo do chrome alcança o documento do quadro.").toEqual([]);
   });
 
-  it("a tipografia do chrome vive em `.ds-chrome`", () => {
-    const declared = declaredProperties(".ds-chrome");
-    expect(declared).toContain("color");
-    expect(declared).toContain("font-family");
+  it("não existe regra em `:root`, `html`, `body` nem `*` solto", () => {
+    expect(css).not.toMatch(/(^|[\s,}])(:root|html|body)\b[^{]*\{/m);
+    expect(selectors().filter((selector) => selector.startsWith("*"))).toEqual([]);
   });
 
-  it("nenhum seletor alcança o palco a partir de `.ds-root`", () => {
-    // `.ds-root *` alcançaria todo elemento do produto. `.ds-chrome *` não.
-    const leaking = [...css.matchAll(/^\s*(\.ds-root\s+\*[^,{]*)/gm)].map((match) => match[1]);
-    expect(leaking).toEqual([]);
-  });
-
-  it("todo seletor de classe do motor é prefixado com `ds-`", () => {
+  it("toda classe e toda custom property são prefixadas", () => {
     const classes = [...css.matchAll(/\.([a-zA-Z][\w-]*)/g)]
       .map((match) => match[1]!)
       .filter((name) => !name.startsWith("ds-"));
     expect([...new Set(classes)]).toEqual([]);
-  });
 
-  it("todo estado de cenário tem indicador visual próprio", () => {
-    const missing = SCENARIO_STATUSES.filter(
-      (status) => !css.includes(`.ds-status-dot[data-status="${status}"]`),
-    );
-
-    expect(missing).toEqual([]);
-  });
-
-  it("o light mode redefine os tokens do chrome sem alcançar o palco", () => {
-    const light = ruleBody('.ds-root[data-appearance="light"]');
-    expect(light).toContain("--ds-bg: #eef1f6");
-    expect(light).toContain("--ds-fg: #172033");
-    expect(light).not.toMatch(/(?:^|;)\s*(?:color|font|background)\s*:/);
-  });
-
-  it("texto e ações do light mode preservam contraste AA", () => {
-    const canvas = "#eef1f6";
-    expect(contrastRatio("#172033", canvas)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio("#536078", canvas)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio("#626d80", canvas)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio("#ffffff", "#4f67d8")).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it("controles compactos compartilham uma única altura", () => {
-    expect(ruleBody(".ds-root")).toContain("--ds-control-h: 32px");
-    expect(ruleBody(".ds-btn")).toContain("height: var(--ds-control-h)");
-    expect(ruleBody(".ds-segmented button")).toContain("height: var(--ds-control-h)");
-    expect(ruleBody(".ds-select,\n.ds-input")).toContain("height: var(--ds-control-h)");
-  });
-
-  it("listas do inspector exibem marcadores próprios", () => {
-    expect(ruleBody(".ds-list")).toContain("list-style: none");
-    expect(ruleBody(".ds-list li::before")).toContain('content: "•"');
-  });
-
-  it("não existe regra em elemento nu sem escopo do chrome", () => {
-    // Uma regra como `button { … }` no CSS do motor redefiniria os botões do
-    // cliente. Toda regra de elemento tem que estar sob um seletor `ds-`.
-    const bareElementRules = [...css.matchAll(/^([a-z][a-z0-9]*(?:\s*,\s*[a-z][a-z0-9]*)*)\s*\{/gm)]
+    // Declaração de custom property: começa a linha ou vem depois de `{`/`;`.
+    // Um seletor como `.ds-item--stacked::before` não é declaração.
+    const properties = [...css.matchAll(/(?:^|[{;])\s*(--[\w-]+)\s*:/gm)]
       .map((match) => match[1]!)
-      .filter((selector) => !selector.startsWith("@"));
-    expect(bareElementRules).toEqual([]);
+      .filter((name) => !name.startsWith("--ds-"));
+    expect([...new Set(properties)]).toEqual([]);
+  });
+
+  it("`.ds-root` cobre a janela com fundo, fonte e cor próprios", () => {
+    const declared = declaredProperties(".ds-root");
+    for (const property of ["position", "inset", "background", "color", "font-family", "font-size"]) {
+      expect(declared, property).toContain(property);
+    }
+  });
+
+  it("os elementos do chrome voltam ao padrão antes do estilo do chrome", () => {
+    expect(ruleBody(".ds-root :where(*:not(svg, svg *))")).toContain("all: revert");
+  });
+
+  it("claro e escuro usam os tokens preto e branco combinados", () => {
+    const light = ruleBody(".ds-root");
+    expect(light).toContain("--ds-bg: #ffffff");
+    expect(light).toContain("--ds-fg: #0a0a0a");
+    expect(light).toContain("--ds-muted: #737373");
+    expect(light).toContain("--ds-border: #e5e5e5");
+    expect(light).toContain("--ds-surface: #fafafa");
+    expect(light).toContain("--ds-radius: 8px");
+    expect(light).toContain("--ds-tint: rgb(10 10 10 / 0.1)");
+    expect(light).toContain("--ds-fs: 13px");
+    expect(light).toContain("--ds-fs-sm: 12px");
+
+    const dark = ruleBody('.ds-root[data-appearance="dark"]');
+    expect(dark).toContain("--ds-bg: #0a0a0a");
+    expect(dark).toContain("--ds-fg: #fafafa");
+    expect(dark).toContain("--ds-muted: #a3a3a3");
+    expect(dark).toContain("--ds-border: #262626");
+    expect(dark).toContain("--ds-surface: #171717");
+    expect(dark).toContain("--ds-tint: rgb(250 250 250 / 0.12)");
+  });
+
+  it("a única cor além do preto, branco e cinzas é o vermelho do diagnóstico", () => {
+    const colors = [...css.matchAll(/#([0-9a-f]{3,8})\b/gi)].map((match) => match[1]!.toLowerCase());
+    const chromatic = colors.filter((hex) => {
+      const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex.slice(0, 6);
+      const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(full.slice(i, i + 2), 16));
+      return !(r === g && g === b);
+    });
+    expect([...new Set(chromatic)].sort()).toEqual(["dc2626", "f87171"]);
+    expect(ruleBody(".ds-diagnostics__trigger[data-level=\"error\"]")).toContain("var(--ds-danger)");
+  });
+
+  it("seleção é por tom: fundo a 10% da cor do texto, texto cheio", () => {
+    expect(css).toMatch(
+      /\.ds-item\[aria-current="true"\][^{]*\.ds-tab\[aria-selected="true"\]\s*\{\s*background: var\(--ds-tint\);\s*color: var\(--ds-fg\)/,
+    );
   });
 });
 

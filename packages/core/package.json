@@ -1,7 +1,7 @@
 {
   "name": "@brucesantos/design-space",
-  "version": "0.6.0",
-  "description": "Motor neutro do Bananas Design Space: registry de cenários, shell, deep links, controles de persona/viewport/rede, inspetor de regras e ferramentas de acessibilidade. Não contém UI de cliente.",
+  "version": "0.8.0",
+  "description": "Motor neutro do Bananas Design Space: telas como rotas com variações, catálogo de componentes, chrome em preto e branco com a UI do produto num iframe, deep links e controles de persona/viewport/rede. Não contém UI de cliente.",
   "type": "module",
   "license": "MIT",
   "author": "Bruno Santos (https://github.com/brucesantos)",
@@ -17,7 +17,7 @@
     "scenarios",
     "design-engineering",
     "react",
-    "a11y"
+    "component-catalog"
   ],
   "sideEffects": [
     "**/*.css"

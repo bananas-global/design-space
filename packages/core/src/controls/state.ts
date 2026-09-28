@@ -16,12 +16,12 @@
  * receber a persona, a fixture e o estado de rede corretos de brinde.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ChromeTheme,
   ControlsState,
   NetworkState,
-  ScenarioView,
+  PanelTab,
   ViewportSetting,
 } from "../types/index.js";
 import type { Registry } from "../registry/index.js";
@@ -33,17 +33,30 @@ import {
   handoffAllowsScenario,
   parseHandoffScope,
 } from "../handoff/index.js";
+import {
+  acceptFrameMessage,
+  fromFrameUrl,
+  postFrameMessage,
+  toFrameUrl,
+} from "../frame/index.js";
 
+/**
+ * Presets de viewport. A largura é a da janela que o produto enxerga dentro do
+ * quadro; a altura é a da janela e pode ser trocada com a largura (girar).
+ * `custom` só existe por URL (`viewport=custom&w=…`), para links antigos.
+ */
 export const VIEWPORTS: readonly ViewportSetting[] = [
+  { id: "mobile", label: "Celular", width: 375, height: 812 },
+  { id: "tablet", label: "Tablet", width: 768, height: 1024 },
+  { id: "desktop", label: "Desktop", width: 1280, height: 800 },
   { id: "fit", label: "Ajustar" },
-  { id: "mobile", label: "Celular", width: 390, height: 844 },
-  { id: "tablet", label: "Tablet", width: 834, height: 1112 },
-  { id: "desktop", label: "Desktop", width: 1440, height: 900 },
   { id: "custom", label: "Personalizado" },
 ] as const;
 
-export const TEXT_SCALES = [1, 1.25, 1.5, 2] as const;
-
+/** Faixa do zoom da visualização, em porcentagem. */
+export const ZOOM_MIN = 25;
+export const ZOOM_MAX = 150;
+export const ZOOM_DEFAULT = 100;
 
 export type DesignSpaceLocation = {
   path: string;
@@ -73,20 +86,10 @@ export function parseControls(search: string, registry: Registry): ControlsState
     : undefined;
 
   const network = params.get(PARAM.network);
-  const scale = Number(params.get(PARAM.textScale));
-  const requestedView = params.get(PARAM.view);
-  const view: ScenarioView =
-    scenario?.status === "ported" ||
-    requestedView === "ported" ||
-    params.get(PARAM.showPorted) === "1"
-      ? "ported"
-      : "active";
 
   return {
     scenario: scenario?.id,
     handoff,
-    view,
-    showPorted: view === "ported",
     component: component?.id,
     persona: params.get(PARAM.persona) ?? scenario?.persona,
     fixture: component ? componentFixture : requestedFixture ?? scenario?.fixture,
@@ -96,16 +99,20 @@ export function parseControls(search: string, registry: Registry): ControlsState
     themeMode: params.get(PARAM.themeMode) ?? registry.product.theme?.modes?.[0],
     locale: params.get(PARAM.locale) ?? registry.product.theme?.locales?.[0],
     dataSource: params.get(PARAM.dataSource) ?? registry.product.dataSources?.default ?? "fixtures",
+    // Sem parâmetro, o tema do chrome fica em aberto: o shell resolve pela
+    // última escolha da pessoa e, na falta dela, pelo sistema.
     chromeTheme: isChromeTheme(params.get(PARAM.chromeTheme))
       ? (params.get(PARAM.chromeTheme) as ChromeTheme)
-      : "dark",
+      : undefined,
     // Chrome visível por padrão. `?chrome=0` é o modo de revisão limpa e captura
     // de tela, então precisa ser explícito para não sumir sem pedido.
     chrome: params.get(PARAM.chrome) !== "0",
-    keyboardMode: params.get(PARAM.keyboardMode) === "1",
-    reducedMotion: params.get(PARAM.reducedMotion) === "1",
-    textScale: (TEXT_SCALES as readonly number[]).includes(scale) ? scale : 1,
     inspector: params.get(PARAM.inspector) !== "0",
+    panelTab: isPanelTab(params.get(PARAM.panelTab))
+      ? (params.get(PARAM.panelTab) as PanelTab)
+      : "variations",
+    zoom: clampZoom(params.get(PARAM.zoom)),
+    rotated: params.get(PARAM.rotated) === "1",
   };
 }
 
@@ -119,8 +126,6 @@ export function serializeControls(state: ControlsState, registry: Registry): str
 
   if (state.component) params.set(PARAM.component, state.component);
   else if (state.scenario) params.set(PARAM.scenario, state.scenario);
-
-  if (scenarioView(state) === "ported") params.set(PARAM.view, "ported");
 
   // Persona e fixture só entram quando divergem do cenário: um link com a
   // combinação declarada não precisa repeti-la, e um link com combinação
@@ -154,13 +159,14 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   if (state.dataSource && state.dataSource !== defaultSource) {
     params.set(PARAM.dataSource, state.dataSource);
   }
-  if (state.chromeTheme === "light") params.set(PARAM.chromeTheme, "light");
+  if (state.chromeTheme) params.set(PARAM.chromeTheme, state.chromeTheme);
 
   if (!state.chrome) params.set(PARAM.chrome, "0");
-  if (state.keyboardMode) params.set(PARAM.keyboardMode, "1");
-  if (state.reducedMotion) params.set(PARAM.reducedMotion, "1");
-  if (state.textScale !== 1) params.set(PARAM.textScale, String(state.textScale));
   if (!state.inspector) params.set(PARAM.inspector, "0");
+  if (state.panelTab === "info") params.set(PARAM.panelTab, "info");
+  const zoom = clampZoom(state.zoom === undefined ? null : String(state.zoom));
+  if (zoom !== ZOOM_DEFAULT) params.set(PARAM.zoom, String(zoom));
+  if (state.rotated) params.set(PARAM.rotated, "1");
   applyHandoffScope(params, state.handoff);
 
   const query = params.toString();
@@ -173,19 +179,36 @@ export type DesignSpaceState = {
   viewport: ViewportSetting;
   /** Altera um ou mais controles, preservando a rota. */
   setControls: (patch: Partial<ControlsState>) => void;
-  /** Troca entre trabalho ativo e referências portadas sem misturar coleções. */
-  setScenarioView: (view: ScenarioView) => void;
   /** Navega para uma rota, preservando os controles ativos. */
   navigate: (to: string, options?: { replace?: boolean }) => void;
   /**
    * Abre um cenário: vai para a rota dele e reseta persona, fixture e rede para
-   * o que o cenário declara. Controles de ambiente (viewport, chrome, texto)
+   * o que o cenário declara. Controles de ambiente (viewport, chrome, tema)
    * são preservados de propósito — quem está revisando no celular não quer
    * voltar ao desktop a cada troca de situação.
    */
   openScenario: (scenarioId: string) => void;
   /** Abre uma referência do catálogo de componentes. */
-  openComponent: (componentId: string) => void;
+  openComponent: (componentId: string, options?: { replace?: boolean }) => void;
+  /**
+   * Abre uma tela: a primeira variação visível ou, sem variação, a rota crua,
+   * sem cenário, persona nem fixture.
+   */
+  openScreen: (screenId: string, options?: { replace?: boolean }) => void;
+  /**
+   * Vai para um endereço exato, sem herdar a query atual. É o que o chrome usa
+   * para adotar a navegação que aconteceu dentro do quadro.
+   */
+  go: (path: string, search: string, options?: { replace?: boolean }) => void;
+};
+
+export type DesignSpaceStateOptions = {
+  /**
+   * Modo quadro: o documento é o `<iframe>` do chrome. A navegação troca o
+   * endereço do próprio quadro sem criar entrada de histórico — o histórico é
+   * do pai — e avisa o pai; o pai manda o estado novo por mensagem.
+   */
+  frame?: boolean;
 };
 
 /**
@@ -193,8 +216,14 @@ export type DesignSpaceState = {
  * diretamente, sem router externo, e escuta `popstate` para que voltar e
  * avançar no navegador funcionem como o usuário espera.
  */
-export function useDesignSpaceState(registry: Registry): DesignSpaceState {
+export function useDesignSpaceState(
+  registry: Registry,
+  options: DesignSpaceStateOptions = {},
+): DesignSpaceState {
+  const frame = Boolean(options.frame);
   const [location, setLocation] = useState<DesignSpaceLocation>(() => currentLocation());
+  const locationRef = useRef(location);
+  locationRef.current = location;
 
   useEffect(() => {
     const onPopState = () => setLocation(currentLocation());
@@ -202,53 +231,58 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  // Quadro: recebe estado do pai e avisa que montou. O pai decide se o endereço
+  // de montagem ainda é o certo — pode ter mudado enquanto o quadro carregava.
+  useEffect(() => {
+    if (!frame || window.parent === window) return;
+    const origin = window.location.origin;
+    const onMessage = (event: MessageEvent) => {
+      const message = acceptFrameMessage(event, { origin, source: window.parent });
+      if (message?.type !== "location") return;
+      const { path, search } = fromFrameUrl(message.url);
+      window.history.replaceState(null, "", toFrameUrl(path, search));
+      setLocation({ path, search });
+    };
+    window.addEventListener("message", onMessage);
+    const here = currentLocation();
+    postFrameMessage(
+      window.parent,
+      { ds: 1, type: "ready", url: toFrameUrl(here.path, here.search) },
+      origin,
+    );
+    return () => window.removeEventListener("message", onMessage);
+  }, [frame]);
+
   const controls = useMemo(() => parseControls(location.search, registry), [location.search, registry]);
 
-  const push = useCallback((path: string, search: string, replace = false) => {
-    const url = `${path}${search}`;
-    if (replace) window.history.replaceState(null, "", url);
-    else window.history.pushState(null, "", url);
-    setLocation({ path, search });
-  }, []);
+  const push = useCallback(
+    (path: string, search: string, replace = false) => {
+      if (frame) {
+        const url = toFrameUrl(path, search);
+        const clean = fromFrameUrl(url);
+        window.history.replaceState(null, "", url);
+        setLocation(clean);
+        postFrameMessage(
+          window.parent === window ? undefined : window.parent,
+          { ds: 1, type: "navigate", url, replace },
+          window.location.origin,
+        );
+        return;
+      }
+      const url = `${path}${search}`;
+      if (replace) window.history.replaceState(null, "", url);
+      else window.history.pushState(null, "", url);
+      setLocation({ path, search });
+    },
+    [frame],
+  );
 
   const setControls = useCallback(
     (patch: Partial<ControlsState>) => {
-      const patchedView =
-        patch.view ??
-        (patch.showPorted === undefined ? undefined : patch.showPorted ? "ported" : "active");
-      const next = {
-        ...controls,
-        ...patch,
-        ...(patchedView
-          ? { view: patchedView, showPorted: patchedView === "ported" }
-          : {}),
-      };
+      const next = { ...controls, ...patch };
       // Troca de controle é replace, não push: o histórico do navegador deve
       // registrar navegação entre situações, não cada ajuste de viewport.
       push(location.path, serializeControls(next, registry), true);
-    },
-    [controls, location.path, push, registry],
-  );
-
-  const setScenarioView = useCallback(
-    (view: ScenarioView) => {
-      const scenario = registry.scenario(controls.scenario);
-      const scenarioBelongsToView =
-        !scenario || (view === "ported" ? scenario.status === "ported" : scenario.status !== "ported");
-      const next: ControlsState = {
-        ...controls,
-        view,
-        showPorted: view === "ported",
-        ...(scenarioBelongsToView
-          ? {}
-          : {
-              scenario: undefined,
-              persona: undefined,
-              fixture: undefined,
-              network: "success",
-            }),
-      };
-      push(scenarioBelongsToView ? location.path : "/", serializeControls(next, registry), false);
     },
     [controls, location.path, push, registry],
   );
@@ -277,8 +311,6 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
       const next: ControlsState = {
         ...controls,
         scenario: scenario.id,
-        view: scenario.status === "ported" ? "ported" : "active",
-        showPorted: scenario.status === "ported",
         component: undefined,
         persona: scenario.persona,
         fixture: scenario.fixture,
@@ -290,7 +322,7 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
   );
 
   const openComponent = useCallback(
-    (componentId: string) => {
+    (componentId: string, openOptions?: { replace?: boolean }) => {
       const component = registry.component(componentId);
       if (!component || !handoffAllowsComponent(controls.handoff, componentId)) return;
 
@@ -305,9 +337,45 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
       next.fixture =
         registry.componentFixture(component.id, component.defaultFixture)?.id ??
         component.fixtures?.[0]?.id;
-      push("/", serializeControls(next, registry), false);
+      push("/", serializeControls(next, registry), openOptions?.replace ?? false);
     },
     [controls, push, registry],
+  );
+
+  const openScreen = useCallback(
+    (screenId: string, openOptions?: { replace?: boolean }) => {
+      const screen = registry.screensFor({ handoff: controls.handoff }).find((s) => s.id === screenId);
+      if (!screen) return;
+      const first = screen.variations[0];
+      if (first) {
+        const next: ControlsState = {
+          ...controls,
+          scenario: first.id,
+          component: undefined,
+          persona: first.persona,
+          fixture: first.fixture,
+          network: first.network ?? "success",
+        };
+        push(first.route, serializeControls(next, registry), openOptions?.replace ?? false);
+        return;
+      }
+      const next: ControlsState = {
+        ...controls,
+        scenario: undefined,
+        component: undefined,
+        persona: undefined,
+        fixture: undefined,
+        network: "success",
+      };
+      push(screen.href, serializeControls(next, registry), openOptions?.replace ?? false);
+    },
+    [controls, push, registry],
+  );
+
+  const go = useCallback(
+    (path: string, search: string, goOptions?: { replace?: boolean }) =>
+      push(path || "/", search, goOptions?.replace ?? false),
+    [push],
   );
 
   const viewport = useMemo(() => resolveViewport(controls), [controls]);
@@ -317,24 +385,35 @@ export function useDesignSpaceState(registry: Registry): DesignSpaceState {
     controls,
     viewport,
     setControls,
-    setScenarioView,
     navigate,
     openScenario,
     openComponent,
+    openScreen,
+    go,
   };
 }
 
-/** Resolve objetos 0.4.0 que ainda só carregam `showPorted`. */
-export function scenarioView(state: Pick<ControlsState, "view" | "showPorted">): ScenarioView {
-  return state.view ?? (state.showPorted ? "ported" : "active");
-}
-
 export function resolveViewport(controls: ControlsState): ViewportSetting {
-  const preset = VIEWPORTS.find((v) => v.id === controls.viewport);
   if (controls.viewport === "custom") {
     return { id: "custom", label: "Personalizado", width: controls.customWidth ?? 1024 };
   }
-  return preset ?? { id: "fit", label: "Ajustar" };
+  const preset = VIEWPORTS.find((v) => v.id === controls.viewport) ?? {
+    id: "fit",
+    label: "Ajustar",
+  };
+  // Girar só faz sentido quando existe altura para trocar com a largura.
+  if (controls.rotated && preset.width && preset.height) {
+    return { ...preset, width: preset.height, height: preset.width };
+  }
+  return { ...preset };
+}
+
+/** Zoom válido a partir do texto da URL: inteiro entre 25 e 150, ou 100. */
+export function clampZoom(value: string | null): number {
+  if (value === null) return ZOOM_DEFAULT;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return ZOOM_DEFAULT;
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, parsed));
 }
 
 function currentLocation(): DesignSpaceLocation {
@@ -348,6 +427,10 @@ function isNetworkState(value: string | null): value is NetworkState {
 
 function isChromeTheme(value: string | null): value is ChromeTheme {
   return value === "dark" || value === "light";
+}
+
+function isPanelTab(value: string | null): value is PanelTab {
+  return value === "variations" || value === "info";
 }
 
 function positiveInt(value: string | null): number | undefined {

@@ -50,7 +50,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Contrato de cenário, regras e contraste dos tokens
+      - name: Contrato de cenário e regras
         run: pnpm test
 
       - name: Instalar a CLI da Vercel
@@ -76,7 +76,7 @@ jobs:
       # foram testados e falharam.
       #
       # Sem isso o cabeçalho da revisão mostra "development" e fica sem branch nem
-      # commit, e é o commit que torna uma aprovação rastreável.
+      # commit, e é o commit que torna uma revisão rastreável.
       - name: Gravar o contexto do deployment
         run: |
           cat > build-info.json <<JSON
@@ -99,7 +99,7 @@ jobs:
       - name: Instalar navegador
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Jornada e axe contra o que foi publicado
+      - name: Jornadas contra o que foi publicado
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
         run: pnpm test:e2e

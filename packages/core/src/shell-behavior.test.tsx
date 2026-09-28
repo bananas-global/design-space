@@ -1,91 +1,128 @@
-import { act, createElement } from "react";
-import { createRoot } from "react-dom/client";
-import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { createRegistry } from "./registry/index.js";
-import { Controls } from "./shell/Controls.js";
 import { DesignSpace } from "./shell/DesignSpace.js";
-import { Home } from "./shell/Home.js";
-import { Inspector } from "./shell/Inspector.js";
-import { LabelsContext, DEFAULT_LABELS } from "./shell/labels.js";
-import { Sidebar } from "./shell/Sidebar.js";
+import { DEFAULT_LABELS } from "./shell/labels.js";
+import { FRAME_PARAM } from "./frame/index.js";
 import type {
   ComponentPreviewProps,
-  ControlsState,
   ProductDefinition,
-  Scenario,
+  ScreenProps,
 } from "./types/index.js";
-import { SCENARIO_STATUSES } from "./types/index.js";
 
 beforeAll(() => {
-  const environment = globalThis as typeof globalThis & {
-    IS_REACT_ACT_ENVIRONMENT: boolean;
-  };
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean };
   environment.IS_REACT_ACT_ENVIRONMENT = true;
 });
 
-const controls: ControlsState = {
-  scenario: undefined,
-  view: "active",
-  component: undefined,
-  persona: undefined,
-  fixture: undefined,
-  network: "success",
-  viewport: "fit",
-  customWidth: undefined,
-  themeMode: undefined,
-  locale: undefined,
-  dataSource: "fixtures",
-  chromeTheme: "dark",
-  chrome: true,
-  keyboardMode: false,
-  reducedMotion: false,
-  textScale: 1,
-  inspector: true,
-};
+function RequestScreen({ params, context }: ScreenProps) {
+  return (
+    <main data-testid="screen">
+      <h1>{`Request ${params.id ?? "queue"}`}</h1>
+      <output data-testid="data">{JSON.stringify(context.data ?? null)}</output>
+      <output data-testid="persona">{context.persona?.id ?? "none"}</output>
+      <a href="/requests/REQ-9">open</a>
+    </main>
+  );
+}
 
-const portedScenario: Scenario = {
-  id: "requests.imported",
-  title: "Imported reference",
-  route: "/requests/imported",
-  persona: "reviewer",
-  fixture: "request-imported",
-  a11y: { keyboard: "full", contrast: "AA" },
-  status: "ported",
-};
-
-const activeScenario: Scenario = {
-  id: "billing.review",
-  title: "Active review",
-  route: "/billing/review",
-  persona: "reviewer",
-  fixture: "request-imported",
-  a11y: { keyboard: "full", contrast: "AA" },
-  status: "in-review",
-};
+function ButtonPreview({ data }: ComponentPreviewProps<{ label: string }>) {
+  return <button type="button">{data?.label ?? "empty"}</button>;
+}
 
 function product(overrides: Partial<ProductDefinition> = {}): ProductDefinition {
   return {
     id: "reference",
     name: "Reference",
-    modules: [
-      { id: "requests", name: "Requests" },
-      { id: "billing", name: "Billing" },
-      { id: "empty", name: "Empty module" },
+    personas: [
+      { id: "reviewer", name: "Reviewer", permissions: ["requests.read"] },
+      { id: "requester", name: "Requester", permissions: [] },
     ],
-    scenarios: [portedScenario],
-    personas: [{ id: "reviewer", name: "Reviewer", permissions: [] }],
-    fixtures: [{ id: "request-imported", label: "Imported", data: {} }],
-    routes: [{ path: "/requests/:id", screen: () => null }],
+    fixtures: [
+      { id: "queue", label: "Queue", data: { total: 3 } },
+      { id: "detail", label: "Detail", data: { id: "REQ-1" } },
+    ],
+    routes: [
+      { path: "/requests", screen: RequestScreen, name: "Request queue" },
+      { path: "/requests/:id", screen: RequestScreen, name: "Request detail" },
+    ],
+    scenarios: [
+      {
+        id: "queue",
+        title: "Full queue",
+        intent: "See everything waiting.",
+        route: "/requests",
+        persona: "reviewer",
+        fixture: "queue",
+        expected: ["Three requests are listed."],
+        components: ["actions.button"],
+      },
+      {
+        id: "queue-empty",
+        title: "Empty queue",
+        intent: "Explain the empty state.",
+        route: "/requests",
+        persona: "reviewer",
+        fixture: "queue",
+        network: "empty",
+        expected: ["The empty state explains what to do."],
+      },
+      {
+        id: "detail",
+        title: "Detail",
+        route: "/requests/REQ-1",
+        persona: "reviewer",
+        fixture: "detail",
+        expected: ["The detail opens."],
+      },
+    ],
+    components: [
+      {
+        id: "actions.button",
+        name: "Button",
+        group: "Actions",
+        source: "components/button.ex → button/1",
+        preview: ButtonPreview,
+        fixtures: [
+          { id: "default", label: "Default", data: { label: "Continue" } },
+          { id: "long", label: "Long label", data: { label: "Continue to the next step" } },
+        ],
+      },
+      { id: "feedback.notice", name: "Notice", group: "Feedback", preview: () => null },
+    ],
     ...overrides,
   };
 }
 
-function withLabels(node: React.ReactNode): string {
-  return renderToStaticMarkup(
-    <LabelsContext.Provider value={DEFAULT_LABELS}>{node}</LabelsContext.Provider>,
+let root: Root | undefined;
+
+async function mount(url: string, definition: ProductDefinition = product()) {
+  window.history.replaceState(null, "", url);
+  const container = document.createElement("div");
+  document.body.append(container);
+  root = createRoot(container);
+  await act(async () => {
+    root!.render(<DesignSpace product={definition} />);
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+  return container;
+}
+
+function button(container: HTMLElement, name: string): HTMLButtonElement {
+  const found = [...container.querySelectorAll("button")].find(
+    (item) => item.textContent?.trim() === name || item.getAttribute("aria-label") === name,
   );
+  if (!found) throw new Error(`Botão não encontrado: ${name}`);
+  return found;
+}
+
+async function click(element: Element) {
+  await act(async () => {
+    (element as HTMLElement).click();
+  });
 }
 
 function setInputValue(input: HTMLInputElement, value: string) {
@@ -95,533 +132,350 @@ function setInputValue(input: HTMLInputElement, value: string) {
 }
 
 afterEach(() => {
+  act(() => root?.unmount());
+  root = undefined;
   document.body.innerHTML = "";
   window.history.replaceState(null, "", "/");
-});
-
-describe("ported visibility in the shell", () => {
-  it("shows one active-work empty state with the references action for a ported-only product", () => {
-    const registry = createRegistry(product());
-    const markup = withLabels(
-      <Home
-        registry={registry}
-        view="active"
-        onViewChange={() => undefined}
-        onOpenScenario={() => undefined}
-      />,
-    );
-
-    expect(markup).toContain(DEFAULT_LABELS.home.noActiveWork);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
-    expect(markup).not.toContain(portedScenario.title);
-    expect(markup.match(/ds-home__empty/g)).toHaveLength(1);
-    expect(markup).not.toContain("Empty module");
-    expect(markup).toContain(DEFAULT_LABELS.home.statusLegend);
-    for (const status of SCENARIO_STATUSES) {
-      expect(markup).toContain(`data-status="${status}"`);
-      expect(markup).toContain(DEFAULT_LABELS.status[status]);
-      expect(markup).toContain(DEFAULT_LABELS.statusMeaning[status]);
-    }
-  });
-
-  it("shows one navigation empty state instead of empty module rows", () => {
-    const registry = createRegistry(product());
-    const markup = withLabels(
-      <Sidebar
-        registry={registry}
-        activeScenario={undefined}
-        activeComponent={undefined}
-        controls={controls}
-        onOpenScenario={() => undefined}
-        onOpenComponent={() => undefined}
-        onViewChange={() => undefined}
-      />,
-    );
-
-    expect(markup.match(/ds-sidebar__view-empty/g)).toHaveLength(1);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.noActiveWork);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
-    expect(markup).not.toContain(DEFAULT_LABELS.sidebar.emptyModule);
-    expect(markup).not.toContain("ds-module__count");
-    expect(markup).not.toContain("ds-module__chevron");
-  });
-
-  it("renders only ported scenarios in the references view", () => {
-    const registry = createRegistry(product());
-    const markup = withLabels(
-      <Home
-        registry={registry}
-        view="ported"
-        onViewChange={() => undefined}
-        onOpenScenario={() => undefined}
-      />,
-    );
-
-    expect(markup).toContain(portedScenario.title);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.backToActive);
-    expect(markup).not.toContain(DEFAULT_LABELS.home.noActiveWork);
-    expect(markup).not.toContain("Billing");
-    expect(markup).not.toContain("Empty module");
-  });
-
-  it("keeps active and ported scenarios separate in a mixed product home", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const markup = withLabels(
-      <Home
-        registry={registry}
-        view="active"
-        onViewChange={() => undefined}
-        onOpenScenario={() => undefined}
-      />,
-    );
-
-    expect(markup).toContain(activeScenario.title);
-    expect(markup).not.toContain(portedScenario.title);
-    expect(markup).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
-    expect(markup).not.toContain("Requests");
-    expect(markup).not.toContain("Empty module");
-  });
-
-  it("removes empty modules and exposes an accessible textual view selector", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const container = document.createElement("div");
-    const root = createRoot(container);
-
-    act(() => root.render(
-      <Sidebar
-        registry={registry}
-        activeScenario={activeScenario}
-        activeComponent={undefined}
-        controls={{ ...controls, scenario: activeScenario.id }}
-        onOpenScenario={() => undefined}
-        onOpenComponent={() => undefined}
-        onViewChange={() => undefined}
-      />,
-    ));
-
-    expect(container.textContent).toContain(activeScenario.title);
-    expect(container.textContent).not.toContain(portedScenario.title);
-    expect(container.textContent).not.toContain("Requests");
-    expect(container.textContent).not.toContain("Empty module");
-    const switcher = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.sidebar.viewPorted(1),
-    );
-    expect(switcher).toBeDefined();
-    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
-    expect(container.querySelector('[aria-label*="Trabalho ativo"]')).not.toBeNull();
-    act(() => root.unmount());
-  });
-
-  it("scopes search to the selected view", () => {
-    const registry = createRegistry(product({ scenarios: [activeScenario, portedScenario] }));
-    const container = document.createElement("div");
-    const root = createRoot(container);
-    act(() => root.render(
-      <LabelsContext.Provider value={DEFAULT_LABELS}>
-      <Sidebar
-        registry={registry}
-        activeScenario={undefined}
-        activeComponent={undefined}
-        controls={{ ...controls, view: "ported" }}
-        onOpenScenario={() => undefined}
-        onOpenComponent={() => undefined}
-        onViewChange={() => undefined}
-      />
-      </LabelsContext.Provider>,
-    ));
-
-    const input = container.querySelector('input[type="search"]') as HTMLInputElement;
-    act(() => setInputValue(input, "Active review"));
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.noMatch("Active review"));
-    expect(container.querySelectorAll(".ds-scenario")).toHaveLength(0);
-
-    act(() => setInputValue(input, "Imported reference"));
-    expect(container.textContent).toContain(portedScenario.title);
-    expect(container.textContent).not.toContain(activeScenario.title);
-    expect(container.textContent).not.toContain("Empty module");
-    act(() => root.unmount());
-  });
-
-  it("restores view=ported on load and returns to active work without mixing the open collection", async () => {
-    const definition = product({ scenarios: [activeScenario, portedScenario] });
-    window.history.replaceState(null, "", "/?view=ported");
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={definition} />));
-
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(container.textContent).toContain(portedScenario.title);
-    expect(container.textContent).not.toContain(activeScenario.title);
-    expect(window.location.search).toBe("?view=ported");
-
-    const back = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.sidebar.backToActive,
-    );
-    await act(async () => back?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-
-    expect(window.location.pathname).toBe("/");
-    expect(window.location.search).toBe("");
-    expect(container.textContent).toContain(activeScenario.title);
-    expect(container.textContent).not.toContain(portedScenario.title);
-    await act(async () => root.unmount());
-  });
-
-  it("opens legacy showPorted=1 links in the references view", async () => {
-    window.history.replaceState(null, "", "/?showPorted=1");
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={product()} />));
-
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(container.textContent).toContain(portedScenario.title);
-    await act(async () => root.unmount());
-  });
-
-  it("infers the references view for a direct ported scenario deep link", async () => {
-    window.history.replaceState(
-      null,
-      "",
-      `/requests/imported?scenario=${portedScenario.id}`,
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={product()} />));
-
-    expect(container.textContent).toContain(DEFAULT_LABELS.sidebar.portedReferences(1));
-    expect(container.textContent).toContain(portedScenario.title);
-    expect(container.querySelector('[aria-current="true"]')?.textContent).toContain(
-      portedScenario.title,
-    );
-    await act(async () => root.unmount());
-  });
-});
-
-describe("component preview fixtures in the shell", () => {
-  it("renders the data selector only for components that declare fixtures", () => {
-    const definition = product({
-      components: [
-        { id: "feedback.notice", name: "Notice", preview: () => null },
-        {
-          id: "actions.button",
-          name: "Button",
-          preview: () => null,
-          fixtures: [{ id: "filled", label: "Filled", data: { label: "Continue" } }],
-        },
-      ],
-    });
-    const registry = createRegistry(definition);
-    const withoutFixtures = registry.component("feedback.notice");
-    const withFixtures = registry.component("actions.button");
-
-    const withoutMarkup = withLabels(
-      <Controls
-        registry={registry}
-        controls={{ ...controls, component: withoutFixtures?.id }}
-        scenarioActive={false}
-        component={withoutFixtures}
-        componentFixture={registry.resolveComponentFixture(withoutFixtures?.id, undefined)}
-        onChange={() => undefined}
-      />,
-    );
-    const withMarkup = withLabels(
-      <Controls
-        registry={registry}
-        controls={{ ...controls, component: withFixtures?.id, fixture: "filled" }}
-        scenarioActive={false}
-        component={withFixtures}
-        componentFixture={registry.resolveComponentFixture(withFixtures?.id, "filled")}
-        onChange={() => undefined}
-      />,
-    );
-
-    expect(withoutMarkup).not.toContain("ds-component-fixture");
-    expect(withMarkup).toContain("ds-component-fixture");
-    expect(withMarkup).toContain("Filled");
-  });
-
-  it("passes resolved fixture data and relevant controls without ScenarioContext", async () => {
-    let received: ComponentPreviewProps<{ label: string }> | undefined;
-    const Preview = (props: ComponentPreviewProps<{ label: string }>) => {
-      received = props;
-      return createElement("span", null, props.data?.label);
-    };
-    const definition = product({
-      theme: { modes: ["light", "dark"], locales: ["pt-BR", "en-US"] },
-      components: [{
-        id: "actions.button",
-        name: "Button",
-        preview: Preview,
-        fixtures: [{ id: "filled", label: "Filled", data: () => ({ label: "Continue" }) }],
-        defaultFixture: "filled",
-      }],
-    });
-    window.history.replaceState(
-      null,
-      "",
-      "/?component=actions.button&fixture=filled&viewport=mobile&theme=dark&locale=en-US&kb=1&motion=1&scale=1.5",
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-
-    await act(async () => root.render(<DesignSpace product={definition} />));
-
-    expect(received).toMatchObject({
-      fixture: { id: "filled", label: "Filled" },
-      data: { label: "Continue" },
-      viewport: { id: "mobile", width: 390, height: 844 },
-      themeMode: "dark",
-      locale: "en-US",
-      a11y: { keyboardMode: true, reducedMotion: true, textScale: 1.5 },
-    });
-    expect(received).not.toHaveProperty("scenario");
-    await act(async () => root.unmount());
-  });
-
-  it("makes an invalid fixture fallback explicit instead of failing silently", async () => {
-    const definition = product({
-      components: [{
-        id: "feedback.notice",
-        name: "Notice",
-        preview: ({ data }: ComponentPreviewProps<{ message: string }>) =>
-          createElement("span", null, data?.message),
-        fixtures: [{ id: "default", label: "Default", data: { message: "Ready" } }],
-      }],
-    });
-    window.history.replaceState(
-      null,
-      "",
-      "/?component=feedback.notice&fixture=missing",
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-
-    await act(async () => root.render(<DesignSpace product={definition} />));
-
-    expect(container.textContent).toContain("Ready");
-    expect(container.textContent).toContain("missing");
-    expect(container.textContent).toContain("fallback");
-    expect(window.location.search).toContain("fixture=missing");
-    await act(async () => root.unmount());
-  });
-});
-
-describe("handoff focado no shell", () => {
-  const hiddenScenario: Scenario = {
-    ...activeScenario,
-    id: "billing.hidden",
-    title: "Hidden review",
-    route: "/billing/hidden",
-  };
-
-  function scopedProduct(): ProductDefinition {
-    return product({
-      modules: [{
-        id: "billing",
-        name: "Billing",
-        flows: [{
-          id: "review",
-          title: "Review flow",
-          steps: [
-            { scenario: activeScenario.id, label: "Allowed step" },
-            { scenario: hiddenScenario.id, label: "Hidden step" },
-          ],
-        }],
-      }, { id: "requests", name: "Requests" }],
-      scenarios: [activeScenario, hiddenScenario, portedScenario],
-      routes: [
-        { path: "/billing/:id", screen: () => createElement("span", null, "SENSITIVE SCREEN") },
-        { path: "/requests/:id", screen: () => null },
-      ],
-      components: [
-        { id: "feedback.allowed", name: "Allowed component", preview: () => null },
-        { id: "feedback.hidden", name: "Hidden component", preview: () => null },
-      ],
-    });
+  try {
+    window.localStorage.clear();
+  } catch {
+    // sem armazenamento no ambiente
   }
+});
 
-  it("filtra Home, flows, portados e componentes pela allowlist", async () => {
-    const registry = createRegistry(scopedProduct());
-    const handoff = {
-      scenarios: [activeScenario.id, portedScenario.id],
-      components: ["feedback.allowed"],
-    };
-    const home = withLabels(
-      <Home
-        registry={registry}
-        view="active"
-        handoff={handoff}
-        onOpenScenario={() => undefined}
-      />,
-    );
-    expect(home).toContain(activeScenario.title);
-    expect(home).toContain("Allowed step");
-    expect(home).not.toContain(hiddenScenario.title);
-    expect(home).not.toContain("Hidden step");
-    expect(home).toContain(DEFAULT_LABELS.sidebar.viewPorted(1));
+describe("chrome", () => {
+  it("abre a raiz na primeira variação da primeira tela, sem Home", async () => {
+    const container = await mount("/");
+    expect(window.location.pathname).toBe("/requests");
+    expect(new URLSearchParams(window.location.search).get("scenario")).toBe("queue");
 
-    const container = document.createElement("div");
-    const root = createRoot(container);
-    await act(async () => root.render(
-      <LabelsContext.Provider value={DEFAULT_LABELS}>
-        <Sidebar
-          registry={registry}
-          activeScenario={activeScenario}
-          activeComponent={undefined}
-          controls={{ ...controls, handoff }}
-          onOpenScenario={() => undefined}
-          onOpenComponent={() => undefined}
-          onViewChange={() => undefined}
-        />
-      </LabelsContext.Provider>,
-    ));
-    const componentsTab = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.sidebar.componentsTab,
-    );
-    await act(async () => componentsTab?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(container.textContent).toContain("Allowed component");
-    expect(container.textContent).not.toContain("Hidden component");
-    await act(async () => root.unmount());
+    const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]");
+    expect(frame).not.toBeNull();
+    expect(frame!.getAttribute("src")).toBe(`/requests?scenario=queue&${FRAME_PARAM}=1`);
+    expect(container.querySelector(".ds-topbar")?.textContent).toContain("Reference");
   });
 
-  it("mostra bloqueio claro para URL fora do escopo e aceita rota autorizada", async () => {
-    const definition = scopedProduct();
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
+  it("abre no primeiro componente quando o produto não tem telas", async () => {
+    const container = await mount("/", product({ routes: [], scenarios: [] }));
+    expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");
+    // As duas abas ficam; a lateral abre em Componentes, e Telas explica onde
+    // as telas entram.
+    expect(container.querySelector(".ds-sidebar [role='tablist']")).not.toBeNull();
+    expect(container.querySelector(".ds-sidebar")?.textContent).toContain("Button");
+    await click(button(container, DEFAULT_LABELS.sidebar.screensTab));
+    expect(container.querySelector(".ds-sidebar")?.textContent).toContain(DEFAULT_LABELS.sidebar.emptyScreens);
+  });
 
-    window.history.replaceState(
-      null,
-      "",
-      "/billing/hidden?scenario=billing.hidden&handoff=1&allowScenario=billing.review",
-    );
-    await act(async () => root.render(<DesignSpace product={definition} />));
-    expect(container.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
-    expect(container.textContent).not.toContain("SENSITIVE SCREEN");
+  it("filtra o painel direito sem diferenciar acento, e Cmd+F foca o filtro", async () => {
+    const container = await mount("/requests?scenario=queue&tab=info");
+    const input = container.querySelector<HTMLInputElement>(`.ds-panel input[aria-label="${DEFAULT_LABELS.panel.searchLabel}"]`)!;
+    expect(input).not.toBeNull();
 
     await act(async () => {
-      window.history.replaceState(
-        null,
-        "",
-        "/billing/hidden?handoff=1&allowRoute=%2Fbilling%2F%3Aid",
-      );
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "f", metaKey: true }));
     });
-    expect(container.textContent).toContain("SENSITIVE SCREEN");
-    expect(container.textContent).not.toContain(DEFAULT_LABELS.shell.outsideHandoff);
-    await act(async () => root.unmount());
+    expect(document.activeElement).toBe(input);
+
+    const visibleRows = () =>
+      [...container.querySelectorAll<HTMLElement>(".ds-panel [data-ds-filter]")].filter((row) => !row.hidden);
+    const before = visibleRows().length;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "ROTA");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const after = visibleRows();
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.length).toBeLessThan(before);
+    expect(after.every((row) => row.textContent?.toLowerCase().includes("rota"))).toBe(true);
+
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "zzzz-nada");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(container.querySelector(".ds-panel")?.textContent).toContain(DEFAULT_LABELS.panel.noMatch("zzzz-nada"));
   });
 
-  it("preserva a allowlist quando a tela navega com query própria", async () => {
-    const navigable = scopedProduct();
-    navigable.routes = [{
-      path: "/billing/:id",
-      screen: ({ context }) => createElement(
-        "button",
-        { onClick: () => context.navigate("/billing/hidden?panel=0") },
-        "LEAVE SCOPE",
-      ),
-    }];
-    window.history.replaceState(
-      null,
-      "",
-      "/billing/review?scenario=billing.review&handoff=1&allowScenario=billing.review",
+  it("mostra Telas e Componentes, sem contagem fora da busca, e destaca o item ativo", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const tabs = [...container.querySelectorAll(".ds-sidebar [role='tab']")].map((tab) =>
+      tab.textContent?.replace(/\s+/g, " ").trim(),
     );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={navigable} />));
-
-    const leave = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "LEAVE SCOPE",
-    );
-    await act(async () => leave?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-
-    expect(window.location.pathname).toBe("/billing/hidden");
-    expect(window.location.search).toContain("handoff=1");
-    expect(window.location.search).toContain("allowScenario=billing.review");
-    expect(window.location.search).toContain("panel=0");
-    expect(container.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
-    await act(async () => root.unmount());
+    expect(tabs).toEqual([DEFAULT_LABELS.sidebar.screensTab, DEFAULT_LABELS.sidebar.componentsTab]);
+    const active = container.querySelector(".ds-sidebar [aria-current='true']");
+    expect(active?.textContent).toContain("Request queue");
   });
 
-  it("acrescenta o handoff a links internos da UI do produto", async () => {
-    const linked = scopedProduct();
-    linked.routes = [{
-      path: "/billing/:id",
-      screen: () => createElement(
-        "div",
-        null,
-        createElement("a", { href: "/billing/hidden?tab=details" }, "INTERNAL LINK"),
-        createElement("a", { href: "https://docs.example.test/guide" }, "EXTERNAL LINK"),
-      ),
-    }];
-    window.history.replaceState(
-      null,
-      "",
-      "/billing/review?scenario=billing.review&handoff=1&allowScenario=billing.review",
-    );
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    await act(async () => root.render(<DesignSpace product={linked} />));
+  it("busca sem diferenciar acento nem caixa, contando por aba", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const input = container.querySelector<HTMLInputElement>(".ds-sidebar input")!;
+    await act(async () => setInputValue(input, "BÚTTON"));
 
-    const anchors = [...container.querySelectorAll("a")];
-    const internal = anchors.find((anchor) => anchor.textContent === "INTERNAL LINK");
-    const external = anchors.find((anchor) => anchor.textContent === "EXTERNAL LINK");
-    expect(internal?.getAttribute("href")).toContain("tab=details");
-    expect(internal?.getAttribute("href")).toContain("handoff=1");
-    expect(internal?.getAttribute("href")).toContain("allowScenario=billing.review");
-    expect(external?.getAttribute("href")).toBe("https://docs.example.test/guide");
-    await act(async () => root.unmount());
+    const counts = [...container.querySelectorAll(".ds-sidebar [role='tab'] .ds-count")].map(
+      (item) => item.textContent,
+    );
+    expect(counts).toEqual(["0", "1"]);
+
+    await click(button(container, `${DEFAULT_LABELS.sidebar.componentsTab}1`));
+    expect(container.querySelector(".ds-sidebar__list")?.textContent).toContain("Button");
+    expect(container.querySelector(".ds-sidebar__list")?.textContent).not.toContain("Notice");
+  });
+
+  it("lista as variações da tela e troca de variação pela URL", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain("Full queue");
+    expect(panel.textContent).toContain("See everything waiting.");
+    expect(panel.textContent).toContain("Empty queue");
+
+    await click(button(container, "Empty queueExplain the empty state."));
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("scenario")).toBe("queue-empty");
+    expect(window.location.pathname).toBe("/requests");
+  });
+
+  it("Informações da tela mostram rota, comportamento esperado e componentes com origem", async () => {
+    const container = await mount("/requests?scenario=queue&tab=info");
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain("/requests");
+    expect(panel.textContent).toContain(DEFAULT_LABELS.info.expected);
+    expect(panel.textContent).toContain("Three requests are listed.");
+    expect(panel.textContent).toContain("components/button.ex → button/1");
+    expect(() => button(container, DEFAULT_LABELS.info.copyForPr)).not.toThrow();
+
+    await click(button(container, "Button"));
+    expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");
+  });
+
+  it("Informações do componente mostram origem e onde é usado, com link", async () => {
+    const container = await mount("/?component=actions.button&tab=info");
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain("components/button.ex → button/1");
+    expect(panel.textContent).toContain(DEFAULT_LABELS.info.usedIn);
+
+    await click(button(container, "Request queue"));
+    expect(window.location.pathname).toBe("/requests");
+    expect(new URLSearchParams(window.location.search).get("scenario")).toBe("queue");
+  });
+
+  it("as variações de um componente são as fixtures dele", async () => {
+    const container = await mount("/?component=actions.button");
+    await click(button(container, "Long label"));
+    expect(new URLSearchParams(window.location.search).get("fixture")).toBe("long");
+  });
+
+  it("viewport, girar e zoom vão para a URL e para o tamanho do quadro", async () => {
+    const container = await mount("/requests?scenario=queue");
+    await click(button(container, DEFAULT_LABELS.viewport.mobile!));
+    const frame = () => container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!;
+    expect(new URLSearchParams(window.location.search).get("viewport")).toBe("mobile");
+    expect(frame().style.width).toBe("375px");
+    expect(frame().style.height).toBe("812px");
+
+    await click(button(container, DEFAULT_LABELS.topbar.rotate));
+    expect(frame().style.width).toBe("812px");
+
+    await click(button(container, DEFAULT_LABELS.topbar.zoomOut));
+    expect(new URLSearchParams(window.location.search).get("zoom")).toBe("90");
+    expect(frame().style.transform).toBe("scale(0.9)");
+  });
+
+  it("Shift+C esconde o chrome e o botão discreto o traz de volta", async () => {
+    const container = await mount("/requests?scenario=queue");
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "C", shiftKey: true }));
+    });
+    expect(container.querySelector(".ds-root")?.getAttribute("data-chrome")).toBe("hidden");
+    expect(container.querySelector(".ds-topbar")).toBeNull();
+    expect(new URLSearchParams(window.location.search).get("chrome")).toBe("0");
+
+    await click(container.querySelector(".ds-restore")!);
+    expect(container.querySelector(".ds-topbar")).not.toBeNull();
+  });
+
+  it("o painel fica sempre aberto com o chrome, e a barra mostra a versão do motor", async () => {
+    const container = await mount("/requests?scenario=queue");
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "P", shiftKey: true }));
+    });
+    expect(container.querySelector(".ds-panel")).not.toBeNull();
+    const version = container.querySelector<HTMLAnchorElement>(".ds-topbar__version");
+    expect(version?.textContent).toMatch(/^Design Space \d+\.\d+\.\d+$/);
+    expect(version?.href).toContain("npmjs.com/package/@brucesantos/design-space");
+  });
+
+  it("girar só vale para celular e tablet", async () => {
+    const desktop = await mount("/requests?scenario=queue&viewport=desktop");
+    expect(button(desktop, DEFAULT_LABELS.topbar.rotate).disabled).toBe(true);
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+    const mobile = await mount("/requests?scenario=queue&viewport=mobile");
+    expect(button(mobile, DEFAULT_LABELS.topbar.rotate).disabled).toBe(false);
+  });
+
+  it("segue o sistema por padrão e lembra a troca de tema", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const rootElement = () => container.querySelector(".ds-root")!;
+    expect(rootElement().getAttribute("data-appearance")).toBe("light");
+
+    await click(button(container, DEFAULT_LABELS.topbar.darkMode));
+    expect(rootElement().getAttribute("data-appearance")).toBe("dark");
+    expect(new URLSearchParams(window.location.search).get("appearance")).toBe("dark");
+    expect(window.localStorage.getItem("ds:appearance")).toBe("dark");
+  });
+
+  it("mostra o indicador de diagnóstico só quando há problema", async () => {
+    const clean = await mount("/requests?scenario=queue");
+    expect(clean.querySelector(".ds-diagnostics")).toBeNull();
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+
+    const broken = await mount(
+      "/requests?scenario=queue",
+      product({
+        scenarios: [
+          ...product().scenarios,
+          { id: "broken", title: "Broken", route: "/requests", fixture: "missing" },
+        ],
+      }),
+    );
+    const trigger = broken.querySelector<HTMLButtonElement>(".ds-diagnostics__trigger")!;
+    expect(trigger.getAttribute("data-level")).toBe("error");
+    await click(trigger);
+    expect(broken.querySelector(".ds-diagnostics__popover")?.textContent).toContain("missing");
+  });
+
+  it("estado vazio simples quando o produto não tem nada", async () => {
+    const container = await mount("/", product({ routes: [], scenarios: [], components: [] }));
+    expect(container.textContent).toContain(DEFAULT_LABELS.shell.empty);
+    expect(container.querySelector("iframe")).toBeNull();
+  });
+
+  it("filtra a navegação pelo handoff", async () => {
+    const container = await mount(
+      "/requests/REQ-1?scenario=detail&handoff=1&allowScenario=detail&allowComponent=feedback.notice",
+    );
+    const sidebar = container.querySelector(".ds-sidebar")!;
+    expect(sidebar.textContent).toContain("Request detail");
+    expect(sidebar.textContent).not.toContain("Request queue");
+    await click(button(container, DEFAULT_LABELS.sidebar.componentsTab));
+    expect(sidebar.textContent).toContain("Notice");
+    expect(sidebar.textContent).not.toContain("Button");
   });
 });
 
-describe("escopos autoexplicativos do Inspector", () => {
-  it("separa tarefa, contexto herdado, tela e produto e sinaliza aprovação incompleta", async () => {
-    const approvedWithoutRecord: Scenario = {
-      ...activeScenario,
-      status: "approved",
-      permissions: ["requests.read"],
-      expected: ["A decisão fica registrada."],
+describe("mensagens do quadro no chrome", () => {
+  function frameWindow(container: HTMLElement): Window {
+    return container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!.contentWindow!;
+  }
+
+  it("adota a navegação do quadro, mantendo os controles do chrome", async () => {
+    const container = await mount("/requests?scenario=queue&appearance=dark&zoom=75");
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          source: frameWindow(container),
+          data: {
+            ds: 1,
+            type: "navigate",
+            url: `/requests/REQ-1?scenario=detail&${FRAME_PARAM}=1`,
+            replace: false,
+          },
+        }),
+      );
+    });
+
+    expect(window.location.pathname).toBe("/requests/REQ-1");
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("scenario")).toBe("detail");
+    expect(params.get("appearance")).toBe("dark");
+    expect(params.get("zoom")).toBe("75");
+    expect(params.has(FRAME_PARAM)).toBe(false);
+  });
+
+  it("ignora mensagem de outra origem ou de outra janela", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const data = {
+      ds: 1,
+      type: "navigate",
+      url: `/requests/REQ-1?scenario=detail&${FRAME_PARAM}=1`,
+      replace: false,
     };
-    const registry = createRegistry(product({ scenarios: [approvedWithoutRecord] }));
-    const container = document.createElement("div");
-    const root = createRoot(container);
-    await act(async () => root.render(
-      <LabelsContext.Provider value={DEFAULT_LABELS}>
-        <Inspector
-          registry={registry}
-          scenario={approvedWithoutRecord}
-          controls={{ ...controls, scenario: approvedWithoutRecord.id }}
-          focusedNode={undefined}
-          tabStopCount={0}
-        />
-      </LabelsContext.Provider>,
-    ));
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: "https://evil.example.test",
+          source: frameWindow(container),
+          data,
+        }),
+      );
+      window.dispatchEvent(new MessageEvent("message", { origin: window.location.origin, source: window, data }));
+    });
+    expect(window.location.pathname).toBe("/requests");
+  });
 
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.taskScope);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.inheritedScope);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.approvalPendingStatus);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.approvalMissing);
+  it("atalho repassado pelo quadro esconde o chrome", async () => {
+    const container = await mount("/requests?scenario=queue");
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          source: frameWindow(container),
+          data: { ds: 1, type: "shortcut", key: "C" },
+        }),
+      );
+    });
+    expect(container.querySelector(".ds-root")?.getAttribute("data-chrome")).toBe("hidden");
+  });
+});
 
-    const a11y = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === DEFAULT_LABELS.inspector.tabA11y,
+describe("modo quadro", () => {
+  it("renderiza só a UI do produto, sem nenhum elemento do chrome", async () => {
+    const container = await mount(`/requests/REQ-1?scenario=detail&${FRAME_PARAM}=1`);
+    expect(container.querySelector("[data-testid='screen']")?.textContent).toContain("Request REQ-1");
+    expect(container.querySelector("[data-testid='data']")?.textContent).toBe('{"id":"REQ-1"}');
+    expect(container.querySelector("[data-testid='persona']")?.textContent).toBe("reviewer");
+    expect(container.querySelector("[class^='ds-'], [class*=' ds-']")).toBeNull();
+    expect(container.querySelector("iframe")).toBeNull();
+  });
+
+  it("renderiza o preview do componente com a fixture pedida", async () => {
+    const container = await mount(`/?component=actions.button&fixture=long&${FRAME_PARAM}=1`);
+    expect(container.textContent).toBe("Continue to the next step");
+  });
+
+  it("aplica persona e rede da URL do quadro", async () => {
+    const container = await mount(
+      `/requests?scenario=queue&persona=requester&network=empty&${FRAME_PARAM}=1`,
     );
-    await act(async () => a11y?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.screenScope);
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.productScope);
+    expect(container.querySelector("[data-testid='persona']")?.textContent).toBe("requester");
+    expect(container.querySelector("[data-testid='data']")?.textContent).toBe("null");
+  });
 
-    const diagnostics = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent?.startsWith(DEFAULT_LABELS.inspector.tabDiagnostics),
+  it("links internos navegam dentro do quadro, sem recarregar", async () => {
+    const container = await mount(`/requests?scenario=queue&${FRAME_PARAM}=1`);
+    await click(container.querySelector("a")!);
+    expect(window.location.pathname).toBe("/requests/REQ-9");
+    expect(new URLSearchParams(window.location.search).get(FRAME_PARAM)).toBe("1");
+    expect(container.querySelector("h1")?.textContent).toBe("Request REQ-9");
+  });
+
+  it("bloqueia endereço fora do handoff e preserva o recorte nos links", async () => {
+    const blocked = await mount(
+      `/requests?scenario=queue&handoff=1&allowScenario=detail&${FRAME_PARAM}=1`,
     );
-    await act(async () => diagnostics?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(container.textContent).toContain(DEFAULT_LABELS.inspector.diagnosticsProductNotice);
-    await act(async () => root.unmount());
+    expect(blocked.textContent).toContain(DEFAULT_LABELS.shell.outsideHandoff);
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+
+    const allowed = await mount(
+      `/requests/REQ-1?scenario=detail&handoff=1&allowScenario=detail&allowRoute=%2Frequests%2F%3Aid&${FRAME_PARAM}=1`,
+    );
+    const href = allowed.querySelector("a")?.getAttribute("href") ?? "";
+    const url = new URL(href, window.location.origin);
+    expect(url.searchParams.get("handoff")).toBe("1");
+    expect(url.searchParams.getAll("allowScenario")).toEqual(["detail"]);
   });
 });

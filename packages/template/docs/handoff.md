@@ -15,20 +15,26 @@ assumir que deve portar o React para o stack real linha por linha.
 ## O que precisa ir junto
 
 1. **URL de commit** do cenário, não a de branch. A URL de branch muda de
-   conteúdo a cada push, então uma aprovação registrada nela não é uma aprovação.
+   conteúdo a cada push, então o que foi combinado nela pode mudar depois.
 2. **Id do cenário**, para que a conversa aponte para a mesma situação.
 3. **Regras** que governam a situação, com id.
 4. **Critérios de aceite**, que vêm de `expected` no cenário.
 5. **Estados alcançáveis** — sucesso, vazio, erro, carregamento, sem permissão —
    e como abrir cada um por URL.
-6. **Contrato de acessibilidade**: cobertura de teclado, nível de contraste e os
-   eventos que precisam ser anunciados.
-7. **Assets** exclusivos, quando houver.
+6. **Assets** exclusivos, quando houver.
+
+## Copiar para o PR
+
+Na aba **Informações** de qualquer tela, **Copiar para o PR** gera o markdown
+pronto: nome da tela, link absoluto de cada variação no deployment atual (com o
+commit, quando o build informa), a tabela componente → origem (`source`) e o
+comportamento esperado (`expected`) de cada variação. Cole na descrição do PR.
 
 ## URL focada no trabalho autorizado
 
 Monte o endereço entregue à engenharia com um `HandoffScope`. Cenários listados
-aparecem na Home, busca, flows e navegação e autorizam as próprias rotas. Rotas
+aparecem como variações das suas telas, na busca e na navegação, e autorizam as
+próprias rotas. Rotas
 sem cenário e componentes isolados entram nas listas correspondentes.
 
 ```ts
@@ -43,15 +49,15 @@ const handoff = {
   components: ["actions.primary-button"],
 } satisfies HandoffScope;
 
-const implementationUrl = scenarioUrl(approvedScenario, {
-  origin: approvedOrigin,
+const implementationUrl = scenarioUrl(blockedScenario, {
+  origin: commitOrigin,
   overrides: { handoff },
 });
 ```
 
 O link continua reproduzindo viewport, tema, idioma e controles quando eles forem
-incluídos nos overrides. Home, busca, jornadas, referências portadas e catálogo
-visual mostram somente a allowlist. Abrir algo fora dela produz uma mensagem
+incluídos nos overrides. Telas, variações, busca e catálogo visual mostram
+somente a allowlist. Abrir algo fora dela produz uma mensagem
 explícita em vez de montar a tela solicitada.
 
 Esse recorte reduz ambiguidade e distração; **não é segurança**. O catálogo e o
@@ -65,11 +71,10 @@ proteja o ambiente com autenticação e autorização próprias.
 ## Cenário
 `requests.approve-blocked-by-rule` — Aprovação bloqueada por falta de documento
 
-## Referência aprovada
+## Referência
 <URL imutável de commit com o HandoffScope serializado>
 
 Commit: <sha completo>
-Status do cenário: aprovado
 
 ## Persona e permissões
 Aprovador · `requests.read`, `requests.approve`, `requests.reject`
@@ -83,7 +88,7 @@ Aprovador · `requests.read`, `requests.approve`, `requests.reject`
 
 ## Comportamento esperado
 - O botão Aprovar aparece desabilitado, não escondido.
-- O motivo aparece na tela e é associado ao botão para leitor de tela.
+- O motivo aparece na tela, junto do botão.
 - A ação de recusar continua disponível.
 
 ## Estados alcançáveis
@@ -95,11 +100,6 @@ Aprovador · `requests.read`, `requests.approve`, `requests.reject`
 | Carregando | `?scenario=requests.queue&network=loading` |
 | Sem permissão | `?scenario=requests.approve-no-permission` |
 
-## Acessibilidade
-- Jornada completável só por teclado.
-- Contraste WCAG 2.2 AA nos tokens em uso.
-- Anunciar: `request.decision`.
-
 ## Observação
 Especificação executável. O stack real deste produto é <stack>; traduzir
 comportamento, não portar componentes.
@@ -107,10 +107,8 @@ comportamento, não portar componentes.
 
 ## Depois do release
 
-QA e design comparam o implementado com o cenário aprovado. Diferença
+QA e design comparam o implementado com o cenário entregue. Diferença
 intencional atualiza o Design Space **ou** é registrada como decisão em
-`docs/decisions/`. Quando o comportamento chega em produção, o `status` do
-cenário vira `implemented` — e a partir daí o sistema real é a fonte de verdade
-do comportamento entregue, não este repositório.
-
-É esse passo que evita que a referência envelheça em silêncio.
+`docs/decisions/`. Quando o comportamento chega em produção, o sistema real passa
+a ser a fonte de verdade do comportamento entregue: o cenário que só existia para
+o handoff pode sair do repositório.

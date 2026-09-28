@@ -22,12 +22,16 @@ aparece na navegação e na busca, e o time passa a traduzir mentalmente.
 | Decisão | Aprovar ou recusar, sempre com registro. |
 | Documento | Anexo que comprova valor ou necessidade. |
 
-## Módulos
+## Telas
 
-### Solicitações
+Cada rota é uma tela; os cenários da rota são as variações dela.
 
-Registro, análise e decisão. Um único módulo de propósito: o template mostra a
-estrutura, não a extensão.
+| Tela | Rota | Variações |
+| --- | --- | --- |
+| Fila de solicitações | `/requests` | fila cheia, fila vazia |
+| Detalhe da solicitação | `/requests/:id` | aprovação permitida, bloqueada por regra, sem permissão |
+
+Duas telas de propósito: o template mostra a estrutura, não a extensão.
 
 ## Personas
 
@@ -56,7 +60,7 @@ O que existe hoje:
 | --- | --- | --- |
 | Fila com cinco solicitações | `requests.queue` | sucesso |
 | Fila vazia | `requests.queue-empty` | vazio |
-| Aprovação permitida | `requests.approve-allowed` | sucesso, anúncio |
+| Aprovação permitida | `requests.approve-allowed` | sucesso |
 | Aprovação bloqueada por falta de documento | `requests.approve-blocked-by-rule` | exceção, regra |
 | Sem permissão para decidir | `requests.approve-no-permission` | permissão |
 

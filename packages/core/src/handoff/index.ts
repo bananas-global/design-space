@@ -67,8 +67,9 @@ export function handoffAllowsComponent(
 }
 
 /**
- * A raiz é sempre permitida porque nela vive a Home já filtrada. Fora dela,
- * uma rota precisa estar explícita ou pertencer a um cenário permitido.
+ * A raiz é sempre permitida: o chrome a redireciona para o primeiro item do
+ * recorte. Fora dela, uma rota precisa estar explícita ou pertencer a um
+ * cenário permitido.
  */
 export function handoffAllowsPath(
   scope: HandoffScope | undefined,

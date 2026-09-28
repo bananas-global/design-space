@@ -9,15 +9,11 @@
 
 /* ------------------------------------- shell */
 export { DesignSpace, type DesignSpaceProps } from "./shell/DesignSpace.js";
-export { Stage, StageEmpty, TabOrderOverlay, type StageProps } from "./shell/Stage.js";
-export { Home, type HomeProps } from "./shell/Home.js";
+export { StageEmpty } from "./shell/Stage.js";
 export {
   DEFAULT_LABELS,
   EN_US_LABELS,
-  KEYBOARD_LABELS,
   NETWORK_LABELS,
-  STATUS_LABELS,
-  STATUS_MEANING,
   resolveLabels,
   useLabels,
   type Labels,
@@ -27,10 +23,11 @@ export {
 /* ---------------------------------- registry */
 export {
   createRegistry,
+  normalizeSearch,
   type ComponentFixtureResolution,
-  type ModuleNode,
   type Registry,
   type ScenarioQueryOptions,
+  type ScreenNode,
 } from "./registry/index.js";
 export {
   formatIssues,
@@ -45,15 +42,22 @@ export { matchPath, resolveRoute, type RouteMatch } from "./router/index.js";
 
 /* ---------------------------------- controls */
 export {
-  TEXT_SCALES,
   VIEWPORTS,
+  ZOOM_DEFAULT,
+  ZOOM_MAX,
+  ZOOM_MIN,
+  clampZoom,
   parseControls,
   resolveViewport,
   serializeControls,
   useDesignSpaceState,
   type DesignSpaceState,
+  type DesignSpaceStateOptions,
   type DesignSpaceLocation,
 } from "./controls/state.js";
+
+/* ------------------------------------- quadro */
+export { FRAME_ATTRIBUTE, FRAME_PARAM } from "./frame/index.js";
 export { PARAM, applyOverrides, serializeValue } from "./controls/params.js";
 
 /* ----------------------------------- handoff */
@@ -86,33 +90,6 @@ export {
   type DeployContext,
 } from "./deploy/index.js";
 
-/* -------------------------------------- a11y */
-export {
-  CONTRAST_THRESHOLDS,
-  assertContrastPairs,
-  checkContrastPair,
-  checkContrastPairs,
-  contrastRatio,
-  flatten,
-  parseColor,
-  readCssVariable,
-  relativeLuminance,
-  type ContrastResult,
-  type Rgb,
-} from "./a11y/contrast.js";
-export {
-  computeRole,
-  describeElement,
-  shortSelector,
-  tabbableElements,
-  type AccessibleNode,
-} from "./a11y/accessible-tree.js";
-export {
-  useKeyboardMode,
-  type KeyboardModeResult,
-  type TabStop,
-} from "./a11y/useKeyboardMode.js";
-
 /* -------------------------------- utilitários */
 /* Extraído por evidência, não por antecipação: os dois primeiros produtos
    escreveram a mesma correção de parse de data separadamente. */
@@ -121,10 +98,6 @@ export { ageInYears, daysBetween, parseIsoDate } from "./util/date.js";
 /* ------------------------------------- tipos */
 export {
   NETWORK_STATES,
-  SCENARIO_STATUSES,
-  type A11yContract,
-  type ContrastPair,
-  type ContrastTarget,
   type ComponentPreview,
   type ComponentPreviewFixture,
   type ComponentPreviewProps,
@@ -134,12 +107,9 @@ export {
   type DataRequest,
   type DataSourceAdapter,
   type Fixture,
-  type Flow,
-  type FlowStep,
   type HandoffScope,
-  type KeyboardCoverage,
-  type Module,
   type NetworkState,
+  type PanelTab,
   type Persona,
   type ProductDefinition,
   type ProductTheme,
@@ -147,8 +117,6 @@ export {
   type RouteDefinition,
   type Scenario,
   type ScenarioContext,
-  type ScenarioStatus,
-  type ScenarioView,
   type ScreenProps,
   type ViewportSetting,
 } from "./types/index.js";

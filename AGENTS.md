@@ -14,7 +14,7 @@ O motor compartilhado (`packages/core`) e o template de novos produtos
 ```bash
 pnpm install
 pnpm check                      # typecheck + build + testes de todos os pacotes
-pnpm -C packages/core test      # 67 testes unitários do motor
+pnpm -C packages/core test      # testes unitários do motor
 pnpm -C packages/template dev   # o motor rodando dentro de um produto de exemplo
 pnpm -C packages/template test:e2e
 ```
@@ -57,7 +57,7 @@ padrão é compartilhado pela convenção no template; o componente, não.
 - **Não** adicione um export ao `src/index.ts` sem necessidade. Aquela lista é um
   compromisso de versionamento semântico com todos os produtos.
 - **Não** adicione dependência de runtime. O motor tem `react` e `react-dom` como
-  peers e nada além disso. Roteamento, validação e medição de contraste são
+  peers e nada além disso. Roteamento e validação são
   implementados aqui de propósito, porque o que se precisa deles é pequeno.
 - **Não** cite provedor de hospedagem no motor, nem em comentário, e não volte a ler
   variável de ambiente em `deploy/`. Contexto de deployment vem do produto por
@@ -69,14 +69,26 @@ padrão é compartilhado pela convenção no template; o componente, não.
 - **Não** use nome de cliente nem vocabulário de um setor específico em comentário,
   exemplo ou fixture de teste do motor. Exemplo do motor é genérico: solicitação,
   aprovação, cobrança. Existe trava em `src/shell/boundary.test.ts`.
-- **Não** escreva CSS que possa alcançar a UI do produto. Todo seletor é
-  prefixado com `ds-`, toda custom property com `--ds-`, e não existe regra em
-  elemento nu fora de `.ds-root`.
+- **Não** escreva CSS que possa alcançar a UI do produto. A UI roda num
+  `<iframe>`, mas o mesmo bundle carrega `shell.css` no documento do quadro:
+  todo seletor começa em `.ds-`, toda custom property em `--ds-`, e não existe
+  regra em `:root`, `html`, `body` nem em elemento nu. Existe trava em
+  `src/shell/boundary.test.ts`.
+- **Não** confie no documento do chrome. O CSS global do produto também carrega
+  nele: `.ds-root` define fundo, fonte e cor, e todo elemento novo do chrome
+  precisa de classe `ds-` com o estilo completo.
+- **Não** dê cor, logo ou tema por produto ao chrome. Ele é preto e branco para
+  todos; a única cor é o vermelho do diagnóstico
+  ([0012](docs/decisions/0012-chrome-unico-telas-como-rotas-e-iframe.md)).
+- **Não** reintroduza módulo, jornada ou outra camada entre rota e cenário. Uma
+  tela é uma rota; as variações são os cenários da rota.
+- **Não** aceite `postMessage` sem checar `event.origin === location.origin` e
+  `event.source` contra a janela esperada. Use `acceptFrameMessage`.
 - **Não** mude o schema de cenário sem entrada no `CHANGELOG.md` e sem avaliar se
   é major. Mudança incompatível exige comando ou guia, nunca merge silencioso.
-- **Não** remova o `a11y` obrigatório do contrato de cenário, nem o torne
-  opcional "por conveniência de migração". Ele existe para que acessibilidade não
-  volte a ser auditoria de fim de projeto.
+- **Não** reintroduza `a11y`, `status` ou coleção de portados no contrato de
+  cenário sem uma decisão nova que revogue a
+  [0011](docs/decisions/0011-revoga-a11y-e-ciclo-de-vida.md).
 - **Não** faça push direto na `main`. Todo repositório da Bananas exige pull
   request — existe um ruleset ativo, e quem é admin passa por cima dele sem
   querer, com um aviso fácil de perder na saída do `git push`. Trabalhe em branch
@@ -88,8 +100,8 @@ padrão é compartilhado pela convenção no template; o componente, não.
 
 `docs/decisions/` deste repositório guarda as decisões **do modelo** — as que valem
 para todos os Design Spaces: fixture sintética como padrão, preview público,
-acessibilidade obrigatória no contrato de cenário, escopo do source mapping, ação
-bloqueada que explica o motivo.
+escopo do source mapping, ação bloqueada que explica o motivo, handoff como
+recorte de foco. Decisão revogada continua no diretório, marcada como tal.
 
 Repositório de produto registra apenas o que é dele: identidade visual, regra de
 negócio, recorte de escopo, divergência com o sistema real.
@@ -112,8 +124,8 @@ documento diz qual decisão ele abre e por quê, em vez de reescrevê-la.
 | `src/controls/` | Estado dos controles e sua serialização na URL. |
 | `src/adapters/` | Fontes de dados e resolução do cenário ativo. |
 | `src/deploy/` | Contexto de deployment e montagem de deep links. |
-| `src/a11y/` | Contraste, árvore acessível e modo teclado. |
-| `src/shell/` | Chrome neutro: mapa, navegação, painel, controles, palco. |
+| `src/frame/` | Protocolo entre o chrome e o quadro (`ds-frame=1`, `postMessage`). |
+| `src/shell/` | Chrome neutro: barra, Telas/Componentes, Variações/Informações, quadro. |
 | `src/testing/` | Entrypoint separado, fora do bundle do preview. |
 
 ## Ao mudar o motor

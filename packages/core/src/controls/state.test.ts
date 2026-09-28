@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseControls, serializeControls } from "./state.js";
+import { parseControls, resolveViewport, serializeControls } from "./state.js";
 import { createRegistry } from "../registry/index.js";
 import type { ProductDefinition, RouteDefinition } from "../types/index.js";
 
@@ -9,7 +9,6 @@ const preview = () => null;
 const registry = createRegistry({
   id: "acme",
   name: "Acme",
-  modules: [{ id: "requests", name: "Solicitações" }],
   scenarios: [
     {
       id: "requests.approve-blocked",
@@ -17,18 +16,13 @@ const registry = createRegistry({
       route: "/requests/REQ-2043",
       persona: "analyst",
       fixture: "request-blocked",
-      a11y: { keyboard: "full", contrast: "AA" },
-      status: "approved",
       network: "error",
     },
     {
       id: "requests.imported",
-      title: "Referência importada",
+      title: "Referência sem persona",
       route: "/requests/imported",
-      persona: "analyst",
       fixture: "request-approved",
-      a11y: { keyboard: "full", contrast: "AA" },
-      status: "ported",
     },
   ],
   personas: [
@@ -79,10 +73,9 @@ describe("parseControls", () => {
     expect(controls.network).toBe("success");
   });
 
-  it("ignora valor inválido de rede e de escala", () => {
-    const controls = parseControls("?network=explodiu&scale=7", registry);
+  it("ignora valor inválido de rede", () => {
+    const controls = parseControls("?network=explodiu", registry);
     expect(controls.network).toBe("success");
-    expect(controls.textScale).toBe(1);
   });
 
   it("mantém o chrome visível a não ser que a URL peça o contrário", () => {
@@ -90,12 +83,31 @@ describe("parseControls", () => {
     expect(parseControls("?chrome=0", registry).chrome).toBe(false);
   });
 
-  it("usa dark por padrão e persiste light na URL", () => {
-    expect(parseControls("", registry).chromeTheme).toBe("dark");
+  it("deixa o tema do chrome em aberto sem parâmetro e persiste os dois temas", () => {
+    expect(parseControls("", registry).chromeTheme).toBeUndefined();
     const light = parseControls("?appearance=light", registry);
     expect(light.chromeTheme).toBe("light");
     expect(serializeControls(light, registry)).toBe("?appearance=light");
-    expect(parseControls("?appearance=desconhecido", registry).chromeTheme).toBe("dark");
+    const dark = parseControls("?appearance=dark", registry);
+    expect(serializeControls(dark, registry)).toBe("?appearance=dark");
+    expect(parseControls("?appearance=desconhecido", registry).chromeTheme).toBeUndefined();
+  });
+
+  it("lê zoom dentro da faixa, girar e aba do painel", () => {
+    expect(parseControls("", registry)).toMatchObject({
+      zoom: 100,
+      rotated: false,
+      panelTab: "variations",
+    });
+    expect(parseControls("?zoom=50&rotate=1&tab=info", registry)).toMatchObject({
+      zoom: 50,
+      rotated: true,
+      panelTab: "info",
+    });
+    expect(parseControls("?zoom=5", registry).zoom).toBe(25);
+    expect(parseControls("?zoom=900", registry).zoom).toBe(150);
+    expect(parseControls("?zoom=abc", registry).zoom).toBe(100);
+    expect(parseControls("?tab=outra", registry).panelTab).toBe("variations");
   });
 
   it("abre componente por deep link sem manter cenário ativo", () => {
@@ -138,25 +150,19 @@ describe("parseControls", () => {
     expect(serializeControls(controls, registry)).toBe("?component=feedback.notice");
   });
 
-  it("usa trabalho ativo por padrão e restaura a visão semântica pela URL", () => {
-    expect(parseControls("", registry).view).toBe("active");
-    const controls = parseControls("?view=ported", registry);
-    expect(controls.view).toBe("ported");
-    expect(serializeControls(controls, registry)).toBe("?view=ported");
-  });
-
-  it("lê showPorted=1 como compatibilidade e passa a emitir a URL semântica", () => {
-    const controls = parseControls("?showPorted=1", registry);
-    expect(controls.view).toBe("ported");
-    expect(serializeControls(controls, registry)).toBe("?view=ported");
-  });
-
-  it("infere referências portadas ao abrir um portado por deep link", () => {
+  it("abre cenário sem persona com persona indefinida e sem serializá-la", () => {
     const controls = parseControls("?scenario=requests.imported", registry);
-    expect(controls.view).toBe("ported");
-    expect(serializeControls(controls, registry)).toBe(
-      "?scenario=requests.imported&view=ported",
+    expect(controls.scenario).toBe("requests.imported");
+    expect(controls.persona).toBeUndefined();
+    expect(serializeControls(controls, registry)).toBe("?scenario=requests.imported");
+  });
+
+  it("ignora parâmetros removidos na 0.7 e na 0.8", () => {
+    const controls = parseControls(
+      "?view=ported&showPorted=1&kb=1&motion=1&scale=2&module=requests&flow=decide&step=2",
+      registry,
     );
+    expect(serializeControls(controls, registry)).toBe("");
   });
 });
 
@@ -205,10 +211,51 @@ describe("serializeControls", () => {
 
   it("faz round-trip de todos os controles de ambiente", () => {
     const original = parseControls(
-      "?scenario=requests.approve-blocked&viewport=custom&w=800&chrome=0&kb=1&motion=1&scale=1.5&panel=0",
+      "?scenario=requests.approve-blocked&viewport=custom&w=800&chrome=0&panel=0",
       registry,
     );
     const roundTripped = parseControls(serializeControls(original, registry), registry);
     expect(roundTripped).toEqual(original);
+  });
+
+  it("faz round-trip de viewport, girar, zoom, aba, tema e painel", () => {
+    const search =
+      "?scenario=requests.approve-blocked&viewport=mobile&appearance=dark&panel=0&tab=info&zoom=75&rotate=1";
+    const controls = parseControls(search, registry);
+    expect(serializeControls(controls, registry)).toBe(search);
+    expect(parseControls(serializeControls(controls, registry), registry)).toEqual(controls);
+  });
+
+  it("omite zoom 100, aba padrão e viewport sem giro", () => {
+    const controls = parseControls("?zoom=100&tab=variations&rotate=0", registry);
+    expect(serializeControls(controls, registry)).toBe("");
+  });
+});
+
+describe("resolveViewport", () => {
+  it("usa os presets de janela real e troca largura e altura ao girar", () => {
+    expect(resolveViewport(parseControls("?viewport=mobile", registry))).toMatchObject({
+      width: 375,
+      height: 812,
+    });
+    expect(resolveViewport(parseControls("?viewport=tablet", registry)).width).toBe(768);
+    expect(resolveViewport(parseControls("?viewport=desktop", registry)).width).toBe(1280);
+    expect(resolveViewport(parseControls("?viewport=mobile&rotate=1", registry))).toMatchObject({
+      width: 812,
+      height: 375,
+    });
+  });
+
+  it("Ajustar não tem tamanho e não gira", () => {
+    const fit = resolveViewport(parseControls("?rotate=1", registry));
+    expect(fit.id).toBe("fit");
+    expect(fit.width).toBeUndefined();
+  });
+
+  it("aceita `custom` de links antigos", () => {
+    expect(resolveViewport(parseControls("?viewport=custom&w=640", registry))).toMatchObject({
+      id: "custom",
+      width: 640,
+    });
   });
 });

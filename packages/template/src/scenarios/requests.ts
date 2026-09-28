@@ -1,26 +1,17 @@
 import type { Scenario } from "@brucesantos/design-space";
 
 /**
- * Cenários do módulo de solicitações.
+ * Cenários de solicitações.
  *
- * Seis situações, não seis telas: a fila cheia, a fila vazia, a decisão
- * permitida, a decisão bloqueada por regra e a decisão bloqueada por permissão.
- * A última é a que costuma faltar em protótipo, e é a que a engenharia mais
- * pergunta.
+ * Cinco situações em duas telas. A fila (`/requests`) tem duas variações: cheia
+ * e vazia. O detalhe (`/requests/:id`) tem três: decisão permitida, bloqueada
+ * por regra e bloqueada por permissão. A última é a que costuma faltar em
+ * protótipo, e é a que a engenharia mais pergunta.
+ *
+ * `components` lista o que cada tela usa do catálogo: é o que aparece em
+ * "Componentes usados" e na tabela do "Copiar para o PR".
  */
 export const scenarios: Scenario[] = [
-  {
-    id: "requests.imported-reference",
-    title: "Referência importada ainda não validada",
-    intent: "Preservar material trazido do sistema existente sem tratá-lo como trabalho ativo.",
-    route: "/requests/REQ-2041",
-    persona: "approver",
-    fixture: "requests-standard",
-    a11y: { keyboard: "full", contrast: "AA" },
-    status: "ported",
-    expected: ["A referência continua acessível por deep link enquanto aguarda validação."],
-    tags: ["importado"],
-  },
   {
     id: "requests.queue",
     title: "Fila de solicitações",
@@ -28,14 +19,8 @@ export const scenarios: Scenario[] = [
     route: "/requests",
     persona: "approver",
     fixture: "requests-standard",
-    a11y: {
-      keyboard: "full",
-      contrast: "AA",
-      announces: [],
-      notes: "Tabela com cabeçalhos de linha e coluna; a situação nunca é comunicada só por cor.",
-    },
-    status: "in-review",
     actions: ["Abrir uma solicitação"],
+    components: ["feedback.status"],
     expected: [
       "As cinco solicitações aparecem com valor, solicitante e situação.",
       "A situação tem rótulo textual, não só cor.",
@@ -49,23 +34,21 @@ export const scenarios: Scenario[] = [
     route: "/requests",
     persona: "approver",
     fixture: "requests-empty",
-    a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
     expected: ["A tela explica por que está vazia e o que faz aparecer conteúdo."],
+    components: ["feedback.status"],
     tags: ["vazio"],
   },
   {
     id: "requests.approve-allowed",
     title: "Aprovação permitida",
-    intent: "Confirmar que a decisão é anunciada, e não apenas exibida.",
+    intent: "Confirmar que a decisão tem retorno visível na tela.",
     route: "/requests/REQ-2042",
     persona: "approver",
     fixture: "requests-standard",
     rules: ["approval-requires-attachment"],
-    a11y: { keyboard: "full", contrast: "AA", announces: ["request.decision"] },
-    status: "in-review",
     preconditions: ["Solicitação em análise, com documento anexado."],
     actions: ["Aprovar", "Recusar", "Voltar para a fila"],
+    components: ["actions.buttons", "feedback.status"],
     expected: [
       "O botão Aprovar está habilitado.",
       "Ao aprovar, o resultado é anunciado por região de status.",
@@ -81,18 +64,12 @@ export const scenarios: Scenario[] = [
     persona: "approver",
     fixture: "requests-high-value-no-doc",
     rules: ["approval-requires-attachment"],
-    a11y: {
-      keyboard: "full",
-      contrast: "AA",
-      announces: ["request.decision"],
-      notes: "O motivo do bloqueio é associado ao botão por aria-describedby.",
-    },
-    status: "in-review",
     preconditions: ["Solicitação acima de R$ 5.000,00 sem documento anexado."],
     expected: [
       "O botão Aprovar está desabilitado.",
       "O motivo aparece na tela e é associado ao botão para leitor de tela.",
     ],
+    components: ["actions.buttons", "feedback.status"],
     tags: ["exceção", "regra"],
   },
   {
@@ -102,12 +79,11 @@ export const scenarios: Scenario[] = [
     route: "/requests/REQ-2042",
     persona: "requester",
     fixture: "requests-standard",
-    a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
     expected: [
       "As ações de decisão aparecem desabilitadas, com o motivo.",
       "Nenhum dado da solicitação é escondido: a restrição é de ação, não de leitura.",
     ],
+    components: ["actions.buttons", "feedback.status"],
     tags: ["permissão", "exceção"],
   },
 ];

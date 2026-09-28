@@ -29,23 +29,32 @@ describe("contrato de cenário", () => {
       expect(tags.has(required), `falta cenário com a etiqueta "${required}"`).toBe(true);
     }
   });
-
-  it("declara acessibilidade em todo cenário", () => {
-    for (const scenario of productDefinition.scenarios) {
-      expect(scenario.a11y.contrast, scenario.id).toBeDefined();
-      expect(scenario.a11y.keyboard, scenario.id).toBeDefined();
-    }
-  });
 });
 
-describe("referências portadas e fixtures de componente", () => {
+describe("catálogo e fixtures de componente", () => {
   const registry = createRegistry(productDefinition);
 
-  it("mantém portados fora do trabalho ativo por padrão", () => {
-    expect(productDefinition.scenarios.some((scenario) => scenario.status === "ported")).toBe(true);
-    expect(registry.activeScenarios().some((scenario) => scenario.status === "ported")).toBe(false);
-    expect(registry.activeScenarios({ includePorted: true }).some((scenario) => scenario.status === "ported"))
-      .toBe(true);
+  it("exibe todo cenário registrado", () => {
+    expect(registry.activeScenarios()).toHaveLength(productDefinition.scenarios.length);
+  });
+
+  it("organiza as situações em duas telas, cada uma com suas variações", () => {
+    expect(registry.screens.map((screen) => [screen.name, screen.variations.length])).toEqual([
+      ["Fila de solicitações", 2],
+      ["Detalhe da solicitação", 3],
+    ]);
+  });
+
+  it("todo cenário declara os componentes que usa, e todo componente tem origem", () => {
+    for (const scenario of productDefinition.scenarios) {
+      expect(scenario.components?.length, scenario.id).toBeGreaterThan(0);
+    }
+    for (const component of productDefinition.components ?? []) {
+      expect(component.source, component.id).toBeTruthy();
+    }
+    expect(registry.usagesOf("actions.buttons").map((screen) => screen.id)).toEqual([
+      "/requests/:id",
+    ]);
   });
 
   it("cobre componente legado sem fixture e componente com múltiplas fixtures", () => {

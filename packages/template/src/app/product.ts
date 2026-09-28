@@ -1,7 +1,6 @@
 import { EN_US_LABELS, type ProductDefinition } from "@brucesantos/design-space";
 
 import { fixtures, modules, personas, rules, scenarios } from "./catalog.js";
-import { contrastPairs } from "../tokens/contrast.js";
 import { RequestList } from "../screens/RequestList.js";
 import { RequestDetail } from "../screens/RequestDetail.js";
 import { components } from "../components/catalog.js";
@@ -34,7 +33,7 @@ export const productDefinition: ProductDefinition = {
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build
   // deste repositório. Quem tem acesso ao próprio build é o produto, então o
   // contexto vem daqui — sem isso o cabeçalho da revisão fica sem branch nem
-  // commit, e é o commit que torna uma aprovação rastreável.
+  // commit, e é o commit que torna uma revisão rastreável.
   //
   // Sem hospedagem os três chegam vazios e o motor trata como desenvolvimento
   // local, que é um caso suportado. Ver `vite.config.ts` para a origem dos
@@ -46,7 +45,6 @@ export const productDefinition: ProductDefinition = {
   },
 
   theme: {
-    contrastPairs,
     locales: ["pt-BR"],
     labels: EN_US_LABELS,
 

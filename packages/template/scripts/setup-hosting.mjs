@@ -56,8 +56,7 @@ for (const provider of providers) {
 
 if (target === "none") {
   console.log("Hospedagem: nenhuma. `pnpm dev` local, sem preview publicado.");
-  console.log("Lembre que `approvedAt` de cenário aprovado precisa de uma URL");
-  console.log("imutável — sem hospedagem, registre o permalink do commit no Git.");
+  console.log("Para citar uma versão exata na revisão, use o permalink do commit no Git.");
   process.exit(0);
 }
 

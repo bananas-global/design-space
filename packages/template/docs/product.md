@@ -56,7 +56,7 @@ O que existe hoje:
 | --- | --- | --- |
 | Fila com cinco solicitações | `requests.queue` | sucesso |
 | Fila vazia | `requests.queue-empty` | vazio |
-| Aprovação permitida | `requests.approve-allowed` | sucesso, anúncio |
+| Aprovação permitida | `requests.approve-allowed` | sucesso |
 | Aprovação bloqueada por falta de documento | `requests.approve-blocked-by-rule` | exceção, regra |
 | Sem permissão para decidir | `requests.approve-no-permission` | permissão |
 

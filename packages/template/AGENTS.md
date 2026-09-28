@@ -19,8 +19,8 @@ persona, permissões, pré-condições, dados, ações, regras e resultado esper
 ```bash
 pnpm dev          # dev server na porta determinística deste projeto
 pnpm typecheck    # tsc --noEmit
-pnpm test         # contrato de cenário, regras e contraste dos tokens
-pnpm test:e2e     # jornada Playwright + axe (sobe o dev server sozinho)
+pnpm test         # contrato de cenário e regras
+pnpm test:e2e     # jornadas Playwright (sobe o dev server sozinho)
 pnpm build        # typecheck + build de produção
 pnpm check        # typecheck + test + build — rode antes de concluir qualquer alteração
 ```
@@ -43,7 +43,7 @@ um Design Space que roda só local é caso suportado, não pendência.
 | `src/personas/` | Papéis, objetivos e permissões. |
 | `src/rules/` | Regras de negócio, separadas por domínio, com a implementação. |
 | `src/contracts/` | Tipos e schemas do domínio. |
-| `src/tokens/` | Identidade visual: `tokens.css` e os pares de contraste. |
+| `src/tokens/` | Identidade visual: `tokens.css`. |
 | `hosting/` | Arquivos por provedor de hospedagem, instalados por `pnpm setup:hosting`. |
 | `docs/product.md` | Visão, módulos, vocabulário e personas. |
 | `docs/decisions/` | Decisões **deste produto**. As do modelo vivem no repositório do motor. |
@@ -56,14 +56,12 @@ um Design Space que roda só local é caso suportado, não pendência.
    navegação.
 2. Use o **vocabulário do negócio** no `title`. "Aprovação bloqueada por falta de
    documento", não "ApprovalBlockedState".
-3. Aponte `fixture` e `persona` para ids que já existem. O motor valida em
-   runtime e reclama no painel de Diagnóstico se não existirem.
-4. Preencha `a11y`. É obrigatório, e não é formalidade: `keyboard: "full"`
-   significa que a jornada é completável só por teclado, e `announces` lista os
-   eventos que precisam ser anunciados para leitor de tela.
-5. Preencha `expected`. Sem critério de aceite, o cenário não vira caso
+3. Aponte `fixture` para um id que já existe. `persona` é opcional: informe
+   quando ela decide permissões. O motor valida em runtime e reclama no painel de
+   Diagnóstico se um id informado não existir.
+4. Preencha `expected`. Sem critério de aceite, o cenário não vira caso
    verificável no handoff — é tela bonita.
-6. Garanta que `route` casa com uma rota declarada em `product.ts`.
+5. Garanta que `route` casa com uma rota declarada em `product.ts`.
 
 **Por que `catalog.ts` é separado de `product.ts`:** o Playwright carrega os testes
 com esbuild puro, sem os plugins do Vite. Um `import` de SVG, de CSS ou um
@@ -86,16 +84,13 @@ mesma situação.
   do motor é português.
 - **Não** introduzir componente global quando a necessidade é local. Reuso de UI
   é decisão local deste produto.
-- **Não** remover foco visível, rótulo acessível, ordem de tabulação ou contraste
-  para resolver um pedido de layout. Se um item do backlog exigir isso, **pare e
-  pergunte** — não escolha o layout.
 - **Não** adicionar integração com backend sem um problema concreto de fixture.
   O padrão é `dataSources: { default: "fixtures" }`.
 - Registrar em `docs/decisions/` toda nova regra ou decisão **deste produto** que
   altere comportamento. Decisão que valeria para todos os Design Spaces pertence ao
   repositório do motor — não copie para cá.
-- Rodar `pnpm check` antes de concluir. Typecheck, contrato de cenário e
-  contraste dos tokens quebram o build de propósito.
+- Rodar `pnpm check` antes de concluir. Typecheck, contrato de cenário e testes
+  de regra quebram o build de propósito.
 
 ## Como pedir mudanças (formato que funciona)
 
@@ -118,5 +113,4 @@ pergunte.
 | --- | --- |
 | `Command/Ctrl` + `K` ou `F` | Foca a busca da lateral |
 | `↑` / `↓` | Percorre os resultados filtrados |
-| `Shift` + `K` | Liga ou desliga o modo teclado |
 | `Shift` + `P` | Mostra ou oculta o painel de contexto |

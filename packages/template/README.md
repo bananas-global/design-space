@@ -27,11 +27,9 @@ URL própria.
 1. Copie o diretório para um repositório novo, `<produto>-design-space`.
 2. Troque `name` no `package.json` — isso muda a porta de dev automaticamente.
 3. Troque a dependência do motor de `workspace:*` para a versão publicada
-   (`^0.5.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
+   (`^0.7.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
    `pnpm install` falha.
-4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente e
-   atualize `src/tokens/contrast.ts` com os pares reais. O teste de tokens falha
-   se algum par ficar abaixo do alvo.
+4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente.
 5. Reescreva `src/app/catalog.ts` com o vocabulário do cliente — módulos, jornadas
    e cenários — e ajuste as rotas em `src/app/product.ts`.
 6. Substitua domínio, personas, fixtures, regras e cenários.
@@ -56,15 +54,14 @@ src/
 ├── personas/      # papéis e permissões
 ├── rules/         # regras de negócio e sua implementação
 ├── contracts/     # tipos do domínio
-└── tokens/        # identidade visual e pares de contraste
+└── tokens/        # identidade visual
 docs/
 ├── product.md
 ├── handoff.md
 └── decisions/
 tests/
 ├── product.test.ts   # contrato de cenário e regras
-├── tokens.test.ts    # contraste na origem
-└── e2e/              # jornada Playwright + axe
+└── e2e/              # jornadas Playwright
 hosting/              # arquivos por provedor, instalados por escolha explícita
 └── vercel/
 ```
@@ -73,19 +70,14 @@ hosting/              # arquivos por provedor, instalados por escolha explícita
 
 ```bash
 pnpm check      # typecheck + testes + build
-pnpm test:e2e   # jornada real, com axe por cenário
+pnpm test:e2e   # jornada real contra o preview ou o dev server
 ```
 
 O que quebra o build de propósito:
 
 - **Typecheck.** Contrato de componente e de cenário.
 - **Contrato de cenário.** Fixture, persona, regra ou rota inexistente.
-- **Contraste dos tokens.** Par de cores abaixo do alvo WCAG 2.2 AA.
-- **Axe, violação crítica ou séria.** Por cenário, na mesma jornada Playwright.
-
-Verificação automática é piso, não teto. Ordem de leitura confusa, rótulo
-tecnicamente presente mas sem sentido e fluxo impossível de completar com leitor
-de tela passam no axe — revisão humana nas jornadas críticas continua necessária.
+- **Regras de negócio.** Cada regra em `src/rules/` tem teste próprio.
 
 ## Hospedagem
 
@@ -101,10 +93,8 @@ quem desenha ou por chamada com tela compartilhada. É um uso completo do modelo
 não uma versão reduzida: `env` fica `development` e o cabeçalho da revisão omite
 branch e commit, e nada mais muda.
 
-O que você perde é a revisão **assíncrona** — e, com ela, a aprovação por URL
-imutável. `approvedAt` continua obrigatório em cenário aprovado, então registre o
-permalink do commit no Git e anote a escolha em `docs/decisions/`: sem artefato que
-o aprovador consiga abrir, a aprovação passa a depender do repositório.
+O que você perde é a revisão **assíncrona** e o link imutável por commit. Se a
+revisão precisar citar uma versão exata, use o permalink do commit no Git.
 
 `hosting/<provedor>/` guarda os arquivos que cada provedor exige. O script copia
 para a raiz e para `.github/workflows/`, e remove o que o provedor anterior
@@ -127,8 +117,8 @@ sem convite. `X-Robots-Tag: noindex, nofollow` mantém a URL clicável e fora de
 busca — preview aberto não é preview indexado.
 
 - **URL de branch** — revisão em andamento, sempre o último commit daquela branch.
-- **URL de commit** — aprovação e handoff. Imutável, então a aprovação não muda de
-  conteúdo debaixo de quem aprovou.
+- **URL de commit** — handoff e referência a uma versão exata. Imutável, então o
+  que foi discutido não muda de conteúdo depois.
 
 Se algum dia um projeto precisar ser fechado, saiba o que isso custa antes de
 decidir: **Vercel Authentication exige que cada pessoa que revisa seja membro do
@@ -141,16 +131,8 @@ Quando o projeto usa Vercel, a Toolbar oferece threads ancoradas na página, com
 status, para revisão assíncrona com PO e cliente. Ela exige conta para comentar.
 O template não inclui, por enquanto, um coletor de feedback próprio no preview.
 
-Comentário resolvido na Toolbar não significa cenário aprovado. Aprovação muda o
-`status` do cenário no repositório, e nada mais.
-
-Cenário trazido do sistema existente sem validação começa como `ported`. Esse
-estado documenta a origem sem tratá-la como proposta ou compromisso de
-implementação; por padrão ele fica fora da home, árvore, busca e contagens de
-trabalho ativo. A ação **View N ported references** abre uma coleção separada,
-contendo somente portados, e persiste `view=ported` no link. Um deep link direto
-infere essa visão mesmo sem o parâmetro, e a revisão é que determina sua próxima
-etapa. Links anteriores com `showPorted=1` continuam funcionando.
+Todo cenário registrado aparece na navegação: o motor não tem estado de ciclo de
+vida nem coleção de referências separada desde a 0.7.
 
 A aba **Componentes** é alimentada por `ProductDefinition.components`. Cada item
 aponta para um preview React local: o motor organiza e cria o deep link, mas
@@ -164,7 +146,7 @@ Estado interativo efêmero, como foco ou modal aberto, permanece local ao previe
 
 Para entrega à engenharia, `HandoffScope` limita por URL os cenários, padrões de
 rota e componentes autorizados. O motor aplica a allowlist à Home, busca,
-navegação, flows, portados e catálogo visual e bloqueia tentativas fora do
+navegação, flows e catálogo visual e bloqueia tentativas fora do
 recorte. O modelo está em [`docs/handoff.md`](docs/handoff.md). Esse mecanismo é
 foco de UX, não isolamento: preview que precisa ocultar o catálogo exige build
 separado ou autenticação/autorização próprias.

@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
 import { pathFor } from "@brucesantos/design-space/testing";
 // Importa o catálogo, não a `ProductDefinition`: o Playwright carrega os testes
 // com esbuild puro, sem os plugins do Vite, e um `import.meta.env` na cadeia
@@ -7,18 +6,8 @@ import { pathFor } from "@brucesantos/design-space/testing";
 import { scenarios as catalogScenarios } from "../../src/app/catalog.js";
 
 /**
- * Uma jornada real contra o preview, com axe na mesma passagem (E9, E16).
- *
- * O desenho segue o documento em dois pontos que valem explicitar:
- *
- * - **Axe roda por cenário, não uma vez na home.** Violação de acessibilidade
- *   costuma ser específica de estado — o vazio, o erro, o modal. Rodar só na
- *   primeira tela produz o "falso verde de ferramenta" que o próprio documento
- *   lista como risco.
- *
- * - **Violação crítica quebra o build, igual typecheck.** `serious` e `critical`
- *   falham; `moderate` e `minor` não, para não transformar exploração em
- *   manutenção de teste.
+ * Jornadas reais contra o preview: deep link de cada cenário, o fluxo de decisão
+ * e o determinismo da URL.
  */
 
 const scenarios = catalogScenarios;
@@ -26,10 +15,8 @@ const scenarios = catalogScenarios;
 /**
  * Abre o cenário pelo deep link, com o chrome do motor fora do caminho.
  *
- * `chrome: false` não é conveniência: o axe precisa medir a UI do produto, não o
- * painel do motor. Sem isso, uma violação do chrome falharia o build de um
- * produto que não a causou — e o inverso, um problema real do produto ficaria
- * escondido no meio das violações do ambiente.
+ * `chrome: false` mantém a asserção sobre a UI do produto, sem o painel do motor
+ * disputando seletores como `role="status"` ou títulos de seção.
  */
 function urlFor(scenarioId: string): string {
   const scenario = scenarios.find((item) => item.id === scenarioId)!;
@@ -47,28 +34,6 @@ test.describe("deep link", () => {
   }
 });
 
-test.describe("acessibilidade por cenário", () => {
-  for (const scenario of scenarios) {
-    test(`axe sem violação crítica em "${scenario.title}"`, async ({ page }) => {
-      await page.goto(urlFor(scenario.id));
-      await page.locator("#conteudo").waitFor();
-
-      const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-        .analyze();
-
-      const blocking = results.violations.filter((violation) =>
-        ["serious", "critical"].includes(violation.impact ?? ""),
-      );
-
-      expect(
-        blocking.map((violation) => `${violation.id}: ${violation.help}`),
-        `Violações bloqueantes em ${scenario.id}`,
-      ).toEqual([]);
-    });
-  }
-});
-
 test.describe("jornada: decidir uma solicitação", () => {
   test("da fila até a decisão, só por teclado", async ({ page }) => {
     await page.goto(urlFor("requests.queue"));
@@ -76,9 +41,7 @@ test.describe("jornada: decidir uma solicitação", () => {
     await expect(page.getByRole("heading", { name: "Solicitações" })).toBeVisible();
     await expect(page.getByRole("row")).toHaveCount(6); // cabeçalho + 5 solicitações
 
-    // Tab até o link da solicitação e Enter. A jornada declara
-    // `a11y.keyboard: "full"`, então este é o teste que sustenta a afirmação —
-    // não a intenção escrita no contrato.
+    // Foco no link da solicitação e Enter: a jornada inteira funciona sem mouse.
     const link = page.getByRole("link", { name: "Licenças de software de design" });
     await link.focus();
     await expect(link).toBeFocused();
@@ -91,8 +54,7 @@ test.describe("jornada: decidir uma solicitação", () => {
     await approve.focus();
     await page.keyboard.press("Enter");
 
-    // A decisão precisa ser anunciada, não apenas exibida: é o que o campo
-    // `announces: ["request.decision"]` do cenário exige.
+    // O resultado da decisão aparece na região de status da tela.
     await expect(page.getByRole("status")).toContainText("Solicitação aprovada");
   });
 

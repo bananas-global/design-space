@@ -2,9 +2,9 @@
 #
 # Governança proporcional (Princípio 9): iteração visual acontece local, sem PR
 # por mudança. Este workflow existe para o que é barato e pega erro caro —
-# typecheck, contrato de cenário, contraste dos tokens e build.
+# typecheck, contrato de cenário, regras e build.
 #
-# A jornada Playwright com axe roda contra o preview, em `preview-tests.yml`, e
+# A jornada Playwright roda contra o preview, em `preview-tests.yml`, e
 # não aqui: rodar contra um build local testaria um artefato que ninguém revisa.
 name: CI
 
@@ -31,7 +31,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Contrato de cenário, regras e contraste dos tokens
+      - name: Contrato de cenário e regras
         run: pnpm test
 
       - name: Build

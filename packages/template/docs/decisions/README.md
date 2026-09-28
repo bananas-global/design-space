@@ -7,8 +7,7 @@ real.
 ## O que **não** vem para cá
 
 As decisões do modelo — fixture sintética como padrão, preview público, escopo do
-source mapping, ação bloqueada que explica o motivo, acessibilidade obrigatória no
-contrato de cenário — valem para todos os Design Spaces e vivem uma única vez, no
+source mapping, ação bloqueada que explica o motivo — valem para todos os Design Spaces e vivem uma única vez, no
 repositório do motor:
 
 <https://github.com/bananas-global/design-space/tree/main/docs/decisions>

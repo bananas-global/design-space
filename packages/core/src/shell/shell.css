@@ -36,7 +36,7 @@
   --ds-fs-sm: 12px;
   --ds-radius: 6px;
   --ds-control-h: 28px;
-  --ds-topbar-h: 44px;
+  --ds-topbar-h: 52px;
 
   position: fixed;
   inset: 0;
@@ -146,11 +146,12 @@
 /* ------------------------------------------------------------ topbar */
 
 .ds-topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
   height: var(--ds-topbar-h);
-  padding: 0 10px 0 14px;
+  padding: 0 12px 0 16px;
   border-bottom: 1px solid var(--ds-border);
   background: var(--ds-bg);
   flex: none;
@@ -158,37 +159,44 @@
 
 .ds-topbar__product {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
   min-width: 0;
-  flex: 1;
 }
 
 .ds-topbar__name {
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.ds-topbar__meta {
+.ds-topbar__version {
+  width: fit-content;
   color: var(--ds-muted);
   font-size: var(--ds-fs-sm);
+  line-height: 1.2;
+  text-decoration: none;
   white-space: nowrap;
 }
 
+.ds-topbar__version:hover {
+  color: var(--ds-fg);
+  text-decoration: underline;
+}
+
+.ds-topbar__view,
 .ds-topbar__tools {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: none;
 }
 
-.ds-topbar__divider {
-  width: 1px;
-  height: 18px;
-  margin: 0 2px;
-  background: var(--ds-border);
+.ds-topbar__tools {
+  justify-self: end;
 }
 
 .ds-group {

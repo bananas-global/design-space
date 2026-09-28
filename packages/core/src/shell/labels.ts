@@ -46,8 +46,7 @@ export type Labels = {
     cleanReview: string;
     lightMode: string;
     darkMode: string;
-    openPanel: string;
-    closePanel: string;
+    engineVersion: (version: string) => string;
     diagnostics: (errors: number, warnings: number) => string;
     branchTitle: (branch: string) => string;
     commitTitle: (commit: string) => string;
@@ -177,8 +176,7 @@ export const DEFAULT_LABELS: Labels = {
     cleanReview: "Revisão limpa (Shift+C)",
     lightMode: "Tema claro",
     darkMode: "Tema escuro",
-    openPanel: "Abrir painel (Shift+P)",
-    closePanel: "Fechar painel (Shift+P)",
+    engineVersion: (version) => `Design Space ${version}`,
     diagnostics: (errors, warnings) =>
       `Diagnóstico: ${errors} ${errors === 1 ? "erro" : "erros"}, ${warnings} ${
         warnings === 1 ? "aviso" : "avisos"
@@ -318,8 +316,7 @@ export const EN_US_LABELS: Labels = {
     cleanReview: "Clean review (Shift+C)",
     lightMode: "Light theme",
     darkMode: "Dark theme",
-    openPanel: "Open panel (Shift+P)",
-    closePanel: "Close panel (Shift+P)",
+    engineVersion: (version) => `Design Space ${version}`,
     diagnostics: (errors, warnings) =>
       `Diagnostics: ${errors} ${errors === 1 ? "error" : "errors"}, ${warnings} ${
         warnings === 1 ? "warning" : "warnings"

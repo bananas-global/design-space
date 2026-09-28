@@ -1,7 +1,7 @@
 /**
- * Barra superior, numa linha só: o nome do produto à esquerda e, à direita, os
- * controles de visualização — viewport, girar, zoom — e os de revisão — copiar
- * link, revisão limpa, tema do chrome, painel e diagnóstico.
+ * Barra superior em três partes: o produto e a versão do motor à esquerda; no
+ * centro, a visualização — viewport, girar, zoom e revisão limpa; à direita,
+ * copiar link, tema do chrome e diagnóstico.
  *
  * Nada aqui muda a UI do produto além da largura da janela que ela enxerga.
  */
@@ -11,6 +11,7 @@ import type { DeployContext } from "../deploy/index.js";
 import { ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN } from "../controls/state.js";
 import type { ValidationIssue } from "../registry/validate.js";
 import type { ChromeTheme, ViewportSetting } from "../types/index.js";
+import { ENGINE_PACKAGE, ENGINE_VERSION } from "../version.js";
 import { Icon, type IconName } from "./icons.js";
 import { useLabels } from "./labels.js";
 
@@ -38,7 +39,6 @@ export type TopbarProps = {
   zoom: number;
   rotated: boolean;
   theme: ChromeTheme;
-  panelOpen: boolean;
   issues: ValidationIssue[];
   /** URL absoluta do estado atual. */
   linkUrl: string;
@@ -47,18 +47,15 @@ export type TopbarProps = {
   onZoom: (zoom: number) => void;
   onCleanReview: () => void;
   onToggleTheme: () => void;
-  onTogglePanel: () => void;
 };
 
 export function Topbar({
   productName,
-  deploy,
   viewportId,
   viewport,
   zoom,
   rotated,
   theme,
-  panelOpen,
   issues,
   linkUrl,
   onViewport,
@@ -66,12 +63,12 @@ export function Topbar({
   onZoom,
   onCleanReview,
   onToggleTheme,
-  onTogglePanel,
 }: TopbarProps) {
   const labels = useLabels();
   const t = labels.topbar;
   const [copied, setCopied] = useState(false);
-  const canRotate = Boolean(viewport.width && viewport.height) || rotated;
+  // Girar só faz sentido em aparelho: monitor e "Ajustar" não têm retrato.
+  const canRotate = (viewportId === "mobile" || viewportId === "tablet") && Boolean(viewport.width && viewport.height);
 
   const copyLink = async () => {
     try {
@@ -89,19 +86,17 @@ export function Topbar({
     <header className="ds-topbar" aria-label={t.region}>
       <div className="ds-topbar__product">
         <span className="ds-topbar__name">{productName}</span>
-        {deploy.branch && (
-          <code className="ds-topbar__meta" title={t.branchTitle(deploy.branch)}>
-            {deploy.branch.length > 24 ? `${deploy.branch.slice(0, 23)}…` : deploy.branch}
-          </code>
-        )}
-        {deploy.shortCommit && deploy.commit && (
-          <code className="ds-topbar__meta" title={t.commitTitle(deploy.commit)}>
-            {deploy.shortCommit}
-          </code>
-        )}
+        <a
+          className="ds-topbar__version"
+          href={`https://www.npmjs.com/package/${ENGINE_PACKAGE}/v/${ENGINE_VERSION}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t.engineVersion(ENGINE_VERSION)}
+        </a>
       </div>
 
-      <div className="ds-topbar__tools">
+      <div className="ds-topbar__view">
         <div className="ds-group" role="group" aria-label={t.viewportGroup}>
           {PRESETS.map((preset) => {
             const label = labels.viewport[preset.id] ?? preset.id;
@@ -164,8 +159,18 @@ export function Topbar({
           </button>
         </div>
 
-        <span className="ds-topbar__divider" aria-hidden="true" />
+        <button
+          type="button"
+          className="ds-btn ds-btn--icon"
+          aria-label={t.cleanReview}
+          title={t.cleanReview}
+          onClick={onCleanReview}
+        >
+          <Icon name="fullscreen" />
+        </button>
+      </div>
 
+      <div className="ds-topbar__tools">
         <button
           type="button"
           className="ds-btn ds-btn--icon"
@@ -178,32 +183,12 @@ export function Topbar({
         <button
           type="button"
           className="ds-btn ds-btn--icon"
-          aria-label={t.cleanReview}
-          title={t.cleanReview}
-          onClick={onCleanReview}
-        >
-          <Icon name="eye-off" />
-        </button>
-        <button
-          type="button"
-          className="ds-btn ds-btn--icon"
           aria-label={theme === "dark" ? t.lightMode : t.darkMode}
           title={theme === "dark" ? t.lightMode : t.darkMode}
           onClick={onToggleTheme}
         >
           <Icon name={theme === "dark" ? "sun" : "moon"} />
         </button>
-        <button
-          type="button"
-          className="ds-btn ds-btn--icon"
-          aria-pressed={panelOpen}
-          aria-label={panelOpen ? t.closePanel : t.openPanel}
-          title={panelOpen ? t.closePanel : t.openPanel}
-          onClick={onTogglePanel}
-        >
-          <Icon name="panel" />
-        </button>
-
         {issues.length > 0 && <DiagnosticsIndicator issues={issues} />}
       </div>
     </header>

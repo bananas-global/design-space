@@ -128,25 +128,19 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
     () => setControls({ chrome: !controls.chrome }),
     [controls.chrome, setControls],
   );
-  const togglePanel = useCallback(
-    () => setControls({ inspector: !controls.inspector }),
-    [controls.inspector, setControls],
-  );
-
   const onShortcut = useCallback(
     (key: "C" | "P") => {
       if (key === "C") toggleChrome();
-      else if (controls.chrome) togglePanel();
     },
-    [controls.chrome, toggleChrome, togglePanel],
+    [toggleChrome],
   );
 
   // Atalhos que não competem com os do navegador. Busca (Cmd/Ctrl+K) vive na
-  // navegação; com o foco no quadro, o próprio quadro repassa Shift+C e Shift+P.
+  // navegação; com o foco no quadro, o próprio quadro repassa Shift+C.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key !== "C" && event.key !== "P") return;
+      if (event.key !== "C") return;
       const target = event.target as HTMLElement | null;
       if (target?.closest?.("input, textarea, select, [contenteditable='true'], [contenteditable='']")) return;
       event.preventDefault();
@@ -182,7 +176,6 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
       className="ds-root"
       data-appearance={theme}
       data-chrome={controls.chrome ? "visible" : "hidden"}
-      data-panel={controls.inspector ? "open" : "closed"}
       data-resizing={resizing ? "true" : undefined}
       data-viewport={viewport.id}
     >
@@ -195,7 +188,6 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           zoom={effectiveZoom}
           rotated={Boolean(controls.rotated)}
           theme={theme}
-          panelOpen={controls.inspector}
           issues={registry.issues}
           linkUrl={linkUrl}
           onViewport={(id) => change({ viewport: id })}
@@ -203,7 +195,6 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           onZoom={(next) => change({ zoom: next })}
           onCleanReview={toggleChrome}
           onToggleTheme={toggleTheme}
-          onTogglePanel={togglePanel}
         />
       )}
 
@@ -243,7 +234,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           )}
         </main>
 
-        {controls.chrome && controls.inspector && (
+        {controls.chrome && (
           <Panel
             registry={registry}
             controls={controls}

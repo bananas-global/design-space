@@ -263,13 +263,24 @@ describe("chrome", () => {
     expect(container.querySelector(".ds-topbar")).not.toBeNull();
   });
 
-  it("Shift+P fecha e abre o painel", async () => {
+  it("o painel fica sempre aberto com o chrome, e a barra mostra a versão do motor", async () => {
     const container = await mount("/requests?scenario=queue");
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "P", shiftKey: true }));
     });
-    expect(container.querySelector(".ds-panel")).toBeNull();
-    expect(new URLSearchParams(window.location.search).get("panel")).toBe("0");
+    expect(container.querySelector(".ds-panel")).not.toBeNull();
+    const version = container.querySelector<HTMLAnchorElement>(".ds-topbar__version");
+    expect(version?.textContent).toMatch(/^Design Space \d+\.\d+\.\d+$/);
+    expect(version?.href).toContain("npmjs.com/package/@brucesantos/design-space");
+  });
+
+  it("girar só vale para celular e tablet", async () => {
+    const desktop = await mount("/requests?scenario=queue&viewport=desktop");
+    expect(button(desktop, DEFAULT_LABELS.topbar.rotate).disabled).toBe(true);
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+    const mobile = await mount("/requests?scenario=queue&viewport=mobile");
+    expect(button(mobile, DEFAULT_LABELS.topbar.rotate).disabled).toBe(false);
   });
 
   it("segue o sistema por padrão e lembra a troca de tema", async () => {

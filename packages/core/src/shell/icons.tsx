@@ -15,7 +15,7 @@ export type IconName =
   | "plus"
   | "link"
   | "check"
-  | "eye-off"
+  | "fullscreen"
   | "sun"
   | "moon"
   | "panel"
@@ -43,7 +43,7 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M8.5 20.5h7M12 16.5v4" />
     </>
   ),
-  fit: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
+  fit: <path d="M3 12h7M3 12l3-3M3 12l3 3M21 12h-7M21 12l-3-3M21 12l-3 3" />,
   rotate: (
     <>
       <path d="M20 12a8 8 0 1 1-2.34-5.66" />
@@ -59,13 +59,7 @@ const PATHS: Record<IconName, ReactNode> = {
     </>
   ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
-  "eye-off": (
-    <>
-      <path d="M3 3l18 18" />
-      <path d="M10.6 5.1A9.7 9.7 0 0 1 12 5c5 0 8.5 4.5 9.5 7a13 13 0 0 1-2.6 3.8M6.4 6.4A13 13 0 0 0 2.5 12c1 2.5 4.5 7 9.5 7a9.4 9.4 0 0 0 4.6-1.2" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-    </>
-  ),
+  fullscreen: <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />,
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />

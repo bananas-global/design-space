@@ -705,76 +705,114 @@
   font-size: var(--ds-fs-sm);
 }
 
+/* Informações: seções com o mesmo título dos grupos da lateral, e cada dado
+   numa linha de rótulo e valor, separada da próxima por um fio no tom. */
 .ds-info {
   display: grid;
-  gap: 16px;
+  gap: 24px;
+  padding-top: 4px;
 }
 
 .ds-section {
   display: grid;
-  gap: 8px;
-}
-
-.ds-section + .ds-section {
-  padding-top: 14px;
-  border-top: 1px solid var(--ds-border);
+  gap: 4px;
 }
 
 .ds-section__title {
+  padding: 0 0 6px;
   color: var(--ds-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: var(--ds-fs-sm);
+  font-weight: 500;
+  letter-spacing: 1px;
+  line-height: 1;
   text-transform: uppercase;
+  opacity: 0.6;
 }
 
 .ds-defs {
   display: grid;
-  gap: 8px;
 }
 
 .ds-def {
   display: grid;
-  gap: 2px;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ds-tint);
+}
+
+.ds-def:last-child {
+  border-bottom: 1px solid var(--ds-tint);
 }
 
 .ds-def dt {
   color: var(--ds-muted);
   font-size: var(--ds-fs-sm);
+  line-height: 19.5px;
 }
 
 .ds-def dd {
+  line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+/* Valor técnico — id, rota, origem no sistema real — numa pílula mono. */
+.ds-def dd code,
+.ds-links code {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--ds-tint);
+  font-family: var(--ds-mono);
+  font-size: var(--ds-fs-sm);
+  line-height: 19.5px;
+  overflow-wrap: anywhere;
+}
+
+.ds-defs > .ds-muted {
+  padding: 10px 0;
+  border-top: 1px solid var(--ds-tint);
+  border-bottom: 1px solid var(--ds-tint);
+  font-size: var(--ds-fs-sm);
 }
 
 .ds-list {
   display: grid;
-  gap: 3px;
+  gap: 6px;
 }
 
 .ds-list li {
   position: relative;
-  padding-left: 12px;
+  padding-left: 14px;
 }
 
 .ds-list li::before {
   content: "";
   position: absolute;
-  top: 0.65em;
-  left: 2px;
-  width: 4px;
+  top: 0.75em;
+  left: 0;
+  width: 8px;
   height: 1px;
-  background: currentColor;
+  background: var(--ds-fg);
+  opacity: 0.2;
 }
 
 .ds-links {
   display: grid;
-  gap: 6px;
 }
 
 .ds-links li {
   display: grid;
-  gap: 1px;
+  gap: 6px;
+  justify-items: start;
+  padding: 10px 0;
+  border-top: 1px solid var(--ds-tint);
+}
+
+.ds-links li:last-child {
+  border-bottom: 1px solid var(--ds-tint);
 }
 
 /* ------------------------------------------------------------ canvas */

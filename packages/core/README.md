@@ -276,6 +276,13 @@ regras, conforme o destino:
 `options.replace` substitui a entrada do histórico em vez de criar outra. O
 recorte de handoff atual é sempre reaplicado.
 
+**Limitação conhecida.** O motor ainda não sabe que parâmetro é da tela do
+produto: numa navegação sem query, a query da tela anterior segue para a
+próxima; com query própria, ela só sai se o destino trouxer a mesma chave. Até
+existir um conceito de query da tela, quem guarda estado na URL tira o que não
+vale mais no destino. Ver
+[0014](../../docs/decisions/0014-query-da-tela.md).
+
 ## A URL é o estado
 
 Todo controle é serializado na query string, então a mesma URL sempre produz a
@@ -303,6 +310,19 @@ rede declarados no cenário.
 | `allowScenario` | Cenário permitido; pode ser repetido e autoriza também a rota do cenário. |
 | `allowRoute` | Padrão de rota permitido, como `/requests/:id`; pode ser repetido. |
 | `allowComponent` | Componente permitido; pode ser repetido. |
+
+### Query da tela
+
+Qualquer outro parâmetro é da tela do produto: aba, passo de um fluxo, filtro,
+página. O motor não o lê, só o carrega. Desde a 0.9.3, mudar persona, rede,
+viewport, zoom, tema, o painel ou um controle da tela — pelo painel ou por
+`context.setControl`/`setControls` de dentro do quadro — preserva essa query.
+Abrir outra tela, cenário ou componente pela navegação do chrome a descarta, e
+"Copiar link" e "Copiar para o PR" levam a query da tela aberta.
+
+A tela lê essa query em `window.location.search`. É garantido que a URL do
+quadro já está em dia quando a tela renderiza: o motor troca o endereço do
+quadro com `replaceState` antes de atualizar o estado.
 
 ## Handoff focado por URL
 

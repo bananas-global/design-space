@@ -1,6 +1,6 @@
 {
   "name": "@brucesantos/design-space",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Motor neutro do Bananas Design Space: telas como rotas com variações, catálogo de componentes, chrome em preto e branco com a UI do produto num iframe, deep links e controles de persona/viewport/rede. Não contém UI de cliente.",
   "type": "module",
   "license": "MIT",

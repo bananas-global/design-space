@@ -28,7 +28,13 @@ import type {
 import type { Registry, ScreenNode } from "../registry/index.js";
 import type { Scenario } from "../types/index.js";
 import { NETWORK_STATES } from "../types/index.js";
-import { CONTROL_PARAM_PREFIX, PARAM, deleteControlParams, readControlParams } from "./params.js";
+import {
+  CONTROL_PARAM_PREFIX,
+  PARAM,
+  deleteControlParams,
+  isEngineParam,
+  readControlParams,
+} from "./params.js";
 import {
   applyHandoffScope,
   handoffAllowsComponent,
@@ -36,6 +42,7 @@ import {
   parseHandoffScope,
 } from "../handoff/index.js";
 import {
+  FRAME_PARAM,
   acceptFrameMessage,
   fromFrameUrl,
   postFrameMessage,
@@ -233,8 +240,9 @@ export type DesignSpaceState = {
   controls: ControlsState;
   viewport: ViewportSetting;
   /**
-   * Altera um ou mais controles, preservando a rota. Parte sempre do endereço
-   * mais recente: chamadas seguidas no mesmo ciclo se acumulam.
+   * Altera um ou mais controles, preservando a rota e a query da tela (ver
+   * {@link keepScreenQuery}). Parte sempre do endereço mais recente: chamadas
+   * seguidas no mesmo ciclo se acumulam.
    */
   setControls: (patch: Partial<ControlsState>) => void;
   /**
@@ -360,7 +368,7 @@ export function useDesignSpaceState(
       const next = { ...latestControls(), ...patch };
       // Troca de controle é replace, não push: o histórico do navegador deve
       // registrar navegação entre situações, não cada ajuste de viewport.
-      const search = serializeControls(next, registry, latest.path);
+      const search = keepScreenQuery(serializeControls(next, registry, latest.path), latest.search);
       if (search === latest.search) return;
       push(latest.path, search, true);
     },
@@ -559,6 +567,22 @@ export function navigationTarget(
   if (state.handoff) applyHandoffScope(params, state.handoff);
   const query = params.toString();
   return { path, search: query ? `?${query}` : "" };
+}
+
+/**
+ * Devolve a `search` dos controles com a query da tela que estava em `current`:
+ * todo parâmetro que o motor não lê. Mudar persona, rede, tema ou um controle
+ * não troca de tela, então o estado que a tela do produto guarda na URL — aba,
+ * passo, filtro, página — continua valendo. Pura e testável.
+ */
+export function keepScreenQuery(search: string, current: string): string {
+  const params = new URLSearchParams(search);
+  for (const [key, value] of new URLSearchParams(current)) {
+    if (key === FRAME_PARAM || isEngineParam(key)) continue;
+    params.append(key, value);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }
 
 /**

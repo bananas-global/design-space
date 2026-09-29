@@ -981,3 +981,81 @@ describe("0.9.1: `defaultPersona`", () => {
     expect([...select.options].map((option) => option.value)).toEqual(["", "reviewer", "requester"]);
   });
 });
+
+describe("0.9.3: a query da tela sobrevive ao painel", () => {
+  const screenQuery = (search = window.location.search) => {
+    const params = new URLSearchParams(search);
+    return { aba: params.get("aba"), page: params.get("page") };
+  };
+
+  it("trocar persona e rede mantém a query da tela", async () => {
+    const container = await mount("/orders?aba=resumo&page=2", flowDefinition());
+    await choose(select(container, DEFAULT_LABELS.panel.persona), "requester");
+    expect(new URLSearchParams(window.location.search).get("persona")).toBe("requester");
+    expect(screenQuery()).toEqual({ aba: "resumo", page: "2" });
+
+    await choose(select(container, DEFAULT_LABELS.panel.network), "slow");
+    expect(new URLSearchParams(window.location.search).get("network")).toBe("slow");
+    expect(screenQuery()).toEqual({ aba: "resumo", page: "2" });
+  });
+
+  it("mudar um controle mantém a query e o quadro a recebe por mensagem", async () => {
+    const container = await mount("/orders?aba=resumo", flowDefinition());
+    const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!;
+    const post = vi.spyOn(frame.contentWindow!, "postMessage");
+
+    await choose(select(container, "Rows"), "none");
+    expect(window.location.search).toBe("?c.rows=none&aba=resumo");
+    expect(post).toHaveBeenCalledWith(
+      { ds: 1, type: "location", url: `/orders?c.rows=none&aba=resumo&${FRAME_PARAM}=1` },
+      window.location.origin,
+    );
+  });
+
+  it("zoom, girar e viewport mantêm a query, junto com o recorte de handoff", async () => {
+    const container = await mount(
+      "/orders?aba=resumo&handoff=1&allowRoute=%2Forders",
+      flowDefinition(),
+    );
+    await click(button(container, DEFAULT_LABELS.viewport.mobile!));
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("viewport")).toBe("mobile");
+    expect(params.get("handoff")).toBe("1");
+    expect(params.getAll("allowRoute")).toEqual(["/orders"]);
+    expect(params.get("aba")).toBe("resumo");
+  });
+
+  it("\"Copiar link\" leva a query da tela", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const container = await mount("/orders?aba=resumo", flowDefinition());
+    await choose(select(container, DEFAULT_LABELS.panel.persona), "requester");
+    await click(button(container, DEFAULT_LABELS.topbar.copyLink));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("/orders?persona=requester&aba=resumo"));
+  });
+
+  it("trocar de tela pela lateral deixa a query da tela anterior para trás", async () => {
+    const container = await mount("/orders?aba=resumo&persona=requester", flowDefinition());
+    await click(button(container, "Order detail"));
+    expect(window.location.pathname).toBe("/orders/:id");
+    expect(window.location.search).not.toContain("aba");
+  });
+
+  it("dentro do quadro, `setControl` mantém a query da tela no endereço e na mensagem ao pai", () =>
+    withParent(async (parent) => {
+      const container = await mount(`/orders?scenario=orders.cancel&aba=resumo&${FRAME_PARAM}=1`, flowDefinition());
+      await click(button(container, "close"));
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get("aba")).toBe("resumo");
+      expect(params.getAll(FRAME_PARAM)).toEqual(["1"]);
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        {
+          ds: 1,
+          type: "navigate",
+          url: `/orders?scenario=orders.cancel&c.overlay=none&aba=resumo&${FRAME_PARAM}=1`,
+          replace: true,
+        },
+        window.location.origin,
+      );
+    }));
+});

@@ -275,6 +275,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
             onTab={(tab) => change({ panelTab: tab })}
             onOpenScenario={openScenario}
             onOpenComponent={(id) => openComponent(id)}
+            onOpenScreen={(id) => openScreen(id)}
             onChange={change}
             width={rightWidth}
             onResize={setRightWidth}

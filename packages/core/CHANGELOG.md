@@ -6,6 +6,63 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.9.1 (2026-09-29)
+
+**Patch/minor compatível.** Três limitações que um produto real encontrou na
+0.9.0, mais a persona padrão do produto. Nada muda para quem não usa o que é
+novo; `navigate(to)` sem query nem opções se comporta como antes.
+
+### Corrigido
+
+- **`context.navigate` com query própria não perde mais o contexto.** Antes, a
+  query do destino substituía a atual inteira, e persona, rede, viewport, tema,
+  idioma, fonte de dados e handoff precisavam ser remontados à mão. Agora os
+  parâmetros de contexto do motor — tudo que não é `scenario`, `fixture`,
+  `component` nem `c.*` — seguem, a menos que o destino traga o mesmo parâmetro.
+  Os `c.*` da tela anterior continuam descartados. A persona que vinha do cenário
+  deixado para trás vira `persona=` explícito (salvo quando é a persona padrão);
+  a rede e a fixture do cenário ficam com ele. Vale também para navegação que
+  nasce dentro do quadro e para link comum com query no quadro.
+- **`setControl` chamado várias vezes no mesmo ciclo acumula.** Antes, cada
+  chamada partia do valor da última renderização, e só a última sobrevivia. Agora
+  cada chamada parte do endereço mais recente (atualização funcional), dentro e
+  fora do quadro; chamada sem mudança efetiva não toca no histórico nem avisa o
+  pai. `DesignSpaceState.setControls` também parte do endereço mais recente.
+- **Tela com parâmetro aberta sem cenário** não precisa mais ir para o caminho
+  literal (`/x/:id`): ver `RouteDefinition.params` abaixo. Sem `params`, o
+  comportamento é o de antes, agora com aviso de validação.
+
+### Adicionado
+
+- **`navigate(to, options?)`** em `ScenarioContext` e `DesignSpaceState`, com
+  `NavigateOptions` (tipo exportado): `controls` (id → value) vira `c.*` do
+  destino, sem os valores iguais ao padrão da tela de destino (ou ao que o
+  cenário de destino fixa); `replace` substitui a entrada do histórico. Passar
+  `controls` já faz a navegação ser explícita, como uma query própria.
+- **`ScenarioContext.setControls(patch)`** — vários controles numa única
+  atualização de URL e uma só mensagem ao pai. **Obrigatório** no tipo: o motor é
+  quem monta o contexto e sempre o entrega. Só quebra typecheck de quem monta um
+  `ScenarioContext` à mão (um mock de teste, por exemplo): acrescente
+  `setControls: () => {}`.
+- **`DesignSpaceState.setScreenControls(patch)`** — o mesmo, para quem usa
+  `useDesignSpaceState` diretamente.
+- **`RouteDefinition.params`** — valores de exemplo dos parâmetros do `path` (e
+  de `*`). Usados sempre que o motor abre a tela sem cenário: lateral, variação
+  padrão, "Usado em" em Informações (que agora abre também tela sem
+  variação) e "Copiar para o PR". `ScreenNode.href` passa a trazer o caminho com
+  os exemplos, codificados.
+- **`ProductDefinition.defaultPersona`** — persona efetiva de toda tela e todo
+  cenário sem persona própria: `context.persona`, `context.permissions` e
+  `context.can` refletem ela, também no quadro. O seletor do painel deixa de
+  oferecer "—" e mostra o padrão; `persona=` só vai para a URL quando difere do
+  padrão efetivo. Persona do cenário e a escolhida no painel continuam vencendo.
+  `Registry.defaultPersona`; `permissionsOf` usa a persona padrão para cenário
+  sem persona. Sem `defaultPersona`, nada muda.
+- **Validação:** rota com `:param` sem exemplo e sem cenário que a cubra
+  (aviso); `params` com nome que a rota não tem, vazio, ou que monta caminho de
+  outra rota (aviso); `params` que não é objeto (erro); `defaultPersona` que não
+  é persona registrada (erro).
+
 ## 0.9.0 (2026-09-29)
 
 **Minor (compatível).** Fluxos agrupam telas, e as variações de uma tela passam a

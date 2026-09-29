@@ -215,6 +215,13 @@ export type RouteDefinition = {
   expected?: string[];
   /** Ids do catálogo usados pela tela (mesmo papel de `Scenario.components`). */
   components?: string[];
+  /**
+   * Valores de exemplo dos parâmetros do `path` (`{ id: "REQ-1" }` para
+   * `/requests/:id`), e de `*` quando houver. O motor usa sempre que precisa
+   * abrir a tela sem cenário — lateral, variação padrão, links de Informações e
+   * "Copiar para o PR". Sem eles, o caminho abre literal (`/requests/:id`).
+   */
+  params?: Record<string, string>;
 };
 
 export type ScreenProps = {
@@ -342,6 +349,12 @@ export type ProductDefinition = {
    */
   scenarios: Scenario[];
   personas: Persona[];
+  /**
+   * Persona efetiva de toda tela e todo cenário sem persona própria. Sem ela, a
+   * tela sem cenário abre sem persona (e sem permissões). Persona do cenário e
+   * a escolhida no painel continuam vencendo.
+   */
+  defaultPersona?: string;
   fixtures: Fixture[];
   rules?: Rule[];
   /** Rotas declarativas. Cada rota é uma tela na lista de Telas. */
@@ -435,8 +448,20 @@ export type ScenarioContext = {
   viewport: ViewportSetting;
   themeMode: string | undefined;
   locale: string | undefined;
-  /** Navega dentro do Design Space preservando os controles ativos. */
-  navigate: (to: string) => void;
+  /**
+   * Navega dentro do Design Space, também de dentro do quadro.
+   *
+   * - `navigate("/x")`, sem query: a query atual segue inteira; numa tela
+   *   diferente, os `c.*` da anterior ficam para trás.
+   * - `navigate("/x?a=1")` ou com `options.controls`: o destino manda na query.
+   *   O contexto do motor (persona, rede, viewport, tema, idioma, fonte de
+   *   dados, handoff…) é preservado quando o destino não o traz; `scenario`,
+   *   `fixture`, `component` e os `c.*` da tela anterior não. A persona que vinha
+   *   do cenário deixado para trás vira parâmetro explícito.
+   * - `options.controls` vira `c.*` do destino; valor igual ao padrão da tela
+   *   de destino não entra na URL.
+   */
+  navigate: (to: string, options?: NavigateOptions) => void;
   /** Abre outro cenário por id. */
   openScenario: (scenarioId: string) => void;
   /**
@@ -449,6 +474,20 @@ export type ScenarioContext = {
    * controle de sobreposição para "nenhuma"). Atualiza a URL.
    */
   setControl: (id: string, value: string) => void;
+  /**
+   * Muda vários controles numa única atualização de URL. Chamadas seguidas de
+   * `setControl`/`setControls` no mesmo ciclo se acumulam: cada uma parte do
+   * estado mais recente, não do valor da última renderização.
+   */
+  setControls: (patch: Record<string, string>) => void;
+};
+
+/** Opções de {@link ScenarioContext.navigate}. */
+export type NavigateOptions = {
+  /** Controles da tela de destino (id → value), escritos como `c.<id>`. */
+  controls?: Record<string, string>;
+  /** Substitui a entrada atual do histórico em vez de criar uma nova. */
+  replace?: boolean;
 };
 
 export type ViewportSetting = {

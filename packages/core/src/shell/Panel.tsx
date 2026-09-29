@@ -49,6 +49,8 @@ export type PanelProps = {
   onTab: (tab: PanelTab) => void;
   onOpenScenario: (scenarioId: string) => void;
   onOpenComponent: (componentId: string) => void;
+  /** Abre uma tela sem cenário, no `href` dela (com os exemplos de `route.params`). */
+  onOpenScreen?: (screenId: string) => void;
   onChange: (patch: Partial<ControlsState>) => void;
   width: number;
   onResize: (width: number) => void;
@@ -229,7 +231,8 @@ function Variations({
               value={controls.persona ?? ""}
               onChange={(event) => onChange({ persona: event.target.value || undefined })}
             >
-              <option value="">{p.none}</option>
+              {/* Com persona padrão, "nenhuma" não é uma situação possível. */}
+              {!registry.defaultPersona && <option value="">{p.none}</option>}
               {product.personas.map((persona) => (
                 <option key={persona.id} value={persona.id}>
                   {persona.name}
@@ -496,6 +499,7 @@ function Info({
   component,
   onOpenScenario,
   onOpenComponent,
+  onOpenScreen,
 }: PanelProps) {
   const labels = useLabels();
   const i = labels.info;
@@ -532,7 +536,7 @@ function Info({
                     <button
                       type="button"
                       className="ds-link"
-                      onClick={() => target && onOpenScenario(target.id)}
+                      onClick={() => (target ? onOpenScenario(target.id) : onOpenScreen?.(usage.id))}
                     >
                       {usage.name}
                     </button>

@@ -114,6 +114,7 @@ export {
   type DataSourceAdapter,
   type Fixture,
   type HandoffScope,
+  type NavigateOptions,
   type NetworkState,
   type PanelTab,
   type Persona,

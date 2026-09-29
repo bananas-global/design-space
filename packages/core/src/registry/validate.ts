@@ -14,9 +14,10 @@ import {
   NETWORK_STATES,
   type ControlGroup,
   type ProductDefinition,
+  type RouteDefinition,
   type Scenario,
 } from "../types/index.js";
-import { resolveRoute } from "../router/index.js";
+import { resolveRoute, screenHref } from "../router/index.js";
 
 export type ValidationIssue = {
   level: "error" | "warning";
@@ -109,6 +110,14 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
   // existe quando há cenário que precisa abrir uma tela.
   if (!product.routes?.length && product.scenarios?.length) {
     push("error", "product", "`routes` está vazio: nenhum cenário conseguirá renderizar.");
+  }
+
+  if (product.defaultPersona !== undefined && !personaIds.has(product.defaultPersona)) {
+    push(
+      "error",
+      "product",
+      `\`defaultPersona\` aponta para persona não registrada: \`${product.defaultPersona}\`.`,
+    );
   }
 
   if ("modules" in (product as object)) {
@@ -211,6 +220,7 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
   for (const route of product.routes ?? []) {
     if (!isNonEmptyString(route?.path)) continue;
     const where = `route:${route.path}`;
+    validateRouteParams(product, route, where, push);
     for (const component of Array.isArray(route.components) ? route.components : []) {
       if (!componentIds.has(component)) {
         push(
@@ -389,6 +399,68 @@ function validateControlGroups(
             .join(", ")}.`,
         );
       }
+    }
+  }
+}
+
+/**
+ * Exemplos de parâmetro de uma rota. O motor abre a tela sem cenário no `href`
+ * montado com eles; sem exemplo e sem cenário que cubra a rota, a tela abriria
+ * no caminho literal (`/requests/:id`), e isso é aviso.
+ */
+function validateRouteParams(
+  product: ProductDefinition,
+  route: RouteDefinition,
+  where: string,
+  push: (level: ValidationIssue["level"], where: string, message: string) => void,
+): void {
+  const names = route.path
+    .split("/")
+    .filter((segment) => segment.startsWith(":") || segment === "*")
+    .map((segment) => (segment === "*" ? "*" : segment.slice(1)));
+  const params = route.params;
+  if (params !== undefined && (!params || typeof params !== "object" || Array.isArray(params))) {
+    push("error", where, "`params`, quando informado, é um objeto de nome do parâmetro → valor de exemplo.");
+    return;
+  }
+  const examples = params ?? {};
+  for (const [name, value] of Object.entries(examples)) {
+    if (!names.includes(name)) {
+      push("warning", where, `\`params.${name}\` não é parâmetro de \`${route.path}\` e é ignorado.`);
+    } else if (!isNonEmptyString(value)) {
+      push("warning", where, `\`params.${name}\` vazio: a tela abre com \`:${name}\` literal.`);
+    }
+  }
+
+  const missing = names.filter((name) => name !== "*" && !isNonEmptyString(examples[name]));
+  if (missing.length > 0) {
+    const covered = (product.scenarios ?? []).some(
+      (scenario) =>
+        isNonEmptyString(scenario?.route) &&
+        resolveRoute(product.routes ?? [], scenario.route.split("?")[0] ?? scenario.route)?.definition.path ===
+          route.path,
+    );
+    if (!covered) {
+      push(
+        "warning",
+        where,
+        `Sem exemplo para ${missing.map((name) => `\`:${name}\``).join(", ")} e sem cenário na rota: a tela abre no caminho literal \`${route.path}\`. Declare \`params: { ${missing.map((name) => `${name}: "…"`).join(", ")} }\`.`,
+      );
+    }
+    return;
+  }
+
+  // Com todos os exemplos, o caminho montado precisa cair nesta mesma rota — um
+  // exemplo igual a um segmento literal de outra rota abriria a outra tela.
+  if (names.length > 0) {
+    const href = screenHref(route.path, examples);
+    const match = resolveRoute(product.routes ?? [], href);
+    if (match && match.definition.path !== route.path) {
+      push(
+        "warning",
+        where,
+        `Os exemplos de \`params\` montam \`${href}\`, que abre a rota \`${match.definition.path}\`, não esta.`,
+      );
     }
   }
 }

@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ChromeTheme,
   ControlsState,
+  NavigateOptions,
   NetworkState,
   PanelTab,
   ViewportSetting,
@@ -119,7 +120,9 @@ export function parseControls(search: string, registry: Registry, path?: string)
     scenario: scenario?.id,
     handoff,
     component: component?.id,
-    persona: params.get(PARAM.persona) ?? scenario?.persona,
+    // Precedência: URL, cenário, padrão do produto. O preview de componente não
+    // tem persona, então o padrão não se aplica a ele.
+    persona: params.get(PARAM.persona) ?? scenario?.persona ?? (component ? undefined : registry.defaultPersona),
     fixture: component ? componentFixture : requestedFixture ?? scenario?.fixture,
     network: isNetworkState(network) ? network : (scenario?.network ?? "success"),
     viewport: params.get(PARAM.viewport) ?? "fit",
@@ -160,10 +163,11 @@ export function serializeControls(
   if (state.component) params.set(PARAM.component, state.component);
   else if (state.scenario) params.set(PARAM.scenario, state.scenario);
 
-  // Persona e fixture só entram quando divergem do cenário: um link com a
-  // combinação declarada não precisa repeti-la, e um link com combinação
-  // deliberadamente diferente precisa carregá-la.
-  if (state.persona && state.persona !== scenario?.persona) {
+  // Persona e fixture só entram quando divergem do cenário (e a persona, do
+  // padrão do produto quando o cenário não tem uma): um link com a combinação
+  // declarada não precisa repeti-la, e um link com combinação deliberadamente
+  // diferente precisa carregá-la.
+  if (state.persona && state.persona !== (scenario?.persona ?? registry.defaultPersona)) {
     params.set(PARAM.persona, state.persona);
   }
   if (state.component && state.fixture) {
@@ -228,10 +232,18 @@ export type DesignSpaceState = {
   location: DesignSpaceLocation;
   controls: ControlsState;
   viewport: ViewportSetting;
-  /** Altera um ou mais controles, preservando a rota. */
+  /**
+   * Altera um ou mais controles, preservando a rota. Parte sempre do endereço
+   * mais recente: chamadas seguidas no mesmo ciclo se acumulam.
+   */
   setControls: (patch: Partial<ControlsState>) => void;
-  /** Navega para uma rota, preservando os controles ativos. */
-  navigate: (to: string, options?: { replace?: boolean }) => void;
+  /**
+   * Muda controles da tela (id → value) sobre os valores mais recentes, numa só
+   * atualização de URL. Sem mudança efetiva, não toca no histórico.
+   */
+  setScreenControls: (patch: Record<string, string>) => void;
+  /** Navega para uma rota. Ver {@link navigationTarget} para o que a query leva. */
+  navigate: (to: string, options?: NavigateOptions) => void;
   /**
    * Abre um cenário: vai para a rota dele e reseta persona, fixture e rede para
    * o que o cenário declara. Controles de ambiente (viewport, chrome, tema)
@@ -272,15 +284,20 @@ export function useDesignSpaceState(
   options: DesignSpaceStateOptions = {},
 ): DesignSpaceState {
   const frame = Boolean(options.frame);
-  const [location, setLocation] = useState<DesignSpaceLocation>(() => currentLocation());
+  const [location, setLocationState] = useState<DesignSpaceLocation>(() => currentLocation());
+  // O endereço mais recente, à frente da renderização: duas mudanças no mesmo
+  // ciclo precisam partir uma da outra, não do valor que o React renderizou.
   const locationRef = useRef(location);
-  locationRef.current = location;
+  const setLocation = useCallback((next: DesignSpaceLocation) => {
+    locationRef.current = next;
+    setLocationState(next);
+  }, []);
 
   useEffect(() => {
     const onPopState = () => setLocation(currentLocation());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+  }, [setLocation]);
 
   // Quadro: recebe estado do pai e avisa que montou. O pai decide se o endereço
   // de montagem ainda é o certo — pode ter mudado enquanto o quadro carregava.
@@ -302,7 +319,7 @@ export function useDesignSpaceState(
       origin,
     );
     return () => window.removeEventListener("message", onMessage);
-  }, [frame]);
+  }, [frame, setLocation]);
 
   const controls = useMemo(
     () => parseControls(location.search, registry, location.path),
@@ -328,40 +345,46 @@ export function useDesignSpaceState(
       else window.history.pushState(null, "", url);
       setLocation({ path, search });
     },
-    [frame],
+    [frame, setLocation],
   );
+
+  /** Controles do endereço mais recente, mesmo antes de renderizar. */
+  const latestControls = useCallback((): ControlsState => {
+    const latest = locationRef.current;
+    return latest === location ? controls : parseControls(latest.search, registry, latest.path);
+  }, [controls, location, registry]);
 
   const setControls = useCallback(
     (patch: Partial<ControlsState>) => {
-      const next = { ...controls, ...patch };
+      const latest = locationRef.current;
+      const next = { ...latestControls(), ...patch };
       // Troca de controle é replace, não push: o histórico do navegador deve
       // registrar navegação entre situações, não cada ajuste de viewport.
-      push(location.path, serializeControls(next, registry, location.path), true);
+      const search = serializeControls(next, registry, latest.path);
+      if (search === latest.search) return;
+      push(latest.path, search, true);
     },
-    [controls, location.path, push, registry],
+    [latestControls, push, registry],
+  );
+
+  const setScreenControls = useCallback(
+    (patch: Record<string, string>) => {
+      const current = latestControls().screenControls ?? {};
+      const changed = Object.entries(patch).some(([id, value]) => current[id] !== value);
+      if (!changed) return;
+      setControls({ screenControls: { ...current, ...patch } });
+    },
+    [latestControls, setControls],
   );
 
   const navigate = useCallback(
-    (to: string, options?: { replace?: boolean }) => {
-      const [rawPath, rawSearch] = to.split("?");
-      const path = rawPath || "/";
-      // Uma rota com query própria manda; sem query, os controles seguem.
-      const targetParams = new URLSearchParams(rawSearch ?? location.search);
-      // Controles são da tela: numa tela diferente, os da anterior não valem.
-      if (
-        rawSearch === undefined &&
-        registry.screenForPath(path)?.id !== registry.screenForPath(location.path)?.id
-      ) {
-        deleteControlParams(targetParams);
-      }
-      // Uma navegação iniciada pela UI do produto não pode apagar o recorte do
-      // handoff ao fornecer sua própria query string.
-      if (controls.handoff) applyHandoffScope(targetParams, controls.handoff);
-      const targetQuery = targetParams.toString();
-      const search = targetQuery ? `?${targetQuery}` : "";
-      push(path, search, options?.replace ?? false);
+    (to: string, navigateOptions?: NavigateOptions) => {
+      const target = navigationTarget(to, locationRef.current, registry, {
+        controls: navigateOptions?.controls,
+      });
+      push(target.path, target.search, navigateOptions?.replace ?? false);
     },
-    [controls.handoff, location.path, location.search, push, registry],
+    [push, registry],
   );
 
   const openScenario = useCallback(
@@ -451,12 +474,101 @@ export function useDesignSpaceState(
     controls,
     viewport,
     setControls,
+    setScreenControls,
     navigate,
     openScenario,
     openComponent,
     openScreen,
     go,
   };
+}
+
+/**
+ * Para onde vai uma navegação: caminho e query do destino. Pura e testável.
+ *
+ * - **Sem query e sem `controls`** (`navigate("/x")`): a query atual segue
+ *   inteira, como sempre foi; numa tela diferente, os `c.*` da anterior ficam
+ *   para trás.
+ * - **Com query própria ou com `controls`**: o destino manda. O contexto do
+ *   motor — tudo que não é `scenario`, `fixture`, `component` nem `c.*`:
+ *   persona, rede, viewport, tema, idioma, fonte de dados, handoff e os
+ *   parâmetros do chrome — segue, a menos que o destino traga o mesmo
+ *   parâmetro. A persona que vinha do cenário deixado para trás vira parâmetro
+ *   explícito, para quem está olhando não mudar só porque o cenário saiu.
+ *   `controls` vira `c.*` do destino, sem os valores que já são o padrão da
+ *   tela de destino.
+ *
+ * Em qualquer caso, o recorte de handoff atual é reaplicado: a UI do produto não
+ * consegue apagá-lo escrevendo a própria query.
+ */
+export function navigationTarget(
+  to: string,
+  current: DesignSpaceLocation,
+  registry: Registry,
+  options: { controls?: Record<string, string> } = {},
+): DesignSpaceLocation {
+  const withoutHash = to.split("#")[0] ?? to;
+  const mark = withoutHash.indexOf("?");
+  const path = (mark === -1 ? withoutHash : withoutHash.slice(0, mark)) || "/";
+  const rawSearch = mark === -1 ? undefined : withoutHash.slice(mark + 1);
+  const currentParams = new URLSearchParams(current.search);
+  const state = parseControls(current.search, registry, current.path);
+
+  let params: URLSearchParams;
+  if (rawSearch === undefined && options.controls === undefined) {
+    params = new URLSearchParams(current.search);
+    // Controles são da tela: numa tela diferente, os da anterior não valem.
+    if (registry.screenForPath(path)?.id !== registry.screenForPath(current.path)?.id) {
+      deleteControlParams(params);
+    }
+  } else {
+    const target = new URLSearchParams(rawSearch ?? "");
+    params = new URLSearchParams();
+    for (const [key, value] of currentParams) {
+      if (!isContextParam(key) || target.has(key)) continue;
+      params.append(key, value);
+    }
+    // O cenário fica para trás; quem está olhando, não. A persona que ele dava
+    // vira parâmetro explícito. A rede e a fixture dele são da situação dele e
+    // ficam com ele — a rede escolhida no painel já está na URL e segue.
+    if (
+      state.scenario &&
+      !target.has(PARAM.scenario) &&
+      state.persona &&
+      state.persona !== registry.defaultPersona &&
+      !params.has(PARAM.persona) &&
+      !target.has(PARAM.persona)
+    ) {
+      params.set(PARAM.persona, state.persona);
+    }
+    for (const [key, value] of target) params.append(key, value);
+
+    if (options.controls) {
+      const screen = registry.screenForPath(path);
+      const scenario = registry.scenario(params.get(PARAM.scenario) ?? undefined);
+      const own = scenario && screen && registry.screenOf(scenario)?.id === screen.id ? scenario : undefined;
+      const base = screen ? registry.resolveControls(screen, { scenario: own }).values : {};
+      for (const [id, value] of Object.entries(options.controls)) {
+        const name = `${CONTROL_PARAM_PREFIX}${id}`;
+        if (base[id] === value) params.delete(name);
+        else params.set(name, value);
+      }
+    }
+  }
+
+  if (state.handoff) applyHandoffScope(params, state.handoff);
+  const query = params.toString();
+  return { path, search: query ? `?${query}` : "" };
+}
+
+/**
+ * Parâmetro de contexto do motor: o que atravessa uma navegação com query
+ * própria. Ficam de fora o que escolhe a situação — cenário, fixture,
+ * componente — e os controles da tela anterior.
+ */
+function isContextParam(key: string): boolean {
+  if (key.startsWith(CONTROL_PARAM_PREFIX)) return false;
+  return key !== PARAM.scenario && key !== PARAM.fixture && key !== PARAM.component;
 }
 
 export function resolveViewport(controls: ControlsState): ViewportSetting {

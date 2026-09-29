@@ -22,6 +22,7 @@ function RequestScreen({ params, context }: ScreenProps) {
       <h1>{`Request ${params.id ?? "queue"}`}</h1>
       <output data-testid="data">{JSON.stringify(context.data ?? null)}</output>
       <output data-testid="persona">{context.persona?.id ?? "none"}</output>
+      <output data-testid="can">{String(context.can("requests.read"))}</output>
       <a href="/requests/REQ-9">open</a>
     </main>
   );
@@ -494,6 +495,33 @@ function OrdersScreen({ context }: ScreenProps) {
       <button type="button" onClick={() => context.setControl("overlay", "none")}>
         close
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          context.setControl("rows", "none");
+          context.setControl("sort", "oldest");
+          context.setControl("overlay", "none");
+        }}
+      >
+        accumulate
+      </button>
+      <button type="button" onClick={() => context.setControls({ rows: "one", overlay: "cancel" })}>
+        batch
+      </button>
+    </main>
+  );
+}
+
+function OrderDetailScreen({ params, context }: ScreenProps) {
+  return (
+    <main>
+      <h1>{`Order ${params.id}`}</h1>
+      <button
+        type="button"
+        onClick={() => context.navigate("/orders", { controls: { rows: "one", sort: "recent" } })}
+      >
+        back
+      </button>
     </main>
   );
 }
@@ -550,7 +578,7 @@ function flowDefinition(): ProductDefinition {
           },
         ],
       },
-      { path: "/orders/:id", screen: RequestScreen, name: "Order detail", group: "Orders" },
+      { path: "/orders/:id", screen: OrderDetailScreen, name: "Order detail", group: "Orders" },
     ],
     scenarios: [
       {
@@ -732,5 +760,178 @@ describe("tela sem cenário", () => {
 
     const loading = await mount(`/orders?network=loading&${FRAME_PARAM}=1`, flowDefinition());
     expect(loading.querySelector("[data-testid='state']")?.textContent).toBe("loading");
+  });
+});
+
+/** O fluxo de pedidos com exemplo de parâmetro no detalhe, sem cenário nele. */
+function flowWithParams(): ProductDefinition {
+  const base = flowDefinition();
+  return {
+    ...base,
+    routes: base.routes.map((route) =>
+      route.path === "/orders/:id"
+        ? { ...route, params: { id: "ORD-7" }, components: ["feedback.notice"] }
+        : route,
+    ),
+  };
+}
+
+function withParent<T>(run: (parent: { postMessage: ReturnType<typeof vi.fn> }) => Promise<T>): Promise<T> {
+  const parent = { postMessage: vi.fn() };
+  const descriptor = Object.getOwnPropertyDescriptor(window, "parent");
+  Object.defineProperty(window, "parent", { configurable: true, value: parent });
+  return run(parent).finally(() => {
+    if (descriptor) Object.defineProperty(window, "parent", descriptor);
+    else delete (window as { parent?: unknown }).parent;
+  });
+}
+
+describe("0.9.1: controles acumulam dentro do quadro", () => {
+  it("várias chamadas de `setControl` no mesmo handler se somam numa URL só", () =>
+    withParent(async (parent) => {
+      const container = await mount(`/orders?scenario=orders.cancel&${FRAME_PARAM}=1`, flowDefinition());
+      const output = () => JSON.parse(container.querySelector("[data-testid='controls']")!.textContent!);
+
+      await click(button(container, "accumulate"));
+      expect(output()).toEqual({ rows: "none", sort: "oldest", overlay: "none" });
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get("c.rows")).toBe("none");
+      expect(params.get("c.sort")).toBe("oldest");
+      expect(params.get("c.overlay")).toBe("none");
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        {
+          ds: 1,
+          type: "navigate",
+          url: `/orders?scenario=orders.cancel&c.rows=none&c.sort=oldest&c.overlay=none&${FRAME_PARAM}=1`,
+          replace: true,
+        },
+        window.location.origin,
+      );
+    }));
+
+  it("`setControls` muda vários de uma vez, com uma única mensagem ao pai", () =>
+    withParent(async (parent) => {
+      const container = await mount(`/orders?${FRAME_PARAM}=1`, flowDefinition());
+      parent.postMessage.mockClear();
+      await click(button(container, "batch"));
+      const navigations = parent.postMessage.mock.calls.filter(([message]) => message.type === "navigate");
+      expect(navigations).toHaveLength(1);
+      expect(navigations[0]![0].url).toBe(`/orders?c.rows=one&c.overlay=cancel&${FRAME_PARAM}=1`);
+
+      // Sem mudança efetiva, não há navegação nenhuma.
+      parent.postMessage.mockClear();
+      await click(button(container, "batch"));
+      expect(parent.postMessage.mock.calls.filter(([message]) => message.type === "navigate")).toHaveLength(0);
+    }));
+});
+
+describe("0.9.1: navegação com controles preserva o contexto", () => {
+  it("de dentro do quadro, `navigate(to, { controls })` leva persona, rede e viewport, e não os `c.*` anteriores", () =>
+    withParent(async (parent) => {
+      const container = await mount(
+        `/orders/7?persona=requester&network=slow&viewport=mobile&fixture=queue&${FRAME_PARAM}=1`,
+        flowDefinition(),
+      );
+      await click(button(container, "back"));
+      expect(window.location.pathname).toBe("/orders");
+      const params = Object.fromEntries(new URLSearchParams(window.location.search));
+      expect(params).toEqual({
+        persona: "requester",
+        network: "slow",
+        viewport: "mobile",
+        "c.rows": "one",
+        [FRAME_PARAM]: "1",
+      });
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        {
+          ds: 1,
+          type: "navigate",
+          url: `/orders?persona=requester&network=slow&viewport=mobile&c.rows=one&${FRAME_PARAM}=1`,
+          replace: false,
+        },
+        window.location.origin,
+      );
+    }));
+
+  it("o chrome adota a navegação e devolve os próprios parâmetros", async () => {
+    const container = await mount("/orders/7?persona=requester&zoom=75&tab=info", flowDefinition());
+    const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!.contentWindow!;
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          source: frame,
+          data: { ds: 1, type: "navigate", url: `/orders?persona=requester&c.rows=one&${FRAME_PARAM}=1`, replace: false },
+        }),
+      );
+    });
+    expect(window.location.pathname).toBe("/orders");
+    expect(Object.fromEntries(new URLSearchParams(window.location.search))).toEqual({
+      persona: "requester",
+      "c.rows": "one",
+      zoom: "75",
+      tab: "info",
+    });
+  });
+});
+
+describe("0.9.1: `route.params`", () => {
+  it("a lateral abre a tela sem cenário no caminho de exemplo", async () => {
+    const container = await mount("/orders", flowWithParams());
+    await click(button(container, "Order detail"));
+    expect(window.location.pathname).toBe("/orders/ORD-7");
+    expect(container.querySelector(".ds-sidebar [aria-current='true']")?.textContent).toContain("Order detail");
+  });
+
+  it("\"Usado em\" abre a tela sem cenário no caminho de exemplo", async () => {
+    const container = await mount("/?component=feedback.notice&tab=info", flowWithParams());
+    await click(button(container, "Order detail"));
+    expect(window.location.pathname).toBe("/orders/ORD-7");
+    expect(new URLSearchParams(window.location.search).has("component")).toBe(false);
+  });
+
+  it("sem `params`, o caminho continua literal e o diagnóstico avisa", async () => {
+    const container = await mount("/orders", flowDefinition());
+    await click(container.querySelector<HTMLButtonElement>(".ds-diagnostics__trigger")!);
+    expect(container.querySelector(".ds-diagnostics__popover")?.textContent).toContain("/orders/:id");
+  });
+});
+
+describe("0.9.1: `defaultPersona`", () => {
+  it("é a persona e as permissões da tela sem cenário, dentro do quadro", async () => {
+    const container = await mount(`/requests?${FRAME_PARAM}=1`, product({ defaultPersona: "reviewer" }));
+    expect(container.querySelector("[data-testid='persona']")?.textContent).toBe("reviewer");
+    expect(container.querySelector("[data-testid='can']")?.textContent).toBe("true");
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+
+    // A escolha explícita continua vencendo.
+    const chosen = await mount(`/requests?persona=requester&${FRAME_PARAM}=1`, product({ defaultPersona: "reviewer" }));
+    expect(chosen.querySelector("[data-testid='persona']")?.textContent).toBe("requester");
+    expect(chosen.querySelector("[data-testid='can']")?.textContent).toBe("false");
+  });
+
+  it("o seletor do painel não oferece \"nenhuma\" e a URL só leva a persona quando difere", async () => {
+    const container = await mount("/requests/REQ-4", product({ defaultPersona: "requester" }));
+    const select = container.querySelector<HTMLSelectElement>(".ds-panel select")!;
+    expect([...select.options].map((option) => option.value)).toEqual(["reviewer", "requester"]);
+    expect(select.value).toBe("requester");
+
+    await act(async () => {
+      select.value = "reviewer";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(new URLSearchParams(window.location.search).get("persona")).toBe("reviewer");
+    await act(async () => {
+      select.value = "requester";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(new URLSearchParams(window.location.search).has("persona")).toBe(false);
+  });
+
+  it("sem `defaultPersona`, o seletor mantém a opção vazia", async () => {
+    const container = await mount("/requests/REQ-4");
+    const select = container.querySelector<HTMLSelectElement>(".ds-panel select")!;
+    expect([...select.options].map((option) => option.value)).toEqual(["", "reviewer", "requester"]);
   });
 });

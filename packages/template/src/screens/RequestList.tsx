@@ -41,6 +41,7 @@ export function RequestList({ context }: ScreenProps) {
   const source =
     data === undefined && !context.scenario ? standardList : ((data as RequestsData | null)?.requests ?? []);
   const requests = applyControls(source, context.controls);
+  const filtered = (context.controls.rows ?? "all") !== "all" || (context.controls.status ?? "all") !== "all";
   const notice =
     context.controls.notice === "overdue" ? (
       <div
@@ -65,6 +66,23 @@ export function RequestList({ context }: ScreenProps) {
         <EmptyState
           title="Nenhuma solicitação na fila"
           description="Quando alguém registrar uma solicitação, ela aparece aqui para análise."
+          action={
+            filtered ? (
+              <button
+                type="button"
+                className="text-sm font-medium text-brand-600 underline-offset-2 hover:underline"
+                onClick={() => {
+                  // Duas mudanças seguidas no mesmo clique: o motor acumula as
+                  // duas numa URL só (0.9.1). `context.setControls` faz o mesmo
+                  // numa chamada.
+                  context.setControl("rows", "all");
+                  context.setControl("status", "all");
+                }}
+              >
+                Mostrar a fila inteira
+              </button>
+            ) : undefined
+          }
         />
       </>,
     );

@@ -112,6 +112,14 @@ export function RequestDetail({ params, context }: ScreenProps) {
           <Button variant="ghost" onClick={() => context.navigate("/requests")}>
             Voltar para a fila
           </Button>
+          {/* Navegar com controles: a fila abre filtrada pela situação desta
+              solicitação, e persona, viewport e rede escolhidos seguem. */}
+          <Button
+            variant="ghost"
+            onClick={() => context.navigate("/requests", { controls: { status: request.status } })}
+          >
+            Ver a fila nesta situação
+          </Button>
         </div>
       </Card>
     </div>,

@@ -309,6 +309,49 @@ test.describe("fluxos e controles", () => {
     );
   });
 
+  test("navegar com controles abre a fila filtrada e mantém persona e viewport", async ({ page }) => {
+    await page.goto(urlFor("requests.approve-no-permission", { viewport: "mobile" }));
+    const ui = app(page);
+    await ui.getByRole("button", { name: "Ver a fila nesta situação" }).click();
+
+    await expect(page).toHaveURL(/\/requests\?/);
+    const params = new URL(page.url()).searchParams;
+    expect(params.get("c.status")).toBe("in-review");
+    expect(params.get("persona")).toBe("requester");
+    expect(params.get("viewport")).toBe("mobile");
+    expect(params.has("scenario")).toBe(false);
+    expect(params.has("fixture")).toBe(false);
+
+    await expect(ui.getByRole("row")).toHaveCount(4); // cabeçalho + 3 em análise
+    await expect(page.locator(".ds-panel").getByLabel("Situação")).toHaveValue("in-review");
+    const frame = await frameOf(page);
+    await expect.poll(() => frame.evaluate(() => window.innerWidth)).toBe(375);
+  });
+
+  test("duas chamadas de `setControl` no mesmo clique se acumulam", async ({ page }) => {
+    await page.goto(urlFor("requests.queue", { screenControls: { rows: "none", status: "approved" } }));
+    const ui = app(page);
+    await expect(ui.getByRole("heading", { name: "Nenhuma solicitação na fila" })).toBeVisible();
+
+    await ui.getByRole("button", { name: "Mostrar a fila inteira" }).click();
+    await expect(ui.getByRole("row")).toHaveCount(6);
+    await expect(page).not.toHaveURL(/c\.rows/);
+    await expect(page).not.toHaveURL(/c\.status/);
+    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Todas", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  test("tela sem cenário abre com a persona padrão do produto", async ({ page }) => {
+    await page.goto("/requests?c.status=approved");
+    await expect(app(page).getByRole("row")).toHaveCount(2); // cabeçalho + 1 aprovada
+    const persona = page.locator(".ds-panel select").first();
+    await expect(persona).toHaveValue("approver");
+    await expect(persona.locator("option")).toHaveText(["Solicitante", "Aprovador"]);
+    await expect(page).not.toHaveURL(/persona=/);
+  });
+
   test("valor inválido na URL cai no padrão e aparece no diagnóstico", async ({ page }) => {
     await page.goto(urlFor("requests.queue", { screenControls: { rows: "todas" } }));
     await expect(app(page).getByRole("row")).toHaveCount(6);

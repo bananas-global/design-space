@@ -18,6 +18,9 @@ export const productDefinition: ProductDefinition = {
 
   scenarios,
   personas,
+  // Quem abre uma tela sem cenário — ou um cenário sem persona — vê como
+  // aprovador. Sem isso, a tela sem cenário abriria sem permissão nenhuma.
+  defaultPersona: "approver",
   fixtures,
   rules,
   components,
@@ -49,6 +52,10 @@ export const productDefinition: ProductDefinition = {
       description: "Análise e decisão de uma solicitação.",
       group: "Solicitações",
       components: ["actions.buttons", "feedback.status"],
+      // Exemplo do `:id` para quando o motor abre a tela sem cenário: lateral,
+      // "Usado em" e "Copiar para o PR" vão para `/requests/REQ-2042`, não
+      // para o caminho literal.
+      params: { id: "REQ-2042" },
     },
   ],
 

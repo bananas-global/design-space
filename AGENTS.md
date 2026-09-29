@@ -81,7 +81,10 @@ padrão é compartilhado pela convenção no template; o componente, não.
   todos; a única cor é o vermelho do diagnóstico
   ([0012](docs/decisions/0012-chrome-unico-telas-como-rotas-e-iframe.md)).
 - **Não** reintroduza módulo, jornada ou outra camada entre rota e cenário. Uma
-  tela é uma rota; as variações são os cenários da rota.
+  tela é uma rota; o fluxo (`route.group`) só agrupa telas na navegação, e as
+  variações da tela são os controles por componente, com os cenários como
+  atalhos para combinações
+  ([0013](docs/decisions/0013-fluxos-e-controles-por-componente.md)).
 - **Não** aceite `postMessage` sem checar `event.origin === location.origin` e
   `event.source` contra a janela esperada. Use `acceptFrameMessage`.
 - **Não** mude o schema de cenário sem entrada no `CHANGELOG.md` e sem avaliar se

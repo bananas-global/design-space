@@ -6,6 +6,93 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.9.0 (2026-09-29)
+
+**Minor (compatível).** Fluxos agrupam telas, e as variações de uma tela passam a
+ser controles por componente que se combinam. Tudo é opcional: um produto da 0.8
+continua funcionando sem mudar nada. Ver
+`docs/decisions/0013-fluxos-e-controles-por-componente.md`.
+
+### Adicionado
+
+- **Tipos:** `ControlOption`, `Control` e `ControlGroup`.
+- **`RouteDefinition`:** `group` (o fluxo da tela), `controls` (grupos de
+  controles por componente), `expected` (comportamento esperado da tela sem
+  cenário ativo) e `components` (ids do catálogo usados pela tela).
+- **`Scenario.controls`:** a combinação que o cenário fixa. Abrir o cenário
+  aplica esses valores sobre os padrões da tela.
+- **`ScenarioContext.controls`** (valor de cada controle, com os padrões
+  aplicados) e **`ScenarioContext.setControl(id, value)`**, que funciona dentro
+  do quadro: troca o endereço do quadro e avisa o chrome, que adota a URL.
+- **URL:** `c.<id>=<value>` para cada controle fora do padrão (ou do que o
+  cenário fixa). Valor inválido cai no padrão e aparece como aviso no
+  diagnóstico; controle que a tela não tem também. Os `c.*` chegam ao quadro, e
+  mudar um controle atualiza o quadro por mensagem, sem recarregar. Ao navegar
+  para outra tela, os `c.*` da anterior ficam para trás.
+  `ControlsState.screenControls`, `CONTROL_PARAM_PREFIX`; `applyOverrides` (e
+  portanto `pathFor`/`scenarioUrl` com `overrides`) aceita `screenControls`.
+- **Registry:** `flows()`, `flowOf(screen)`, `controlsOf(screen)`,
+  `resolveControls(screen, { scenario, requested })`; `ScreenNode.group` e
+  `ScreenNode.controls`. Tipos `FlowNode`, `ControlResolution`,
+  `InvalidControl`. `searchScreens` casa também o nome do fluxo.
+- **Aba Telas** agrupada por fluxo, com seções recolhíveis e contagem; tela sem
+  `group` fica no topo, sem título.
+- **Painel Variações** em três partes: **contexto** no topo (persona, rede, e
+  tema, idioma e fonte de dados quando declarados), **um bloco por grupo de
+  controles** (título, link para o componente do catálogo, `note`, e cada
+  controle como botões segmentados ou select) e **atalhos** (os cenários da tela,
+  compactos, com a intenção na dica). O filtro alcança grupos, controles e
+  opções.
+- **Informações:** fluxo, controles com o valor atual, comportamento esperado do
+  cenário ativo ou da rota, e componentes de `route.components` mais os do
+  cenário.
+- **Copiar para o PR por fluxo:** numa tela com `group`, o markdown traz o fluxo
+  inteiro — para cada tela, nome, rota, link absoluto (com os controles atuais na
+  tela aberta), controles disponíveis, atalhos, comportamento esperado e a tabela
+  componente → origem.
+- **Validação:** ids de grupo e de controle únicos por tela, id de controle sem
+  espaço, opções não vazias e sem duplicata, `default` entre as opções e
+  `Scenario.controls` usando controles e valores da tela do cenário (erros);
+  `route.components` e `group.component` inexistentes (avisos).
+- **Rótulos** novos, em pt-BR e en-US: `panel.context`, `panel.shortcuts`,
+  `panel.toggleGroup`, `panel.openComponent`, `info.flow`, `info.controls`,
+  `diagnostics.invalidControl`, `diagnostics.unknownControl`, `pr.open`,
+  `pr.controls`, `pr.shortcuts`, `pr.defaultOption`.
+
+### Alterado
+
+- **Tela sem cenário respeita o estado de rede.** Antes, sem cenário, `network`
+  não tinha efeito; agora `loading`, `slow`, `empty` e `error` chegam à tela
+  (`isLoading`, `data: null`, `error`), como com cenário. `useScenarioData`
+  aceita `screen` para nomear o erro simulado.
+- A lista de cenários do painel virou **Atalhos**, depois dos controles, em uma
+  linha cada; a intenção foi para a dica (`title`) do item.
+- `parseControls(search, registry, path?)` e `serializeControls(state, registry,
+  path?)` aceitam o caminho aberto, para resolver os controles pela tela dele.
+  Sem ele, vale a tela do cenário, como antes.
+- `componentsOfScreen(screen, scenario?)` inclui `route.components`, e aceita um
+  cenário para restringir aos componentes dele; `usagesOf` considera
+  `route.components`.
+
+### Guia de uso
+
+1. Dê um `group` às rotas de um mesmo fluxo:
+   `{ path: "/orders", screen: OrderList, name: "Lista de pedidos", group: "Pedidos" }`.
+2. Declare os controles da tela por componente, em `controls`: um `ControlGroup`
+   por componente (`id`, `title`, `component` opcional, `note` opcional) com os
+   `Control`s dele (`id`, `label`, `options`, `default` opcional).
+3. Na tela, leia `context.controls` e monte os dados sintéticos a partir deles.
+   Quando a UI do produto precisa mudar um controle (fechar um modal), chame
+   `context.setControl(id, value)`.
+4. Troque os cenários que eram só combinações por atalhos: `controls: { … }` no
+   cenário. Mantenha cenário para o que tem persona, fixture, regra ou
+   comportamento esperado próprios.
+5. Mova para `route.expected` e `route.components` o que vale para a tela
+   inteira, e rode a validação: ela aponta controle inexistente, valor fora das
+   opções e `default` inválido.
+6. Nos testes, um link com controles sai de
+   `pathFor(scenario, { screenControls: { rows: "none" } })`.
+
 ## 0.8.0 (2026-09-28)
 
 **Major (incompatível).** Chrome novo, modelo de organização novo e a UI do

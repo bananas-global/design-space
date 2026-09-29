@@ -187,7 +187,7 @@ function Variations({
         )}
         <Card title={component.name} hint={current?.description}>
           <Select
-            label={p.variationsList}
+            label={p.componentVariations}
             value={current?.id ?? ""}
             options={fixtures.map((fixture) => ({ value: fixture.id, label: fixture.label }))}
             onChange={(value) => onChange({ fixture: value })}

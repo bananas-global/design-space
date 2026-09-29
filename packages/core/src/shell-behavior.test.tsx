@@ -283,13 +283,13 @@ describe("chrome", () => {
     const container = await mount("/?component=actions.button");
     const title = container.querySelector(".ds-panel .ds-vcard [data-ds-filter-title]");
     expect(title?.textContent).toBe("Button");
-    const fixtures = select(container, DEFAULT_LABELS.panel.variationsList);
+    const fixtures = select(container, DEFAULT_LABELS.panel.componentVariations);
     expect([...fixtures.options].map((option) => option.textContent)).toEqual(["Default", "Long label"]);
     expect(fixtures.value).toBe("default");
 
     await choose(fixtures, "long");
     expect(new URLSearchParams(window.location.search).get("fixture")).toBe("long");
-    expect(select(container, DEFAULT_LABELS.panel.variationsList).value).toBe("long");
+    expect(select(container, DEFAULT_LABELS.panel.componentVariations).value).toBe("long");
   });
 
   it("viewport, girar e zoom vão para a URL e para o tamanho do quadro", async () => {

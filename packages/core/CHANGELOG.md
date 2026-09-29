@@ -6,6 +6,28 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.9.2 (2026-09-29)
+
+**Patch.** Só o chrome muda; nenhum contrato, tipo ou export novo. Motivo: o
+time achava o painel Variações complexo demais para usar.
+
+### Alterado
+
+- **Painel Variações em cartões.** Contexto primeiro, depois um cartão por
+  `ControlGroup` e, no fim, os Atalhos (só quando a tela tem cenários). O título
+  do cartão ocupa uma linha; grupo com `component` ganha um botão ícone ↗
+  ("Abrir X no catálogo") no lugar do link textual.
+- **Só selects.** Todo controle é um `<select>`, com o rótulo oculto
+  visualmente (continua acessível e alcançado pelo filtro) e a `description` na
+  dica. Acabaram os botões segmentados. `isSegmentedControl` continua exportada
+  só por compatibilidade e não é mais usada pelo painel.
+- **Sem acordeão, sem contagem, sem nota visível.** Os blocos não recolhem mais,
+  o cabeçalho não mostra quantos controles há, e a `note` do grupo fica só no
+  `title` do cabeçalho.
+- **Variações de componente** viram um cartão com o nome do componente e um
+  select das fixtures, no lugar da lista.
+- Tela sem controles e sem cenários não mostra mais o item "Padrão" em Atalhos.
+
 ## 0.9.1 (2026-09-29)
 
 **Patch/minor compatível.** Três limitações que um produto real encontrou na

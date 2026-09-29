@@ -122,11 +122,16 @@ routes: [
 - **Aba Telas:** agrupada por `group`, em seções recolhíveis com contagem, como
   os componentes. Tela sem `group` fica no topo, sem título. A busca casa também
   o nome do fluxo.
-- **Painel Variações:** o **contexto** no topo (persona, rede, e tema, idioma e
-  fonte de dados quando o produto declara), depois um bloco por `ControlGroup` e,
-  por fim, os cenários da tela como **atalhos**. Até quatro opções curtas viram
-  botões segmentados; o resto, um select. O filtro (`Cmd`/`Ctrl` + `F`) alcança
-  grupos, controles e opções.
+- **Painel Variações:** uma pilha de **cartões**, sem acordeão nem contagem.
+  Primeiro o cartão **Contexto** (persona, rede, e tema, idioma e fonte de dados
+  quando o produto declara), depois um cartão por `ControlGroup` e, por fim, o
+  cartão **Atalhos** com os cenários da tela (só quando existem). O título do
+  cartão fica numa linha só; com `component`, uma seta ↗ ao lado abre o
+  componente no catálogo, e a `note` do grupo aparece só como dica (`title`) do
+  cabeçalho. **Todo controle é um select**, sem rótulo visível — as opções dizem
+  o que são; o `label` fica para o leitor de tela e o filtro, e a `description`
+  vira dica. Num componente, o cartão tem o nome dele e um select das fixtures.
+  O filtro (`Cmd`/`Ctrl` + `F`) alcança grupos, controles e opções.
 - **Na URL:** cada controle fora do padrão vai como `c.<id>=<value>`. Valor
   inválido cai no padrão e aparece como aviso no diagnóstico. Os `c.*` chegam ao
   quadro, e mudar um controle atualiza o quadro por mensagem, sem recarregar.

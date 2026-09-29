@@ -126,6 +126,24 @@ async function click(element: Element) {
   });
 }
 
+/** O select de um cartão das Variações, pelo rótulo acessível (visualmente oculto). */
+function select(container: HTMLElement, name: string): HTMLSelectElement {
+  const found = [...container.querySelectorAll<HTMLLabelElement>(".ds-panel label.ds-vcard__field")].find(
+    (label) => label.querySelector(".ds-visually-hidden")?.textContent === name,
+  );
+  const element = found?.querySelector("select");
+  if (!element) throw new Error(`Select não encontrado: ${name}`);
+  return element;
+}
+
+async function choose(element: HTMLSelectElement, value: string) {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+    setter?.call(element, value);
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 function setInputValue(input: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);
@@ -261,10 +279,17 @@ describe("chrome", () => {
     expect(new URLSearchParams(window.location.search).get("scenario")).toBe("queue");
   });
 
-  it("as variações de um componente são as fixtures dele", async () => {
+  it("as variações de um componente são as fixtures dele, num select", async () => {
     const container = await mount("/?component=actions.button");
-    await click(button(container, "Long label"));
+    const title = container.querySelector(".ds-panel .ds-vcard [data-ds-filter-title]");
+    expect(title?.textContent).toBe("Button");
+    const fixtures = select(container, DEFAULT_LABELS.panel.variationsList);
+    expect([...fixtures.options].map((option) => option.textContent)).toEqual(["Default", "Long label"]);
+    expect(fixtures.value).toBe("default");
+
+    await choose(fixtures, "long");
     expect(new URLSearchParams(window.location.search).get("fixture")).toBe("long");
+    expect(select(container, DEFAULT_LABELS.panel.variationsList).value).toBe("long");
   });
 
   it("viewport, girar e zoom vão para a URL e para o tamanho do quadro", async () => {
@@ -607,20 +632,41 @@ describe("fluxos e controles", () => {
     expect(list.textContent).not.toContain("Order detail");
   });
 
-  it("o painel mostra contexto no topo, um bloco por grupo e os atalhos no fim", async () => {
+  it("o painel mostra o cartão de contexto no topo, um cartão por grupo e os atalhos no fim", async () => {
     const container = await mount("/orders", flowDefinition());
-    const heads = [...container.querySelectorAll(".ds-panel .ds-group-section__head [data-ds-filter-title]")].map(
+    const heads = [...container.querySelectorAll(".ds-panel .ds-vcard__head [data-ds-filter-title]")].map(
       (item) => item.textContent,
     );
     expect(heads).toEqual([DEFAULT_LABELS.panel.context, "Order table", "Overlay", DEFAULT_LABELS.panel.shortcuts]);
     const panel = container.querySelector(".ds-panel")!;
-    expect(panel.textContent).toContain("Rows of the table.");
-    // Opções curtas viram segmentado; longas, select.
-    expect(panel.querySelectorAll("[role='radiogroup']")).toHaveLength(2);
-    expect(panel.querySelector("[role='radio'][aria-checked='true']")?.textContent).toBe("Many");
-    expect([...panel.querySelectorAll("select")].map((item) => item.value)).toContain("recent");
+    // Sem acordeão, sem contagem, sem segmentado: todo controle é um select.
+    expect(panel.querySelector("[aria-expanded]")).toBeNull();
+    expect(panel.querySelector(".ds-count")).toBeNull();
+    expect(panel.querySelector("[role='radiogroup']")).toBeNull();
+    expect(select(container, "Rows").value).toBe("many");
+    expect(select(container, "Sort").value).toBe("recent");
+    expect(select(container, "Open").value).toBe("none");
+    expect(select(container, DEFAULT_LABELS.panel.persona)).toBeTruthy();
+    expect(select(container, DEFAULT_LABELS.panel.network)).toBeTruthy();
+  });
 
-    await click(button(container, DEFAULT_LABELS.panel.openComponent("Button")));
+  it("o cartão de grupo com componente tem o botão que o abre, e a nota fica só na dica", async () => {
+    const container = await mount("/orders", flowDefinition());
+    const cards = [...container.querySelectorAll<HTMLElement>(".ds-panel .ds-vcard")];
+    const table = cards.find((card) => card.querySelector("[data-ds-filter-title]")?.textContent === "Order table")!;
+    const overlay = cards.find((card) => card.querySelector("[data-ds-filter-title]")?.textContent === "Overlay")!;
+
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).not.toContain("Rows of the table.");
+    expect(table.querySelector(".ds-vcard__head")!.getAttribute("title")).toBe("Order table — Rows of the table.");
+
+    // Botão só de ícone: o nome acessível vem do aria-label, sem texto visível.
+    const link = table.querySelector<HTMLButtonElement>(".ds-vcard__link")!;
+    expect(link.getAttribute("aria-label")).toBe(DEFAULT_LABELS.panel.openComponent("Button"));
+    expect(link.textContent).toBe("");
+    expect(overlay.querySelector(".ds-vcard__link")).toBeNull();
+
+    await click(link);
     expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");
   });
 
@@ -630,7 +676,7 @@ describe("fluxos e controles", () => {
     const src = frame.getAttribute("src");
     const post = vi.spyOn(frame.contentWindow!, "postMessage");
 
-    await click(button(container, "None"));
+    await choose(select(container, "Rows"), "none");
     expect(new URLSearchParams(window.location.search).get("c.rows")).toBe("none");
     expect(frame.getAttribute("src")).toBe(src);
     expect(post).toHaveBeenCalledWith(
@@ -639,7 +685,7 @@ describe("fluxos e controles", () => {
     );
 
     // Voltar ao padrão tira o parâmetro.
-    await click(button(container, "Many"));
+    await choose(select(container, "Rows"), "many");
     expect(window.location.search).toBe("");
   });
 
@@ -666,23 +712,23 @@ describe("fluxos e controles", () => {
     expect(new URLSearchParams(window.location.search).get("scenario")).toBe("orders.cancel");
     expect(new URLSearchParams(window.location.search).has("c.overlay")).toBe(false);
     expect(button(container, "Cancelling").getAttribute("aria-current")).toBe("true");
-    expect(button(container, "Cancel").getAttribute("aria-checked")).toBe("true");
+    expect(select(container, "Open").value).toBe("cancel");
 
-    await click(button(container, "Nothing"));
+    await choose(select(container, "Open"), "none");
     const params = new URLSearchParams(window.location.search);
     expect(params.get("scenario")).toBe("orders.cancel");
     expect(params.get("c.overlay")).toBe("none");
     expect(button(container, "Cancelling").getAttribute("aria-current")).toBeNull();
 
     // Trocar um controle que o cenário não fixa não tira o destaque.
-    await click(button(container, "Cancel"));
-    await click(button(container, "One"));
+    await choose(select(container, "Open"), "cancel");
+    await choose(select(container, "Rows"), "one");
     expect(button(container, "Cancelling").getAttribute("aria-current")).toBe("true");
   });
 
   it("valor inválido na URL cai no padrão e vira aviso no diagnóstico", async () => {
     const container = await mount("/orders?c.rows=all&c.ghost=1", flowDefinition());
-    expect(container.querySelector("[role='radio'][aria-checked='true']")?.textContent).toBe("Many");
+    expect(select(container, "Rows").value).toBe("many");
     const trigger = container.querySelector<HTMLButtonElement>(".ds-diagnostics__trigger")!;
     expect(trigger.getAttribute("data-level")).toBe("warning");
     await click(trigger);

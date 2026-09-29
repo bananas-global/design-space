@@ -134,7 +134,7 @@ test.describe("chrome", () => {
     expect(await frame.evaluate(() => (window as unknown as { __marker?: number }).__marker)).toBe(1);
 
     // Estado de rede também chega por mensagem.
-    await page.locator(".ds-panel select").nth(1).selectOption("error");
+    await page.locator(".ds-panel").getByRole("combobox", { name: "Network state" }).selectOption("error");
     await expect(app(page).getByRole("alert")).toContainText("Não foi possível carregar");
     expect(await frame.evaluate(() => (window as unknown as { __marker?: number }).__marker)).toBe(1);
   });
@@ -260,11 +260,11 @@ test.describe("fluxos e controles", () => {
     });
 
     const panel = page.locator(".ds-panel");
-    await panel.getByLabel("Situação").selectOption("in-review");
+    await panel.getByRole("combobox", { name: "Situação" }).selectOption("in-review");
     await expect(page).toHaveURL(/c\.status=in-review/);
     await expect(ui.getByRole("row")).toHaveCount(4); // cabeçalho + 3 em análise
 
-    await panel.getByRole("radio", { name: "Uma", exact: true }).click();
+    await panel.getByRole("combobox", { name: "Linhas" }).selectOption("one");
     await expect(page).toHaveURL(/c\.rows=one/);
     await expect(ui.getByRole("row")).toHaveCount(2);
     expect(await frame.evaluate(() => (window as unknown as { __marker?: number }).__marker)).toBe(1);
@@ -272,7 +272,7 @@ test.describe("fluxos e controles", () => {
     // O link copiado reabre a mesma combinação.
     await page.goto(page.url());
     await expect(app(page).getByRole("row")).toHaveCount(2);
-    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Uma", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator(".ds-panel").getByRole("combobox", { name: "Linhas" })).toHaveValue("one");
   });
 
   test("o atalho aplica a combinação e perde o destaque quando ela muda", async ({ page }) => {
@@ -282,10 +282,10 @@ test.describe("fluxos e controles", () => {
     await shortcut.click();
     await expect(page).toHaveURL(/scenario=requests\.queue-empty/);
     await expect(shortcut).toHaveAttribute("aria-current", "true");
-    await expect(panel.getByRole("radio", { name: "Nenhuma", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(panel.getByRole("combobox", { name: "Linhas" })).toHaveValue("none");
     await expect(app(page).getByRole("heading", { name: "Nenhuma solicitação na fila" })).toBeVisible();
 
-    await panel.getByRole("radio", { name: "Todas", exact: true }).click();
+    await panel.getByRole("combobox", { name: "Linhas" }).selectOption("all");
     await expect(page).toHaveURL(/scenario=requests\.queue-empty.*c\.rows=all/);
     await expect(shortcut).not.toHaveAttribute("aria-current", "true");
     await expect(app(page).getByRole("row")).toHaveCount(6);
@@ -295,18 +295,12 @@ test.describe("fluxos e controles", () => {
     await page.goto(urlFor("requests.queue", { screenControls: { notice: "overdue" } }));
     const ui = app(page);
     await expect(ui.getByText("perto do prazo de decisão")).toBeVisible();
-    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Prazo vencendo", exact: true })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    await expect(page.locator(".ds-panel").getByRole("combobox", { name: "Aviso" })).toHaveValue("overdue");
 
     await ui.getByRole("button", { name: "Dispensar" }).click();
     await expect(ui.getByText("perto do prazo de decisão")).toHaveCount(0);
     await expect(page).not.toHaveURL(/c\.notice/);
-    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Nenhum", exact: true })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    await expect(page.locator(".ds-panel").getByRole("combobox", { name: "Aviso" })).toHaveValue("none");
   });
 
   test("navegar com controles abre a fila filtrada e mantém persona e viewport", async ({ page }) => {
@@ -323,7 +317,7 @@ test.describe("fluxos e controles", () => {
     expect(params.has("fixture")).toBe(false);
 
     await expect(ui.getByRole("row")).toHaveCount(4); // cabeçalho + 3 em análise
-    await expect(page.locator(".ds-panel").getByLabel("Situação")).toHaveValue("in-review");
+    await expect(page.locator(".ds-panel").getByRole("combobox", { name: "Situação" })).toHaveValue("in-review");
     const frame = await frameOf(page);
     await expect.poll(() => frame.evaluate(() => window.innerWidth)).toBe(375);
   });
@@ -337,16 +331,13 @@ test.describe("fluxos e controles", () => {
     await expect(ui.getByRole("row")).toHaveCount(6);
     await expect(page).not.toHaveURL(/c\.rows/);
     await expect(page).not.toHaveURL(/c\.status/);
-    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Todas", exact: true })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    await expect(page.locator(".ds-panel").getByRole("combobox", { name: "Linhas" })).toHaveValue("all");
   });
 
   test("tela sem cenário abre com a persona padrão do produto", async ({ page }) => {
     await page.goto("/requests?c.status=approved");
     await expect(app(page).getByRole("row")).toHaveCount(2); // cabeçalho + 1 aprovada
-    const persona = page.locator(".ds-panel select").first();
+    const persona = page.locator(".ds-panel").getByRole("combobox", { name: "Persona" });
     await expect(persona).toHaveValue("approver");
     await expect(persona.locator("option")).toHaveText(["Solicitante", "Aprovador"]);
     await expect(page).not.toHaveURL(/persona=/);

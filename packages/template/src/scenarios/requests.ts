@@ -1,12 +1,66 @@
-import type { Scenario } from "@brucesantos/design-space";
+import type { ControlGroup, Scenario } from "@brucesantos/design-space";
+
+/**
+ * Controles da fila, por componente.
+ *
+ * Cada controle é uma dimensão de variação que se combina com as outras: três
+ * quantidades de linhas × quatro situações × dois avisos são 24 combinações sem
+ * 24 cenários. Na URL, só o que difere do padrão vai como `c.<id>=<valor>`.
+ */
+export const queueControls: ControlGroup[] = [
+  {
+    id: "table",
+    title: "Tabela de solicitações",
+    note: "Quantas linhas a fila mostra e de qual situação.",
+    controls: [
+      {
+        id: "rows",
+        label: "Linhas",
+        options: [
+          { value: "all", label: "Todas" },
+          { value: "one", label: "Uma" },
+          { value: "none", label: "Nenhuma" },
+        ],
+      },
+      {
+        id: "status",
+        label: "Situação",
+        description: "Filtra a fila pela situação da solicitação.",
+        options: [
+          { value: "all", label: "Todas as situações" },
+          { value: "in-review", label: "Em análise" },
+          { value: "approved", label: "Aprovadas" },
+          { value: "rejected", label: "Recusadas" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "notice",
+    title: "Aviso da fila · Status",
+    component: "feedback.status",
+    note: "Faixa acima da tabela. O botão Dispensar da própria tela volta este controle para Nenhum.",
+    controls: [
+      {
+        id: "notice",
+        label: "Aviso",
+        options: [
+          { value: "none", label: "Nenhum" },
+          { value: "overdue", label: "Prazo vencendo" },
+        ],
+      },
+    ],
+  },
+];
 
 /**
  * Cenários de solicitações.
  *
- * Cinco situações em duas telas. A fila (`/requests`) tem duas variações: cheia
- * e vazia. O detalhe (`/requests/:id`) tem três: decisão permitida, bloqueada
- * por regra e bloqueada por permissão. A última é a que costuma faltar em
- * protótipo, e é a que a engenharia mais pergunta.
+ * Na fila (`/requests`), os cenários são atalhos para combinações dos
+ * controles: a fila do dia a dia e a fila vazia. O detalhe (`/requests/:id`)
+ * não tem controles, e os três cenários dele são as situações de decisão:
+ * permitida, bloqueada por regra e bloqueada por permissão. A última é a que
+ * costuma faltar em protótipo, e é a que a engenharia mais pergunta.
  *
  * `components` lista o que cada tela usa do catálogo: é o que aparece em
  * "Componentes usados" e na tabela do "Copiar para o PR".
@@ -33,7 +87,8 @@ export const scenarios: Scenario[] = [
     intent: "Verificar se o primeiro acesso explica o que fazer, em vez de parecer defeito.",
     route: "/requests",
     persona: "approver",
-    fixture: "requests-empty",
+    fixture: "requests-standard",
+    controls: { rows: "none" },
     expected: ["A tela explica por que está vazia e o que faz aparecer conteúdo."],
     components: ["feedback.status"],
     tags: ["vazio"],

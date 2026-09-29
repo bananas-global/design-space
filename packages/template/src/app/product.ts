@@ -1,6 +1,6 @@
 import { EN_US_LABELS, type ProductDefinition } from "@brucesantos/design-space";
 
-import { fixtures, personas, rules, scenarios } from "./catalog.js";
+import { fixtures, personas, queueControls, rules, scenarios } from "./catalog.js";
 import { RequestList } from "../screens/RequestList.js";
 import { RequestDetail } from "../screens/RequestDetail.js";
 import { components } from "../components/catalog.js";
@@ -22,20 +22,33 @@ export const productDefinition: ProductDefinition = {
   rules,
   components,
 
-  // Cada rota é uma tela na lista de Telas; os cenários da rota são as
-  // variações dela. Sem rota para `/`, a raiz abre a primeira tela.
+  // Cada rota é uma tela na lista de Telas, e `group` junta as telas de um
+  // mesmo fluxo. Sem rota para `/`, a raiz abre a primeira tela.
+  //
+  // A fila mostra o modelo da 0.9: em vez de um cenário para cada combinação,
+  // controles por componente que se combinam no painel Variações. A tela lê
+  // `context.controls` e monta a lista; os cenários ficam como atalhos.
   routes: [
     {
       path: "/requests",
       screen: RequestList,
       name: "Fila de solicitações",
       description: "Solicitações aguardando análise e decisão.",
+      group: "Solicitações",
+      controls: queueControls,
+      expected: [
+        "A fila mostra solicitante, valor e situação de cada solicitação.",
+        "Sem nenhuma linha, a tela explica o vazio em vez de parecer defeito.",
+      ],
+      components: ["feedback.status"],
     },
     {
       path: "/requests/:id",
       screen: RequestDetail,
       name: "Detalhe da solicitação",
       description: "Análise e decisão de uma solicitação.",
+      group: "Solicitações",
+      components: ["actions.buttons", "feedback.status"],
     },
   ],
 

@@ -51,6 +51,111 @@ routes: [
 Sem `name`, a tela usa o título do primeiro cenário da rota e, na falta dele, o
 `path`. Não existe módulo nem jornada (decisão 0012).
 
+## Fluxos e controles (0.9)
+
+Uma feature raramente é uma tela: é um **fluxo** de algumas telas, e cada tela
+tem **componentes** que variam de forma independente. Desde a 0.9 as duas coisas
+são declaradas na rota, e nada disso é obrigatório
+([decisão 0013](../../docs/decisions/0013-fluxos-e-controles-por-componente.md)).
+
+```ts
+routes: [
+  {
+    path: "/orders",
+    screen: OrderList,
+    name: "Lista de pedidos",
+    group: "Pedidos", // o fluxo: agrupa as telas na aba Telas
+    expected: ["A lista mostra os pedidos do período."],
+    components: ["data.table"],
+    controls: [
+      {
+        id: "table",
+        title: "Tabela de pedidos · table",
+        component: "data.table", // link para o catálogo no painel
+        note: "Linhas e ordenação.",
+        controls: [
+          {
+            id: "rows",
+            label: "Linhas",
+            options: [
+              { value: "many", label: "Muitas" },
+              { value: "one", label: "Uma" },
+              { value: "none", label: "Nenhuma" },
+            ],
+          },
+        ],
+      },
+      {
+        id: "overlay",
+        title: "Sobreposição",
+        controls: [
+          {
+            id: "overlay",
+            label: "Aberta",
+            options: [
+              { value: "none", label: "Nenhuma" },
+              { value: "cancel", label: "Cancelar pedido" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  { path: "/orders/:id", screen: OrderDetail, name: "Detalhe do pedido", group: "Pedidos" },
+],
+```
+
+- **Aba Telas:** agrupada por `group`, em seções recolhíveis com contagem, como
+  os componentes. Tela sem `group` fica no topo, sem título. A busca casa também
+  o nome do fluxo.
+- **Painel Variações:** o **contexto** no topo (persona, rede, e tema, idioma e
+  fonte de dados quando o produto declara), depois um bloco por `ControlGroup` e,
+  por fim, os cenários da tela como **atalhos**. Até quatro opções curtas viram
+  botões segmentados; o resto, um select. O filtro (`Cmd`/`Ctrl` + `F`) alcança
+  grupos, controles e opções.
+- **Na URL:** cada controle fora do padrão vai como `c.<id>=<value>`. Valor
+  inválido cai no padrão e aparece como aviso no diagnóstico. Os `c.*` chegam ao
+  quadro, e mudar um controle atualiza o quadro por mensagem, sem recarregar.
+- **Na tela:** `context.controls` traz o valor de cada controle, com os padrões
+  aplicados; `context.setControl(id, value)` muda um deles a partir da UI do
+  produto (fechar um modal volta a sobreposição para "nenhuma") e atualiza a URL.
+  Sem cenário, a tela monta os próprios dados sintéticos a partir dos controles —
+  é o caso normal agora —, e o estado de rede do contexto continua valendo.
+- **Cenário como atalho:** `Scenario.controls` fixa uma combinação. Abrir o
+  cenário aplica esses valores sobre os padrões; mudar um controle depois não
+  troca de cenário, mas o atalho deixa de aparecer destacado quando a combinação
+  deixa de ser a dele.
+
+```ts
+{ id: "orders.cancel", title: "Cancelando um pedido", route: "/orders",
+  fixture: "orders", controls: { overlay: "cancel" }, expected: ["O modal pede confirmação."] }
+```
+
+```tsx
+function OrderList({ context }: ScreenProps) {
+  const rows = buildRows(context.controls.rows); // dado sintético do produto
+  return (
+    <>
+      <Table rows={rows} />
+      {context.controls.overlay === "cancel" && (
+        <CancelModal onClose={() => context.setControl("overlay", "none")} />
+      )}
+    </>
+  );
+}
+```
+
+Informações mostra rota, fluxo, descrição, os controles com o valor atual, o
+comportamento esperado (o do cenário ativo, senão `route.expected`) e os
+componentes (`route.components` mais os do cenário). **Copiar para o PR**, numa
+tela com fluxo, gera o markdown do fluxo inteiro: para cada tela, nome, rota,
+link absoluto (com os controles atuais na tela aberta), controles disponíveis,
+atalhos, comportamento esperado e a tabela componente → origem.
+
+A validação checa ids de grupo e de controle únicos por tela, `default` entre as
+opções e `Scenario.controls` usando controles e valores da tela do cenário; id de
+componente inexistente em `route.components` ou `group.component` é aviso.
+
 ## O contrato de cenário
 
 Um cenário combina intenção, persona, permissões, pré-condições, dados, ações,
@@ -88,9 +193,9 @@ motor.
 | Região | Conteúdo |
 | --- | --- |
 | Barra superior | Nome do produto; viewport (Celular 375, Tablet 768, Desktop 1280, Ajustar), girar, zoom 25–150%, copiar link, revisão limpa, tema, painel e — quando a validação tem algo a dizer — o indicador de diagnóstico. |
-| Esquerda | **Telas** e **Componentes**, com contagem e busca sem acento nem caixa (nome, descrição, grupo, id e `source`). Componentes agrupados por `group`. Aba vazia some. Redimensionável. |
+| Esquerda | **Telas** e **Componentes**, com contagem e busca sem acento nem caixa (nome, descrição, fluxo ou grupo, id e `source`). Telas agrupadas por fluxo (`route.group`), componentes por `group`. Redimensionável. |
 | Centro | O quadro do produto no tamanho do viewport, com zoom só de visualização. |
-| Direita | **Variações** (cenários da tela ou fixtures do componente, mais persona e rede) e **Informações** (rota, intenção, pré-condições, ações, comportamento esperado, regras, componentes usados e **Copiar para o PR**). Redimensionável. |
+| Direita | **Variações** (contexto no topo, controles da tela por componente e os cenários como atalhos; ou as fixtures do componente) e **Informações** (rota, fluxo, controles, intenção, pré-condições, ações, comportamento esperado, regras, componentes usados e **Copiar para o PR**). Redimensionável. |
 
 Sem Home: a raiz abre a primeira tela na primeira variação ou, sem telas, o
 primeiro componente. O tema segue o sistema, e a troca é lembrada.
@@ -99,7 +204,8 @@ primeiro componente. O tema segue o sistema, e a troca é lembrada.
 
 Gera markdown com o nome da tela, um link absoluto por variação (com o link do
 deployment e o commit quando o produto informa), a tabela componente → origem e
-o comportamento esperado de cada variação.
+o comportamento esperado de cada variação. Tela com fluxo gera o fluxo inteiro
+(ver [Fluxos e controles](#fluxos-e-controles-09)).
 
 ### O quadro
 
@@ -124,6 +230,7 @@ rede declarados no cenário.
 | `persona` | Troca o papel e as permissões. |
 | `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
+| `c.<id>` | Valor de um controle da tela. Omitido quando é o padrão (ou o que o cenário fixa). |
 | `viewport` | `fit`, `mobile`, `tablet`, `desktop`; `custom` para links antigos. |
 | `w` | Largura, quando `viewport=custom`. |
 | `rotate=1` | Troca largura e altura do viewport. |
@@ -246,8 +353,13 @@ tema, cor ou logo por produto.
 - `screensFor({ handoff })`, `activeScenarios()`, `search()`,
   `searchScreens()`, `searchComponents()`, `componentsFor(handoff)` — aplicam o
   recorte; a busca não diferencia acento nem caixa (`normalizeSearch`).
-- `componentsOfScreen(screen)`, `usagesOf(componentId)` — componentes de uma
-  tela e telas de um componente, a partir de `Scenario.components`.
+- `componentsOfScreen(screen, scenario?)`, `usagesOf(componentId)` — componentes
+  de uma tela e telas de um componente, a partir de `route.components` e
+  `Scenario.components`.
+- `flows(options)`, `flowOf(screen)` — telas agrupadas por fluxo (`FlowNode`).
+  `controlsOf(screen)` e `resolveControls(screen, { scenario, requested })` —
+  controles da tela e seus valores (padrão → cenário → URL), com os pedidos
+  inválidos em `invalid` (`ControlResolution`).
 - `validateProduct(product)` / `validateScenario(scenario)` — validação em runtime
   do contrato. Pega fixture, persona, regra ou rota inexistente, rota duplicada,
   id duplicado e componente citado sem registro — o que o TypeScript não

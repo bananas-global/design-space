@@ -9,7 +9,7 @@
  * em sincronia por mensagem.
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ProductDefinition, ScenarioContext } from "../types/index.js";
 import type { Registry } from "../registry/index.js";
 import { useDesignSpaceState } from "../controls/state.js";
@@ -29,9 +29,10 @@ import { useLabels } from "./labels.js";
 
 export function FrameView({ product, registry }: { product: ProductDefinition; registry: Registry }) {
   const labels = useLabels();
-  const { location, controls, viewport, navigate, openScenario } = useDesignSpaceState(registry, {
-    frame: true,
-  });
+  const { location, controls, viewport, navigate, openScenario, setControls } = useDesignSpaceState(
+    registry,
+    { frame: true },
+  );
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Link comum da UI do produto dentro do quadro: navega sem recarregar e sem
@@ -146,6 +147,7 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
     fixture,
     network: controls.network,
     adapter,
+    screen: location.path,
   });
 
   const permissions = useMemo(() => {
@@ -157,6 +159,18 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
     }
     return registry.permissionsOf(scenario);
   }, [controls.persona, registry, scenario]);
+
+  // Controles da tela: a UI do produto lê os valores e pode mudar um deles. A
+  // mudança troca o endereço do quadro e avisa o pai, que adota a URL nova.
+  const screenControls = controls.screenControls;
+  const values = useMemo(() => screenControls ?? {}, [screenControls]);
+  const setControl = useCallback(
+    (id: string, value: string) => {
+      if (values[id] === value) return;
+      setControls({ screenControls: { ...values, [id]: value } });
+    },
+    [setControls, values],
+  );
 
   const context: ScenarioContext = useMemo(
     () => ({
@@ -175,6 +189,8 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
       locale: controls.locale,
       navigate: (to: string) => navigate(to),
       openScenario,
+      controls: values,
+      setControl,
     }),
     [
       scenario,
@@ -191,6 +207,8 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
       viewport,
       navigate,
       openScenario,
+      values,
+      setControl,
     ],
   );
 

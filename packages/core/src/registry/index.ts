@@ -12,6 +12,8 @@
 
 import type {
   ComponentPreview,
+  Control,
+  ControlGroup,
   ComponentPreviewFixture,
   Fixture,
   HandoffScope,
@@ -49,6 +51,35 @@ export type ScreenNode = {
   href: string;
   /** Cenários da rota, na ordem de `scenarios`. */
   variations: Scenario[];
+  /** `route.group`, sem espaços nas pontas; `undefined` quando a tela não tem fluxo. */
+  group: string | undefined;
+  /** `route.controls`, ou lista vazia. */
+  controls: ControlGroup[];
+};
+
+/**
+ * Um fluxo: as telas que declaram o mesmo `route.group`, na ordem de `routes`.
+ * O fluxo sem nome reúne as telas sem `group` e vem sempre primeiro.
+ */
+export type FlowNode = {
+  name: string | undefined;
+  screens: ScreenNode[];
+};
+
+/** Um valor de controle pedido pela URL que o motor não pôde usar. */
+export type InvalidControl = {
+  id: string;
+  value: string;
+  /** `unknown-control`: a tela não tem esse controle. `invalid-value`: o valor não é uma das opções. */
+  reason: "unknown-control" | "invalid-value";
+  /** Valor usado no lugar, quando o controle existe. */
+  fallback?: string;
+};
+
+export type ControlResolution = {
+  /** Valor de cada controle da tela, na ordem declarada. */
+  values: Record<string, string>;
+  invalid: InvalidControl[];
 };
 
 export type ScenarioQueryOptions = {
@@ -92,6 +123,21 @@ export type Registry = {
   screenOf: (scenario: Scenario | undefined) => ScreenNode | undefined;
   /** Telas permitidas pelo recorte, com variações também filtradas. */
   screensFor: (options?: ScenarioQueryOptions) => ScreenNode[];
+  /** Telas permitidas pelo recorte, agrupadas por fluxo (`route.group`). */
+  flows: (options?: ScenarioQueryOptions) => FlowNode[];
+  /** O fluxo de uma tela, com as telas dele permitidas pelo recorte. */
+  flowOf: (screen: ScreenNode | undefined, options?: ScenarioQueryOptions) => FlowNode | undefined;
+  /** Controles da tela, na ordem dos grupos. */
+  controlsOf: (screen: ScreenNode | undefined) => Control[];
+  /**
+   * Valores dos controles da tela: o padrão de cada controle, depois o que o
+   * cenário fixa, depois o que a URL pede. Pedido inválido cai no valor de baixo
+   * e volta em `invalid`.
+   */
+  resolveControls: (
+    screen: ScreenNode | undefined,
+    input?: { scenario?: Scenario; requested?: Record<string, string> },
+  ) => ControlResolution;
 
   /** Regras de um cenário, resolvidas e na ordem declarada. */
   rulesOf: (scenario: Scenario | undefined) => Rule[];
@@ -106,18 +152,19 @@ export type Registry = {
    * caixa: "aprovacao" acha "Aprovação".
    */
   search: (query: string, options?: ScenarioQueryOptions) => Scenario[];
-  /** Busca de telas: nome, descrição, rota e as variações de cada uma. */
+  /** Busca de telas: nome, descrição, rota, fluxo e as variações de cada uma. */
   searchScreens: (query: string, options?: ScenarioQueryOptions) => ScreenNode[];
   /** Busca de componentes: nome, descrição, grupo, id e `source`. */
   searchComponents: (query: string, handoff?: HandoffScope) => ComponentPreview[];
   /** Componentes permitidos pelo recorte; sem handoff devolve o catálogo. */
   componentsFor: (handoff?: HandoffScope) => ComponentPreview[];
   /**
-   * Componentes usados por uma tela: a união de `components` das variações, na
-   * ordem em que aparecem. Id sem componente registrado fica de fora.
+   * Componentes usados por uma tela: `route.components` e depois a união de
+   * `components` das variações, na ordem em que aparecem. Id sem componente
+   * registrado fica de fora.
    */
-  componentsOfScreen: (screen: ScreenNode | undefined) => ComponentPreview[];
-  /** Telas com ao menos um cenário que lista o componente em `components`. */
+  componentsOfScreen: (screen: ScreenNode | undefined, scenario?: Scenario) => ComponentPreview[];
+  /** Telas que listam o componente em `route.components` ou em um cenário. */
   usagesOf: (componentId: string | undefined, options?: ScenarioQueryOptions) => ScreenNode[];
 };
 
@@ -161,6 +208,8 @@ export function createRegistry(product: ProductDefinition): Registry {
       route,
       href: screenHref(route.path),
       variations,
+      group: route.group?.trim() || undefined,
+      controls: Array.isArray(route.controls) ? route.controls : [],
     });
   }
   const screensById = new Map(screens.map((screen) => [screen.id, screen]));
@@ -200,6 +249,17 @@ export function createRegistry(product: ProductDefinition): Registry {
     return persona(target.persona)?.permissions ?? [];
   };
 
+  const flows = (options: ScenarioQueryOptions = {}) => groupScreens(screensFor(options));
+
+  const componentIdsOf = (screen: ScreenNode | undefined, scenario?: Scenario): string[] => {
+    const ids = new Set<string>(screen?.route.components ?? []);
+    const sources = scenario ? [scenario] : (screen?.variations ?? []);
+    for (const variation of sources) {
+      for (const id of variation.components ?? []) ids.add(id);
+    }
+    return [...ids];
+  };
+
   const componentsFor = (handoff?: HandoffScope) =>
     componentList.filter((component) => handoffAllowsComponent(handoff, component.id));
 
@@ -233,6 +293,14 @@ export function createRegistry(product: ProductDefinition): Registry {
       return path ? screensById.get(path) : undefined;
     },
     screensFor,
+    flows,
+    flowOf: (screen, options) => {
+      if (!screen) return undefined;
+      return flows(options).find((flow) => flow.name === screen.group);
+    },
+    controlsOf: (screen) => (screen?.controls ?? []).flatMap((group) => group.controls ?? []),
+    resolveControls: (screen, input = {}) =>
+      resolveScreenControls(screen?.controls ?? [], input),
 
     rulesOf: (target) =>
       (target?.rules ?? []).map((id) => rules.get(id)).filter((r): r is Rule => Boolean(r)),
@@ -275,6 +343,7 @@ export function createRegistry(product: ProductDefinition): Registry {
             screen.name,
             screen.description ?? "",
             screen.id,
+            screen.group ?? "",
             ...screen.variations.flatMap((variation) => [
               variation.title,
               variation.id,
@@ -304,20 +373,17 @@ export function createRegistry(product: ProductDefinition): Registry {
 
     componentsFor,
 
-    componentsOfScreen: (screen) => {
-      const ids = new Set<string>();
-      for (const variation of screen?.variations ?? []) {
-        for (const id of variation.components ?? []) ids.add(id);
-      }
-      return [...ids]
+    componentsOfScreen: (screen, scenario) =>
+      componentIdsOf(screen, scenario)
         .map((id) => components.get(id))
-        .filter((component): component is ComponentPreview => Boolean(component));
-    },
+        .filter((component): component is ComponentPreview => Boolean(component)),
 
     usagesOf: (componentId, options) => {
       if (!componentId) return [];
-      return screensFor(options).filter((screen) =>
-        screen.variations.some((variation) => variation.components?.includes(componentId)),
+      return screensFor(options).filter(
+        (screen) =>
+          screen.route.components?.includes(componentId) ||
+          screen.variations.some((variation) => variation.components?.includes(componentId)),
       );
     },
   };
@@ -333,6 +399,83 @@ export function normalizeSearch(value: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .trim();
+}
+
+/**
+ * Telas agrupadas por fluxo, na ordem em que cada fluxo aparece. As telas sem
+ * fluxo formam o primeiro grupo, sem nome.
+ */
+export function groupScreens(screens: ScreenNode[]): FlowNode[] {
+  const loose: ScreenNode[] = [];
+  const named = new Map<string, ScreenNode[]>();
+  for (const screen of screens) {
+    if (!screen.group) {
+      loose.push(screen);
+      continue;
+    }
+    const list = named.get(screen.group) ?? [];
+    list.push(screen);
+    named.set(screen.group, list);
+  }
+  const flows: FlowNode[] = [...named].map(([name, items]) => ({ name, screens: items }));
+  return loose.length > 0 ? [{ name: undefined, screens: loose }, ...flows] : flows;
+}
+
+/** Valor padrão de um controle: `default` quando é uma opção, senão a primeira. */
+export function controlDefault(control: Control): string {
+  const options = control.options ?? [];
+  if (control.default !== undefined && options.some((option) => option.value === control.default)) {
+    return control.default;
+  }
+  return options[0]?.value ?? "";
+}
+
+/**
+ * Resolve os valores de um conjunto de grupos de controles. Precedência, do mais
+ * fraco ao mais forte: padrão do controle, valor do cenário, pedido da URL. Um
+ * valor que não é opção do controle nunca é usado.
+ */
+export function resolveScreenControls(
+  groups: ControlGroup[],
+  input: { scenario?: Scenario; requested?: Record<string, string> } = {},
+): ControlResolution {
+  const values: Record<string, string> = {};
+  const invalid: InvalidControl[] = [];
+  const known = new Set<string>();
+  const requested = input.requested ?? {};
+  for (const group of groups) {
+    for (const control of group.controls ?? []) {
+      if (known.has(control.id)) continue;
+      known.add(control.id);
+      const isOption = (value: string | undefined) =>
+        value !== undefined && (control.options ?? []).some((option) => option.value === value);
+      let value = controlDefault(control);
+      const fromScenario = input.scenario?.controls?.[control.id];
+      if (isOption(fromScenario)) value = fromScenario!;
+      const asked = requested[control.id];
+      if (asked !== undefined) {
+        if (isOption(asked)) value = asked;
+        else invalid.push({ id: control.id, value: asked, reason: "invalid-value", fallback: value });
+      }
+      values[control.id] = value;
+    }
+  }
+  for (const [id, value] of Object.entries(requested)) {
+    if (!known.has(id)) invalid.push({ id, value, reason: "unknown-control" });
+  }
+  return { values, invalid };
+}
+
+/**
+ * `true` quando os valores atuais ainda são a combinação que o cenário fixa. É o
+ * que decide se o atalho aparece destacado depois de um controle mudar.
+ */
+export function scenarioMatchesControls(
+  scenario: Scenario | undefined,
+  values: Record<string, string> | undefined,
+): boolean {
+  if (!scenario) return false;
+  return Object.entries(scenario.controls ?? {}).every(([id, value]) => values?.[id] === value);
 }
 
 /** Caminho concreto de uma rota sem cenário: o curinga final some. */

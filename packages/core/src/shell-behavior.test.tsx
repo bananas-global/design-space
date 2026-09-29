@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DesignSpace } from "./shell/DesignSpace.js";
 import { DEFAULT_LABELS } from "./shell/labels.js";
@@ -226,10 +226,11 @@ describe("chrome", () => {
     const container = await mount("/requests?scenario=queue");
     const panel = container.querySelector(".ds-panel")!;
     expect(panel.textContent).toContain("Full queue");
-    expect(panel.textContent).toContain("See everything waiting.");
     expect(panel.textContent).toContain("Empty queue");
+    // Atalho compacto: a intenção fica na dica, não numa segunda linha.
+    expect(button(container, "Full queue").title).toBe("See everything waiting.");
 
-    await click(button(container, "Empty queueExplain the empty state."));
+    await click(button(container, "Empty queue"));
     const params = new URLSearchParams(window.location.search);
     expect(params.get("scenario")).toBe("queue-empty");
     expect(window.location.pathname).toBe("/requests");
@@ -477,5 +478,259 @@ describe("modo quadro", () => {
     const url = new URL(href, window.location.origin);
     expect(url.searchParams.get("handoff")).toBe("1");
     expect(url.searchParams.getAll("allowScenario")).toEqual(["detail"]);
+  });
+});
+
+/* ------------------------------------------------ fluxos e controles */
+
+function OrdersScreen({ context }: ScreenProps) {
+  return (
+    <main>
+      <output data-testid="controls">{JSON.stringify(context.controls)}</output>
+      <output data-testid="scenario">{context.scenario?.id ?? "none"}</output>
+      <output data-testid="state">
+        {context.error ? "error" : context.isLoading ? "loading" : context.data === undefined ? "undefined" : JSON.stringify(context.data)}
+      </output>
+      <button type="button" onClick={() => context.setControl("overlay", "none")}>
+        close
+      </button>
+    </main>
+  );
+}
+
+function flowDefinition(): ProductDefinition {
+  return product({
+    routes: [
+      { path: "/help", screen: RequestScreen, name: "Help" },
+      {
+        path: "/orders",
+        screen: OrdersScreen,
+        name: "Order list",
+        group: "Orders",
+        expected: ["Orders are listed."],
+        controls: [
+          {
+            id: "table",
+            title: "Order table",
+            component: "actions.button",
+            note: "Rows of the table.",
+            controls: [
+              {
+                id: "rows",
+                label: "Rows",
+                options: [
+                  { value: "many", label: "Many" },
+                  { value: "one", label: "One" },
+                  { value: "none", label: "None" },
+                ],
+              },
+              {
+                id: "sort",
+                label: "Sort",
+                options: [
+                  { value: "recent", label: "Most recent first" },
+                  { value: "oldest", label: "Oldest first" },
+                ],
+              },
+            ],
+          },
+          {
+            id: "overlay",
+            title: "Overlay",
+            controls: [
+              {
+                id: "overlay",
+                label: "Open",
+                options: [
+                  { value: "none", label: "Nothing" },
+                  { value: "cancel", label: "Cancel" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { path: "/orders/:id", screen: RequestScreen, name: "Order detail", group: "Orders" },
+    ],
+    scenarios: [
+      {
+        id: "orders.cancel",
+        title: "Cancelling",
+        route: "/orders",
+        fixture: "queue",
+        controls: { overlay: "cancel" },
+        expected: ["The modal asks for confirmation."],
+      },
+    ],
+  });
+}
+
+describe("fluxos e controles", () => {
+  it("a aba Telas agrupa por fluxo, com as telas soltas no topo", async () => {
+    const container = await mount("/orders", flowDefinition());
+    const list = container.querySelector(".ds-sidebar__list")!;
+    const sections = [...list.querySelectorAll(".ds-group-section")];
+    expect(sections).toHaveLength(2);
+    expect(sections[0]!.querySelector(".ds-group-section__head")).toBeNull();
+    expect(sections[0]!.textContent).toBe("Help");
+    expect(sections[1]!.querySelector(".ds-group-section__head")?.textContent).toBe("Orders2");
+
+    await click(button(container, DEFAULT_LABELS.sidebar.toggleGroup("Orders")));
+    expect(list.textContent).not.toContain("Order detail");
+  });
+
+  it("o painel mostra contexto no topo, um bloco por grupo e os atalhos no fim", async () => {
+    const container = await mount("/orders", flowDefinition());
+    const heads = [...container.querySelectorAll(".ds-panel .ds-group-section__head [data-ds-filter-title]")].map(
+      (item) => item.textContent,
+    );
+    expect(heads).toEqual([DEFAULT_LABELS.panel.context, "Order table", "Overlay", DEFAULT_LABELS.panel.shortcuts]);
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain("Rows of the table.");
+    // Opções curtas viram segmentado; longas, select.
+    expect(panel.querySelectorAll("[role='radiogroup']")).toHaveLength(2);
+    expect(panel.querySelector("[role='radio'][aria-checked='true']")?.textContent).toBe("Many");
+    expect([...panel.querySelectorAll("select")].map((item) => item.value)).toContain("recent");
+
+    await click(button(container, DEFAULT_LABELS.panel.openComponent("Button")));
+    expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");
+  });
+
+  it("mudar um controle vai para a URL e para o quadro por mensagem, sem recarregar", async () => {
+    const container = await mount("/orders", flowDefinition());
+    const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!;
+    const src = frame.getAttribute("src");
+    const post = vi.spyOn(frame.contentWindow!, "postMessage");
+
+    await click(button(container, "None"));
+    expect(new URLSearchParams(window.location.search).get("c.rows")).toBe("none");
+    expect(frame.getAttribute("src")).toBe(src);
+    expect(post).toHaveBeenCalledWith(
+      { ds: 1, type: "location", url: `/orders?c.rows=none&${FRAME_PARAM}=1` },
+      window.location.origin,
+    );
+
+    // Voltar ao padrão tira o parâmetro.
+    await click(button(container, "Many"));
+    expect(window.location.search).toBe("");
+  });
+
+  it("o filtro do painel alcança grupos, controles e opções", async () => {
+    const container = await mount("/orders", flowDefinition());
+    const input = container.querySelector<HTMLInputElement>(".ds-panel .ds-search input")!;
+    await act(async () => setInputValue(input, "oldest"));
+    const visible = [...container.querySelectorAll<HTMLElement>(".ds-panel [data-ds-filter]")].filter(
+      (row) => !row.hidden && !row.closest("[hidden]"),
+    );
+    expect(visible.map((row) => row.textContent)).toEqual(["SortMost recent firstOldest first"]);
+
+    await act(async () => setInputValue(input, "overlay"));
+    const groups = [...container.querySelectorAll<HTMLElement>(".ds-panel [data-ds-filter-group]")].filter(
+      (group) => !group.hidden,
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.textContent).toContain("Cancel");
+  });
+
+  it("o cenário aplica os controles e deixa de aparecer destacado quando a combinação muda", async () => {
+    const container = await mount("/orders", flowDefinition());
+    await click(button(container, "Cancelling"));
+    expect(new URLSearchParams(window.location.search).get("scenario")).toBe("orders.cancel");
+    expect(new URLSearchParams(window.location.search).has("c.overlay")).toBe(false);
+    expect(button(container, "Cancelling").getAttribute("aria-current")).toBe("true");
+    expect(button(container, "Cancel").getAttribute("aria-checked")).toBe("true");
+
+    await click(button(container, "Nothing"));
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("scenario")).toBe("orders.cancel");
+    expect(params.get("c.overlay")).toBe("none");
+    expect(button(container, "Cancelling").getAttribute("aria-current")).toBeNull();
+
+    // Trocar um controle que o cenário não fixa não tira o destaque.
+    await click(button(container, "Cancel"));
+    await click(button(container, "One"));
+    expect(button(container, "Cancelling").getAttribute("aria-current")).toBe("true");
+  });
+
+  it("valor inválido na URL cai no padrão e vira aviso no diagnóstico", async () => {
+    const container = await mount("/orders?c.rows=all&c.ghost=1", flowDefinition());
+    expect(container.querySelector("[role='radio'][aria-checked='true']")?.textContent).toBe("Many");
+    const trigger = container.querySelector<HTMLButtonElement>(".ds-diagnostics__trigger")!;
+    expect(trigger.getAttribute("data-level")).toBe("warning");
+    await click(trigger);
+    const popover = container.querySelector(".ds-diagnostics__popover")!.textContent;
+    expect(popover).toContain(DEFAULT_LABELS.diagnostics.invalidControl("rows", "all", "many"));
+    expect(popover).toContain(DEFAULT_LABELS.diagnostics.unknownControl("ghost", "1"));
+  });
+
+  it("Informações mostram fluxo, controles com o valor atual e o esperado da rota", async () => {
+    const container = await mount("/orders?c.rows=one&tab=info", flowDefinition());
+    const panel = container.querySelector(".ds-panel")!;
+    expect(panel.textContent).toContain(DEFAULT_LABELS.info.flow);
+    expect(panel.textContent).toContain("Orders");
+    expect(panel.textContent).toContain("One");
+    expect(panel.textContent).toContain("c.rows=one");
+    expect(panel.textContent).toContain("Orders are listed.");
+  });
+
+  it("navegar para outra tela deixa os controles da anterior para trás", async () => {
+    const container = await mount("/orders?c.rows=one", flowDefinition());
+    await click(button(container, "Order detail"));
+    expect(window.location.pathname).toBe("/orders/:id");
+    expect(window.location.search).not.toContain("c.rows");
+  });
+});
+
+describe("controles dentro do quadro", () => {
+  it("a tela recebe os controles e `setControl` troca a URL do quadro e avisa o pai", async () => {
+    const parent = { postMessage: vi.fn() };
+    const descriptor = Object.getOwnPropertyDescriptor(window, "parent");
+    Object.defineProperty(window, "parent", { configurable: true, value: parent });
+    try {
+      const container = await mount(`/orders?scenario=orders.cancel&${FRAME_PARAM}=1`, flowDefinition());
+      const output = () => JSON.parse(container.querySelector("[data-testid='controls']")!.textContent!);
+      expect(output()).toEqual({ rows: "many", sort: "recent", overlay: "cancel" });
+
+      await click(button(container, "close"));
+      expect(output().overlay).toBe("none");
+      expect(container.querySelector("[data-testid='scenario']")?.textContent).toBe("orders.cancel");
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get("c.overlay")).toBe("none");
+      expect(params.get(FRAME_PARAM)).toBe("1");
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        {
+          ds: 1,
+          type: "navigate",
+          url: `/orders?scenario=orders.cancel&c.overlay=none&${FRAME_PARAM}=1`,
+          replace: true,
+        },
+        window.location.origin,
+      );
+    } finally {
+      if (descriptor) Object.defineProperty(window, "parent", descriptor);
+      else delete (window as { parent?: unknown }).parent;
+    }
+  });
+});
+
+describe("tela sem cenário", () => {
+  it("lê os padrões dos controles e respeita o estado de rede do contexto", async () => {
+    const container = await mount(`/orders?network=error&${FRAME_PARAM}=1`, flowDefinition());
+    expect(JSON.parse(container.querySelector("[data-testid='controls']")!.textContent!)).toEqual({
+      rows: "many",
+      sort: "recent",
+      overlay: "none",
+    });
+    expect(container.querySelector("[data-testid='state']")?.textContent).toBe("error");
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+
+    const empty = await mount(`/orders?network=empty&${FRAME_PARAM}=1`, flowDefinition());
+    expect(empty.querySelector("[data-testid='state']")?.textContent).toBe("null");
+    act(() => root?.unmount());
+    document.body.innerHTML = "";
+
+    const loading = await mount(`/orders?network=loading&${FRAME_PARAM}=1`, flowDefinition());
+    expect(loading.querySelector("[data-testid='state']")?.textContent).toBe("loading");
   });
 });

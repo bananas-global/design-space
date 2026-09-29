@@ -50,8 +50,11 @@ largura do viewport escolhido — CSS isolado nos dois sentidos, e media queries
 respondendo como em produção. Ver
 [`docs/decisions/0012`](docs/decisions/0012-chrome-unico-telas-como-rotas-e-iframe.md).
 
-Organização: **uma tela é uma rota**, e as **variações** dela são os cenários
-cuja `route` casa com a rota. Não há módulo nem jornada para manter.
+Organização: **uma tela é uma rota**, as telas de uma feature se agrupam num
+**fluxo** (`route.group`), e as **variações** de uma tela são controles por
+componente que se combinam, com os cenários como atalhos para combinações. Não
+há módulo nem jornada para manter. Ver
+[`docs/decisions/0013`](docs/decisions/0013-fluxos-e-controles-por-componente.md).
 
 O motor também oferece um escopo de handoff serializado na URL: uma allowlist
 neutra de cenários, padrões de rota e componentes filtra as superfícies de

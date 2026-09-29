@@ -141,6 +141,43 @@ export type Scenario = {
    * "Copiar para o PR".
    */
   components?: string[];
+  /**
+   * Valores de controle que este cenário fixa: um atalho para uma combinação.
+   * Abrir o cenário aplica estes valores sobre os padrões da tela. Chave é o id
+   * de um `Control` da tela do cenário; valor, o `value` de uma das opções.
+   */
+  controls?: Record<string, string>;
+};
+
+/* ------------------------------------------------------------------ *
+ * Controles por componente
+ * ------------------------------------------------------------------ */
+
+/** Uma opção de um controle. */
+export type ControlOption = { value: string; label: string };
+
+/** Um controle: uma dimensão de variação de um componente da tela. */
+export type Control = {
+  /** Id estável, único dentro da tela; vira parâmetro de URL `c.<id>`. */
+  id: string;
+  label: string;
+  options: ControlOption[];
+  /** Valor inicial; padrão = primeira opção. */
+  default?: string;
+  description?: string;
+};
+
+/** Grupo de controles de um componente da tela, como no painel Variações. */
+export type ControlGroup = {
+  /** Id estável, único dentro da tela. */
+  id: string;
+  /** "Tabela de pedidos · table". */
+  title: string;
+  /** Id de um ComponentPreview do catálogo, quando o grupo é de um componente dele. */
+  component?: string;
+  controls: Control[];
+  /** Uma linha de contexto, exibida sob o título. */
+  note?: string;
 };
 
 /* ------------------------------------------------------------------ *
@@ -164,6 +201,20 @@ export type RouteDefinition = {
   name?: string;
   /** Uma linha sobre a tela, exibida em Informações e usada na busca. */
   description?: string;
+  /**
+   * Fluxo a que a tela pertence: agrupa as telas na aba Telas, como `group`
+   * agrupa componentes. Tela sem fluxo fica num grupo sem título, no topo.
+   */
+  group?: string;
+  /** Controles por componente, exibidos no painel Variações. */
+  controls?: ControlGroup[];
+  /**
+   * Comportamento esperado da tela, para Informações e "Copiar para o PR"
+   * quando não há cenário ativo.
+   */
+  expected?: string[];
+  /** Ids do catálogo usados pela tela (mesmo papel de `Scenario.components`). */
+  components?: string[];
 };
 
 export type ScreenProps = {
@@ -388,6 +439,16 @@ export type ScenarioContext = {
   navigate: (to: string) => void;
   /** Abre outro cenário por id. */
   openScenario: (scenarioId: string) => void;
+  /**
+   * Valor atual de cada controle da tela (id → value), com os padrões
+   * aplicados. Vazio quando a tela não declara controles.
+   */
+  controls: Record<string, string>;
+  /**
+   * Muda um controle a partir da UI do produto (ex.: fechar um modal volta o
+   * controle de sobreposição para "nenhuma"). Atualiza a URL.
+   */
+  setControl: (id: string, value: string) => void;
 };
 
 export type ViewportSetting = {
@@ -451,6 +512,11 @@ export type ControlsState = {
   zoom?: number;
   /** Viewport girado: largura e altura trocadas quando o preset tem altura. */
   rotated?: boolean;
+  /**
+   * Valores dos controles da tela aberta (id → value), já com os padrões e o
+   * cenário aplicados. Na URL, só o que difere vai como `c.<id>=<value>`.
+   */
+  screenControls?: Record<string, string>;
 };
 
 /** Abas do painel direito do chrome. */

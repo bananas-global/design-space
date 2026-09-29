@@ -172,9 +172,6 @@ function Variations({
   onOpenScenario,
   onOpenComponent,
   onChange,
-  collapsed,
-  onToggle,
-  filtering,
 }: PanelProps & BlockState) {
   const labels = useLabels();
   const p = labels.panel;
@@ -182,29 +179,21 @@ function Variations({
   if (component) {
     const fixtures = component.fixtures ?? [];
     if (fixtures.length === 0) return <p className="ds-empty">{p.noComponentVariations}</p>;
+    const current = componentFixture.fixture;
     return (
-      <>
-        {componentFixture.didFallback && componentFixture.requestedId && componentFixture.fixture && (
-          <p className="ds-notice">
-            {p.fixtureFallback(componentFixture.requestedId, componentFixture.fixture.id)}
-          </p>
+      <div className="ds-vcards">
+        {componentFixture.didFallback && componentFixture.requestedId && current && (
+          <p className="ds-notice">{p.fixtureFallback(componentFixture.requestedId, current.id)}</p>
         )}
-        <ul className="ds-items" aria-label={p.variationsList}>
-          {fixtures.map((fixture) => (
-            <li key={fixture.id} data-ds-filter>
-              <button
-                type="button"
-                className="ds-item ds-item--stacked"
-                aria-current={componentFixture.fixture?.id === fixture.id ? "true" : undefined}
-                onClick={() => onChange({ fixture: fixture.id })}
-              >
-                <span className="ds-item__title">{fixture.label}</span>
-                {fixture.description && <span className="ds-item__hint">{fixture.description}</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </>
+        <Card title={component.name} hint={current?.description}>
+          <Select
+            label={p.componentVariations}
+            value={current?.id ?? ""}
+            options={fixtures.map((fixture) => ({ value: fixture.id, label: fixture.label }))}
+            onChange={(value) => onChange({ fixture: value })}
+          />
+        </Card>
+      </div>
     );
   }
 
@@ -222,269 +211,177 @@ function Variations({
     onChange({ screenControls: { ...values, [id]: value } });
 
   return (
-    <>
-      <Block id="context" title={p.context} collapsed={collapsed} onToggle={onToggle} filtering={filtering}>
-        <div className="ds-fields ds-fields--flush">
-          <Field label={p.persona}>
-            <select
-              className="ds-select"
-              value={controls.persona ?? ""}
-              onChange={(event) => onChange({ persona: event.target.value || undefined })}
-            >
-              {/* Com persona padrão, "nenhuma" não é uma situação possível. */}
-              {!registry.defaultPersona && <option value="">{p.none}</option>}
-              {product.personas.map((persona) => (
-                <option key={persona.id} value={persona.id}>
-                  {persona.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label={p.network}>
-            <select
-              className="ds-select"
-              value={controls.network}
-              onChange={(event) => onChange({ network: event.target.value as NetworkState })}
-            >
-              {NETWORK_STATES.map((state) => (
-                <option key={state} value={state}>
-                  {labels.network[state]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          {modes.length > 1 && (
-            <Field label={p.theme}>
-              <select
-                className="ds-select"
-                value={controls.themeMode ?? modes[0]}
-                onChange={(event) => onChange({ themeMode: event.target.value })}
-              >
-                {modes.map((mode) => (
-                  <option key={mode} value={mode}>
-                    {mode}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
-
-          {locales.length > 1 && (
-            <Field label={p.locale}>
-              <select
-                className="ds-select"
-                value={controls.locale ?? locales[0]}
-                onChange={(event) => onChange({ locale: event.target.value })}
-              >
-                {locales.map((locale) => (
-                  <option key={locale} value={locale}>
-                    {locale}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
-
-          {adapters.length > 0 && (
-            <Field label={p.dataSource}>
-              <select
-                className="ds-select"
-                value={controls.dataSource ?? "fixtures"}
-                onChange={(event) => onChange({ dataSource: event.target.value })}
-              >
-                <option value="fixtures">{p.fixturesOption}</option>
-                {adapters.map((adapter) => (
-                  <option key={adapter.id} value={adapter.id}>
-                    {adapter.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
-        </div>
-      </Block>
+    <div className="ds-vcards">
+      <Card title={p.context}>
+        <Select
+          label={p.persona}
+          value={controls.persona ?? ""}
+          options={[
+            // Com persona padrão, "nenhuma" não é uma situação possível.
+            ...(registry.defaultPersona ? [] : [{ value: "", label: p.none }]),
+            ...product.personas.map((persona) => ({ value: persona.id, label: persona.name })),
+          ]}
+          onChange={(value) => onChange({ persona: value || undefined })}
+        />
+        <Select
+          label={p.network}
+          value={controls.network}
+          options={NETWORK_STATES.map((state) => ({ value: state, label: labels.network[state] }))}
+          onChange={(value) => onChange({ network: value as NetworkState })}
+        />
+        {modes.length > 1 && (
+          <Select
+            label={p.theme}
+            value={controls.themeMode ?? modes[0]!}
+            options={modes.map((mode) => ({ value: mode, label: mode }))}
+            onChange={(value) => onChange({ themeMode: value })}
+          />
+        )}
+        {locales.length > 1 && (
+          <Select
+            label={p.locale}
+            value={controls.locale ?? locales[0]!}
+            options={locales.map((locale) => ({ value: locale, label: locale }))}
+            onChange={(value) => onChange({ locale: value })}
+          />
+        )}
+        {adapters.length > 0 && (
+          <Select
+            label={p.dataSource}
+            value={controls.dataSource ?? "fixtures"}
+            options={[
+              { value: "fixtures", label: p.fixturesOption },
+              ...adapters.map((adapter) => ({ value: adapter.id, label: adapter.label })),
+            ]}
+            onChange={(value) => onChange({ dataSource: value })}
+          />
+        )}
+      </Card>
 
       {screen.controls.map((group) => {
         const linked = registry.component(group.component);
         return (
-          <Block
+          <Card
             key={group.id}
-            id={`group:${group.id}`}
             title={group.title}
-            count={group.controls.length}
-            collapsed={collapsed}
-            onToggle={onToggle}
-            filtering={filtering}
+            hint={group.note}
+            link={linked ? { label: p.openComponent(linked.name), onOpen: () => onOpenComponent(linked.id) } : undefined}
           >
-            {(group.note || linked) && (
-              <div className="ds-group-section__note" data-ds-filter>
-                {group.note && <span>{group.note}</span>}
-                {linked && (
-                  <button type="button" className="ds-link" onClick={() => onOpenComponent(linked.id)}>
-                    {p.openComponent(linked.name)}
-                  </button>
-                )}
-              </div>
-            )}
-            <div className="ds-fields ds-fields--flush">
-              {group.controls.map((control) => (
-                <ControlField
-                  key={control.id}
-                  control={control}
-                  value={values[control.id] ?? controlDefault(control)}
-                  onChange={(value) => setControl(control.id, value)}
-                />
-              ))}
-            </div>
-          </Block>
+            {group.controls.map((control) => (
+              <Select
+                key={control.id}
+                label={control.label}
+                hint={control.description}
+                value={values[control.id] ?? controlDefault(control)}
+                options={control.options ?? []}
+                onChange={(value) => setControl(control.id, value)}
+              />
+            ))}
+          </Card>
         );
       })}
 
-      {(variations.length > 0 || screen.controls.length === 0) && (
-        <Block
-          id="shortcuts"
-          title={p.shortcuts}
-          count={variations.length || undefined}
-          collapsed={collapsed}
-          onToggle={onToggle}
-          filtering={filtering}
-        >
+      {variations.length > 0 && (
+        <Card title={p.shortcuts}>
           <ul className="ds-items" aria-label={p.variationsList}>
-            {variations.length === 0 ? (
-              <li>
-                <div className="ds-item ds-item--stacked" aria-current="true">
-                  <span className="ds-item__title">{p.defaultVariation}</span>
-                  <span className="ds-item__hint">{p.defaultVariationHint}</span>
-                </div>
+            {variations.map((item) => (
+              <li key={item.id} data-ds-filter>
+                <button
+                  type="button"
+                  className="ds-item"
+                  title={item.intent}
+                  aria-current={highlighted?.id === item.id ? "true" : undefined}
+                  onClick={() => onOpenScenario(item.id)}
+                >
+                  <span className="ds-item__title">{item.title}</span>
+                </button>
               </li>
-            ) : (
-              variations.map((item) => (
-                <li key={item.id} data-ds-filter>
-                  <button
-                    type="button"
-                    className="ds-item"
-                    title={item.intent}
-                    aria-current={highlighted?.id === item.id ? "true" : undefined}
-                    onClick={() => onOpenScenario(item.id)}
-                  >
-                    <span className="ds-item__title">{item.title}</span>
-                  </button>
-                </li>
-              ))
-            )}
+            ))}
           </ul>
-        </Block>
+        </Card>
       )}
-    </>
+    </div>
   );
 }
 
-/** Bloco recolhível do painel, com a aparência dos grupos da lateral. */
-function Block({
-  id,
+/**
+ * Cartão do painel Variações: o título numa linha só, uma seta discreta para o
+ * componente no catálogo e, embaixo, os selects. A nota do grupo fica no
+ * `title` do cabeçalho — contexto sob demanda, sem ocupar o painel.
+ */
+function Card({
   title,
-  count,
-  collapsed,
-  onToggle,
-  filtering,
+  hint,
+  link,
   children,
 }: {
-  id: string;
   title: string;
-  count?: number;
-  collapsed: Set<string>;
-  onToggle: (id: string) => void;
-  filtering: boolean;
+  hint?: string;
+  link?: { label: string; onOpen: () => void };
   children: ReactNode;
 }) {
-  const labels = useLabels().panel;
-  const isCollapsed = collapsed.has(id) && !filtering;
   return (
-    <section className="ds-group-section" data-ds-filter-group>
-      <button
-        type="button"
-        className="ds-group-section__head"
-        aria-expanded={!isCollapsed}
-        aria-label={labels.toggleGroup(title)}
-        onClick={() => onToggle(id)}
-      >
-        <Icon name="chevron" size={12} />
-        <span data-ds-filter-title>{title}</span>
-        {count !== undefined && <span className="ds-count">{count}</span>}
-      </button>
-      {!isCollapsed && children}
+    <section className="ds-vcard" data-ds-filter-group>
+      <header className="ds-vcard__head" title={hint ? `${title} — ${hint}` : title}>
+        <h3 className="ds-vcard__title ds-section__title" data-ds-filter-title>
+          {title}
+        </h3>
+        {link && (
+          <button
+            type="button"
+            className="ds-btn ds-btn--icon ds-vcard__link"
+            aria-label={link.label}
+            title={link.label}
+            onClick={link.onOpen}
+          >
+            <Icon name="arrow-up-right" size={14} />
+          </button>
+        )}
+      </header>
+      <div className="ds-vcard__body">{children}</div>
     </section>
   );
 }
 
 /**
- * Até quatro opções curtas cabem como botões segmentados na largura do painel;
- * acima disso, um select.
+ * Todo controle é um select, sem rótulo visível: as opções dizem o que são. O
+ * rótulo fica para o leitor de tela, para a dica e para o filtro do painel.
+ */
+function Select({
+  label,
+  hint,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="ds-vcard__field" data-ds-filter title={hint ? `${label} — ${hint}` : label}>
+      <span className="ds-visually-hidden">{label}</span>
+      <select className="ds-select" value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/**
+ * Mantido por compatibilidade com a 0.9.0: o painel passou a usar select para
+ * todo controle.
  */
 export function isSegmentedControl(control: Control): boolean {
   const options = control.options ?? [];
   const total = options.reduce((sum, option) => sum + option.label.length, 0);
   return options.length > 0 && options.length <= 4 && total <= 24;
-}
-
-function ControlField({
-  control,
-  value,
-  onChange,
-}: {
-  control: Control;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const options = control.options ?? [];
-  if (!isSegmentedControl(control)) {
-    return (
-      <Field label={control.label} hint={control.description}>
-        <select className="ds-select" value={value} onChange={(event) => onChange(event.target.value)}>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </Field>
-    );
-  }
-  return (
-    <div className="ds-field" data-ds-filter>
-      <span className="ds-field__label" id={`ds-control-${control.id}`}>
-        {control.label}
-      </span>
-      <div className="ds-tabs ds-tabs--segmented" role="radiogroup" aria-labelledby={`ds-control-${control.id}`}>
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            className="ds-tab"
-            aria-checked={option.value === value}
-            tabIndex={option.value === value ? 0 : -1}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-      {control.description && <span className="ds-field__hint">{control.description}</span>}
-    </div>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <label className="ds-field" data-ds-filter>
-      <span className="ds-field__label">{label}</span>
-      {children}
-      {hint && <span className="ds-field__hint">{hint}</span>}
-    </label>
-  );
 }
 
 /* --------------------------------------------------------- informações */

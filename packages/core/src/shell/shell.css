@@ -707,32 +707,84 @@
   font-size: var(--ds-fs-sm);
 }
 
-/* Blocos do painel Variações (contexto, grupos de controles, atalhos): o
-   cabeçalho recolhível dos grupos da lateral, com os campos logo abaixo. */
-.ds-fields--flush {
-  margin-top: 0;
-  padding: 2px 8px 10px;
-  border-top: 0;
-}
-
-.ds-group-section__note {
+/* Variações: um cartão por componente, com o título numa linha e os selects
+   embaixo. Sem acordeão, sem contagem, sem rótulo visível. */
+.ds-vcards {
   display: grid;
-  gap: 4px;
-  justify-items: start;
-  padding: 0 8px 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* `min-width: 0` em toda a cadeia: sem ele o título de uma linha só empurra o
+   cartão para fora do painel. */
+.ds-vcard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--ds-tint);
+  border-radius: calc(var(--ds-radius) + 2px);
+}
+
+.ds-vcard__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 20px;
+}
+
+.ds-vcard__title {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-vcard__link.ds-btn {
+  width: 24px;
+  height: 24px;
+  margin: -4px -4px -4px 0;
+  border-color: transparent;
   color: var(--ds-muted);
-  font-size: var(--ds-fs-sm);
 }
 
-/* Controle segmentado: as abas em cápsula, na largura do campo. */
-.ds-tabs--segmented {
-  margin: 0;
+.ds-vcard__link.ds-btn:hover:not(:disabled) {
+  color: var(--ds-fg);
 }
 
-.ds-tabs--segmented .ds-tab {
-  padding: 0 6px;
-  letter-spacing: normal;
-  text-transform: none;
+.ds-vcard__body {
+  display: grid;
+  gap: 8px;
+}
+
+.ds-vcard__field {
+  display: block;
+  min-width: 0;
+}
+
+.ds-vcard__field .ds-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.ds-vcard .ds-items {
+  margin: 0 -4px;
+}
+
+.ds-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Informações: seções com o mesmo título dos grupos da lateral, e cada dado

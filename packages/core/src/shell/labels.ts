@@ -78,6 +78,7 @@ export type Labels = {
     infoTab: string;
     resize: string;
     variationsList: string;
+    componentVariations: string;
     defaultVariation: string;
     defaultVariationHint: string;
     noVariations: string;
@@ -231,6 +232,7 @@ export const DEFAULT_LABELS: Labels = {
     infoTab: "Informações",
     resize: "Redimensionar o painel",
     variationsList: "Variações da tela",
+    componentVariations: "Variações do componente",
     defaultVariation: "Padrão",
     defaultVariationHint: "A tela sem cenário declarado, sem fixture.",
     noVariations: "Esta tela não tem variações.",
@@ -389,6 +391,7 @@ export const EN_US_LABELS: Labels = {
     infoTab: "Information",
     resize: "Resize panel",
     variationsList: "Screen variations",
+    componentVariations: "Component variations",
     defaultVariation: "Default",
     defaultVariationHint: "The screen without a declared scenario or fixture.",
     noVariations: "This screen has no variations.",

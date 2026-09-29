@@ -7,12 +7,14 @@
  * sistema real e o que cada variação precisa fazer. Montar isso à mão a cada PR
  * é onde os links ficam relativos e os componentes ficam de fora.
  *
- * Função pura: recebe o que o painel já tem e devolve texto.
+ * Função pura: recebe o que o painel já tem e devolve texto. Tela com fluxo
+ * (`route.group`) sai por {@link buildFlowPrMarkdown}, com o fluxo inteiro.
  */
 
 import type { DeployContext } from "../deploy/index.js";
 import { scenarioUrl } from "../deploy/index.js";
-import type { ScreenNode } from "../registry/index.js";
+import { controlDefault, type Registry, type ScreenNode } from "../registry/index.js";
+import { CHROME_ONLY_PARAMS } from "../frame/index.js";
 import type { ComponentPreview, ControlsState, Scenario } from "../types/index.js";
 import { applyOverrides } from "../controls/params.js";
 import type { Labels } from "./labels.js";
@@ -98,4 +100,125 @@ function escapeCell(value: string): string {
 
 function escapeLinkText(value: string): string {
   return value.replace(/([[\]])/g, "\\$1");
+}
+
+export type FlowPrMarkdownInput = {
+  /** O fluxo da tela aberta, com as telas visíveis no recorte ativo. */
+  flow: { name: string; screens: ScreenNode[] };
+  registry: Registry;
+  /** A tela aberta: o link dela leva os controles atuais. */
+  open?: { screen: ScreenNode; location: { path: string; search: string }; variation?: Scenario };
+  deploy: DeployContext;
+  labels: Labels;
+  /** Controles que os links precisam carregar, como o recorte de handoff. */
+  overrides?: Partial<ControlsState>;
+};
+
+/**
+ * Markdown de um fluxo inteiro: um PR de feature costuma trazer as telas do
+ * fluxo juntas, e a pessoa desenvolvedora precisa ver a sequência, não uma tela
+ * solta. Para cada tela: nome, rota, link, controles disponíveis, atalhos,
+ * comportamento esperado e a tabela de componentes.
+ */
+export function buildFlowPrMarkdown({
+  flow,
+  registry,
+  open,
+  deploy,
+  labels,
+  overrides,
+}: FlowPrMarkdownInput): string {
+  const pr = labels.pr;
+  const lines: string[] = [`## ${flow.name}`, ""];
+  const immutableOrigin = deploy.deploymentUrl ? `https://${deploy.deploymentUrl}` : undefined;
+  const commitNote = deploy.shortCommit ? pr.commit(deploy.shortCommit) : undefined;
+
+  const screenLink = (screen: ScreenNode, origin: string): string => {
+    if (open && open.screen.id === screen.id) {
+      const url = new URL(open.location.path || "/", origin);
+      const params = new URLSearchParams(open.location.search);
+      for (const name of CHROME_ONLY_PARAMS) params.delete(name);
+      for (const [key, value] of params) url.searchParams.append(key, value);
+      applyOverrides(url.searchParams, overrides);
+      return url.toString();
+    }
+    const first = screen.variations[0];
+    if (first) return scenarioUrl(first, { origin, overrides });
+    const url = new URL(screen.href, origin);
+    applyOverrides(url.searchParams, overrides);
+    return url.toString();
+  };
+
+  for (const screen of flow.screens) {
+    lines.push(`### ${screen.name}`, "");
+    if (screen.description) lines.push(screen.description, "");
+
+    let link = `\`${screen.route.path}\` · [${pr.open}](${screenLink(screen, deploy.origin)})`;
+    if (immutableOrigin) link += ` · [${commitNote ?? pr.immutableLink}](${screenLink(screen, immutableOrigin)})`;
+    else if (commitNote) link += ` · ${commitNote}`;
+    lines.push(link, "");
+
+    if (screen.controls.length > 0) {
+      lines.push(`**${pr.controls}**`, "");
+      for (const group of screen.controls) {
+        lines.push(`- ${escapeMarkdown(group.title)} (\`${group.id}\`)`);
+        for (const control of group.controls) {
+          const fallback = controlDefault(control);
+          const options = control.options
+            .map((option) =>
+              option.value === fallback
+                ? `${escapeMarkdown(option.label)} (\`${option.value}\`, ${pr.defaultOption})`
+                : `${escapeMarkdown(option.label)} (\`${option.value}\`)`,
+            )
+            .join(" · ");
+          lines.push(`  - ${escapeMarkdown(control.label)} (\`c.${control.id}\`): ${options}`);
+        }
+      }
+      lines.push("");
+    }
+
+    if (screen.variations.length > 0) {
+      lines.push(`**${pr.shortcuts}**`, "");
+      for (const variation of screen.variations) {
+        lines.push(
+          `- [${escapeLinkText(variation.title)}](${scenarioUrl(variation, { origin: deploy.origin, overrides })})`,
+        );
+      }
+      lines.push("");
+    }
+
+    lines.push(`**${pr.expected}**`, "");
+    const openVariation = open?.screen.id === screen.id ? open.variation : undefined;
+    const own = openVariation?.expected?.length ? openVariation.expected : screen.route.expected;
+    const withExpected = screen.variations.filter(
+      (variation) => variation.expected?.length && variation.id !== openVariation?.id,
+    );
+    if (!own?.length && withExpected.length === 0) lines.push(pr.noExpected, "");
+    if (own?.length) {
+      for (const item of own) lines.push(`- ${item}`);
+      lines.push("");
+    }
+    for (const variation of withExpected) {
+      lines.push(`*${variation.title}*`, "");
+      for (const item of variation.expected ?? []) lines.push(`- ${item}`);
+      lines.push("");
+    }
+
+    const components = registry.componentsOfScreen(screen);
+    if (components.length > 0) {
+      lines.push(`**${pr.components}**`, "");
+      lines.push(`| ${pr.component} | ${pr.source} |`, "| --- | --- |");
+      for (const component of components) {
+        const source = component.source ? `\`${escapeCell(component.source)}\`` : pr.empty;
+        lines.push(`| ${escapeCell(component.name)} (\`${component.id}\`) | ${source} |`);
+      }
+      lines.push("");
+    }
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+function escapeMarkdown(value: string): string {
+  return value.replace(/([*_[\]`])/g, "\\$1");
 }

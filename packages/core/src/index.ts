@@ -25,6 +25,9 @@ export {
   createRegistry,
   normalizeSearch,
   type ComponentFixtureResolution,
+  type ControlResolution,
+  type FlowNode,
+  type InvalidControl,
   type Registry,
   type ScenarioQueryOptions,
   type ScreenNode,
@@ -58,7 +61,7 @@ export {
 
 /* ------------------------------------- quadro */
 export { FRAME_ATTRIBUTE, FRAME_PARAM } from "./frame/index.js";
-export { PARAM, applyOverrides, serializeValue } from "./controls/params.js";
+export { CONTROL_PARAM_PREFIX, PARAM, applyOverrides, serializeValue } from "./controls/params.js";
 
 /* ----------------------------------- handoff */
 export {
@@ -102,6 +105,9 @@ export {
   type ComponentPreviewFixture,
   type ComponentPreviewProps,
   type ChromeTheme,
+  type Control,
+  type ControlGroup,
+  type ControlOption,
   type ControlsState,
   type DeployOverrides,
   type DataRequest,

@@ -17,7 +17,8 @@ import type { ControlsState, PanelTab, ProductDefinition } from "../types/index.
 import { createRegistry, type Registry } from "../registry/index.js";
 import { useDesignSpaceState } from "../controls/state.js";
 import { getDeployContext } from "../deploy/index.js";
-import { PARAM } from "../controls/params.js";
+import { CONTROL_PARAM_PREFIX, PARAM, readControlParams } from "../controls/params.js";
+import type { ValidationIssue } from "../registry/validate.js";
 import { fromFrameUrl, isFrameMode, mergeChromeParams, type FrameShortcut } from "../frame/index.js";
 import { Topbar } from "./Topbar.js";
 import { Sidebar } from "./Sidebar.js";
@@ -101,6 +102,26 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
     () => registry.resolveComponentFixture(component?.id, component ? controls.fixture : undefined),
     [component, controls.fixture, registry],
   );
+
+  // Controle pedido na URL com valor que a tela não tem: cai no padrão e vira
+  // aviso no diagnóstico, junto dos problemas do contrato.
+  const issues = useMemo(() => {
+    if (!screen || screen.controls.length === 0) return registry.issues;
+    const { invalid } = registry.resolveControls(screen, {
+      scenario: variation,
+      requested: readControlParams(location.search),
+    });
+    if (invalid.length === 0) return registry.issues;
+    const fromUrl: ValidationIssue[] = invalid.map((item) => ({
+      level: "warning",
+      where: `url:${CONTROL_PARAM_PREFIX}${item.id}`,
+      message:
+        item.reason === "invalid-value"
+          ? labels.diagnostics.invalidControl(item.id, item.value, item.fallback ?? "")
+          : labels.diagnostics.unknownControl(item.id, item.value),
+    }));
+    return [...fromUrl, ...registry.issues];
+  }, [labels, location.search, registry, screen, variation]);
 
   const firstScreen = registry.screensFor({ handoff })[0];
   const firstComponent = registry.componentsFor(handoff)[0];
@@ -194,7 +215,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           zoom={effectiveZoom}
           rotated={Boolean(controls.rotated)}
           theme={theme}
-          issues={registry.issues}
+          issues={issues}
           linkUrl={linkUrl}
           onViewport={(id) => change({ viewport: id })}
           onRotate={() => change({ rotated: !controls.rotated })}
@@ -245,6 +266,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
             registry={registry}
             controls={controls}
             deploy={deploy}
+            location={location}
             screen={screen}
             variation={variation}
             component={component}

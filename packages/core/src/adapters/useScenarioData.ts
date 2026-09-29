@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react";
 import type { DataSourceAdapter, Fixture, NetworkState, Scenario } from "../types/index.js";
-import { fixtureAdapter } from "./index.js";
+import { SLOW_NETWORK_DELAY_MS, SimulatedNetworkError, fixtureAdapter } from "./index.js";
 
 export type ScenarioData = {
   data: unknown;
@@ -22,18 +22,47 @@ export function useScenarioData(options: {
   fixture: Fixture | undefined;
   network: NetworkState;
   adapter: DataSourceAdapter | undefined;
+  /** Rota da tela, usada no erro simulado quando não há cenário. */
+  screen?: string;
 }): ScenarioData {
   const { scenario, fixture, network, adapter } = options;
   const [state, setState] = useState<ScenarioData>({
     data: undefined,
-    isLoading: Boolean(scenario),
+    isLoading: Boolean(scenario) || network === "loading" || network === "slow",
     error: undefined,
   });
 
   useEffect(() => {
     if (!scenario) {
-      setState({ data: undefined, isLoading: false, error: undefined });
-      return;
+      // Tela sem cenário é o caso normal desde a 0.9: não há fixture, mas o
+      // estado de rede do contexto continua valendo, para a tela mostrar o
+      // carregamento, o vazio e o erro dela sem precisar de um cenário para cada.
+      switch (network) {
+        case "loading":
+          setState({ data: undefined, isLoading: true, error: undefined });
+          return;
+        case "empty":
+          setState({ data: null, isLoading: false, error: undefined });
+          return;
+        case "error":
+          setState({
+            data: undefined,
+            isLoading: false,
+            error: new SimulatedNetworkError(options.screen ?? "—"),
+          });
+          return;
+        case "slow": {
+          setState({ data: undefined, isLoading: true, error: undefined });
+          const timer = setTimeout(
+            () => setState({ data: undefined, isLoading: false, error: undefined }),
+            SLOW_NETWORK_DELAY_MS,
+          );
+          return () => clearTimeout(timer);
+        }
+        default:
+          setState({ data: undefined, isLoading: false, error: undefined });
+          return;
+      }
     }
 
     let active = true;
@@ -60,7 +89,7 @@ export function useScenarioData(options: {
     return () => {
       active = false;
     };
-  }, [scenario, fixture, network, adapter]);
+  }, [scenario, fixture, network, adapter, options.screen]);
 
   return state;
 }

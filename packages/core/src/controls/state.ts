@@ -24,9 +24,10 @@ import type {
   PanelTab,
   ViewportSetting,
 } from "../types/index.js";
-import type { Registry } from "../registry/index.js";
+import type { Registry, ScreenNode } from "../registry/index.js";
+import type { Scenario } from "../types/index.js";
 import { NETWORK_STATES } from "../types/index.js";
-import { PARAM } from "./params.js";
+import { CONTROL_PARAM_PREFIX, PARAM, deleteControlParams, readControlParams } from "./params.js";
 import {
   applyHandoffScope,
   handoffAllowsComponent,
@@ -64,10 +65,28 @@ export type DesignSpaceLocation = {
 };
 
 /**
+ * A tela a que os controles se referem: a do caminho, quando informado, ou a do
+ * cenário. E o cenário, só quando ele é variação dessa tela — cenário de outra
+ * tela não fixa controle aqui.
+ */
+function controlTarget(
+  registry: Registry,
+  scenario: Scenario | undefined,
+  path: string | undefined,
+): { screen: ScreenNode | undefined; scenario: Scenario | undefined } {
+  const screen = path !== undefined ? registry.screenForPath(path) : registry.screenOf(scenario);
+  const own = scenario && screen && registry.screenOf(scenario)?.id === screen.id ? scenario : undefined;
+  return { screen, scenario: own };
+}
+
+/**
  * Lê os controles da query string, aplicando os padrões do cenário ativo.
  * Pura e testável: não toca em `window`.
+ *
+ * `path` é o caminho aberto. Com ele, os controles da tela (`c.<id>`) são
+ * resolvidos contra a tela daquele caminho; sem ele, contra a tela do cenário.
  */
-export function parseControls(search: string, registry: Registry): ControlsState {
+export function parseControls(search: string, registry: Registry, path?: string): ControlsState {
   const params = new URLSearchParams(search);
   const handoff = parseHandoffScope(params);
   const componentId = params.get(PARAM.component) ?? undefined;
@@ -86,6 +105,15 @@ export function parseControls(search: string, registry: Registry): ControlsState
     : undefined;
 
   const network = params.get(PARAM.network);
+
+  const target = component ? undefined : controlTarget(registry, scenario, path);
+  const screenControls =
+    target?.screen && target.screen.controls.length > 0
+      ? registry.resolveControls(target.screen, {
+          scenario: target.scenario,
+          requested: readControlParams(params),
+        }).values
+      : undefined;
 
   return {
     scenario: scenario?.id,
@@ -113,6 +141,7 @@ export function parseControls(search: string, registry: Registry): ControlsState
       : "variations",
     zoom: clampZoom(params.get(PARAM.zoom)),
     rotated: params.get(PARAM.rotated) === "1",
+    screenControls,
   };
 }
 
@@ -120,7 +149,11 @@ export function parseControls(search: string, registry: Registry): ControlsState
  * Serializa os controles de volta na query string, omitindo tudo que é padrão.
  * URL curta é URL que sobrevive a ser colada em ticket e em thread.
  */
-export function serializeControls(state: ControlsState, registry: Registry): string {
+export function serializeControls(
+  state: ControlsState,
+  registry: Registry,
+  path?: string,
+): string {
   const params = new URLSearchParams();
   const scenario = registry.scenario(state.scenario);
 
@@ -140,6 +173,24 @@ export function serializeControls(state: ControlsState, registry: Registry): str
   }
   if (state.network !== (scenario?.network ?? "success")) {
     params.set(PARAM.network, state.network);
+  }
+
+  // Controles da tela: só o que difere do que o cenário e os padrões já dão. Sem
+  // tela conhecida, não há base para comparar, e tudo vai.
+  if (state.screenControls && !state.component) {
+    const target = controlTarget(registry, scenario, path);
+    const base = target.screen
+      ? registry.resolveControls(target.screen, { scenario: target.scenario }).values
+      : {};
+    const order = target.screen
+      ? registry.controlsOf(target.screen).map((control) => control.id)
+      : Object.keys(state.screenControls);
+    for (const id of order) {
+      const value = state.screenControls[id];
+      if (value !== undefined && value !== base[id]) {
+        params.set(`${CONTROL_PARAM_PREFIX}${id}`, value);
+      }
+    }
   }
 
   if (state.viewport !== "fit") params.set(PARAM.viewport, state.viewport);
@@ -253,7 +304,10 @@ export function useDesignSpaceState(
     return () => window.removeEventListener("message", onMessage);
   }, [frame]);
 
-  const controls = useMemo(() => parseControls(location.search, registry), [location.search, registry]);
+  const controls = useMemo(
+    () => parseControls(location.search, registry, location.path),
+    [location.path, location.search, registry],
+  );
 
   const push = useCallback(
     (path: string, search: string, replace = false) => {
@@ -282,7 +336,7 @@ export function useDesignSpaceState(
       const next = { ...controls, ...patch };
       // Troca de controle é replace, não push: o histórico do navegador deve
       // registrar navegação entre situações, não cada ajuste de viewport.
-      push(location.path, serializeControls(next, registry), true);
+      push(location.path, serializeControls(next, registry, location.path), true);
     },
     [controls, location.path, push, registry],
   );
@@ -293,6 +347,13 @@ export function useDesignSpaceState(
       const path = rawPath || "/";
       // Uma rota com query própria manda; sem query, os controles seguem.
       const targetParams = new URLSearchParams(rawSearch ?? location.search);
+      // Controles são da tela: numa tela diferente, os da anterior não valem.
+      if (
+        rawSearch === undefined &&
+        registry.screenForPath(path)?.id !== registry.screenForPath(location.path)?.id
+      ) {
+        deleteControlParams(targetParams);
+      }
       // Uma navegação iniciada pela UI do produto não pode apagar o recorte do
       // handoff ao fornecer sua própria query string.
       if (controls.handoff) applyHandoffScope(targetParams, controls.handoff);
@@ -300,7 +361,7 @@ export function useDesignSpaceState(
       const search = targetQuery ? `?${targetQuery}` : "";
       push(path, search, options?.replace ?? false);
     },
-    [controls.handoff, location.search, push],
+    [controls.handoff, location.path, location.search, push, registry],
   );
 
   const openScenario = useCallback(
@@ -315,8 +376,10 @@ export function useDesignSpaceState(
         persona: scenario.persona,
         fixture: scenario.fixture,
         network: scenario.network ?? "success",
+        // Os controles voltam ao que o cenário fixa, sobre os padrões da tela.
+        screenControls: undefined,
       };
-      push(scenario.route, serializeControls(next, registry), false);
+      push(scenario.route, serializeControls(next, registry, scenario.route), false);
     },
     [controls, push, registry],
   );
@@ -333,6 +396,7 @@ export function useDesignSpaceState(
         persona: undefined,
         fixture: undefined,
         network: "success",
+        screenControls: undefined,
       };
       next.fixture =
         registry.componentFixture(component.id, component.defaultFixture)?.id ??
@@ -355,8 +419,9 @@ export function useDesignSpaceState(
           persona: first.persona,
           fixture: first.fixture,
           network: first.network ?? "success",
+          screenControls: undefined,
         };
-        push(first.route, serializeControls(next, registry), openOptions?.replace ?? false);
+        push(first.route, serializeControls(next, registry, first.route), openOptions?.replace ?? false);
         return;
       }
       const next: ControlsState = {
@@ -366,8 +431,9 @@ export function useDesignSpaceState(
         persona: undefined,
         fixture: undefined,
         network: "success",
+        screenControls: undefined,
       };
-      push(screen.href, serializeControls(next, registry), openOptions?.replace ?? false);
+      push(screen.href, serializeControls(next, registry, screen.href), openOptions?.replace ?? false);
     },
     [controls, push, registry],
   );

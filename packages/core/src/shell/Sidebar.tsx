@@ -1,14 +1,16 @@
 /**
  * Lateral esquerda: Telas e Componentes.
  *
- * Uma tela é uma rota; um componente é uma referência do catálogo. A busca vale
+ * Uma tela é uma rota, e as telas se agrupam por fluxo (`route.group`) como os
+ * componentes se agrupam por `group`. Um componente é uma referência do
+ * catálogo. A busca vale
  * para as duas abas ao mesmo tempo, sem diferenciar acento nem caixa, e durante
  * a busca cada aba mostra quantos itens casam — quem busca "botao" na aba Telas
  * vê que a resposta está em Componentes.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Registry, ScreenNode } from "../registry/index.js";
+import { groupScreens, type Registry, type ScreenNode } from "../registry/index.js";
 import type { ComponentPreview, HandoffScope } from "../types/index.js";
 import { Icon } from "./icons.js";
 import { useLabels } from "./labels.js";
@@ -85,6 +87,7 @@ export function Sidebar({
     [handoff, query, registry],
   );
   const groups = useMemo(() => groupComponents(components, s.ungrouped), [components, s.ungrouped]);
+  const flows = useMemo(() => groupScreens(screens), [screens]);
   const searching = query.trim().length > 0;
 
   const toggleGroup = (group: string) =>
@@ -138,16 +141,40 @@ export function Sidebar({
           ) : screens.length === 0 ? (
             <p className="ds-empty">{s.noMatch(query)}</p>
           ) : (
-            <ul className="ds-items">
-              {screens.map((screen) => (
-                <ScreenItem
-                  key={screen.id}
-                  screen={screen}
-                  active={screen.id === activeScreen && !activeComponent}
-                  onOpen={onOpenScreen}
-                />
-              ))}
-            </ul>
+            flows.map((flow) => {
+              const list = (
+                <ul className="ds-items">
+                  {flow.screens.map((screen) => (
+                    <ScreenItem
+                      key={screen.id}
+                      screen={screen}
+                      active={screen.id === activeScreen && !activeComponent}
+                      onOpen={onOpenScreen}
+                    />
+                  ))}
+                </ul>
+              );
+              // Telas sem fluxo: no topo, sem título.
+              if (flow.name === undefined) return <div key="" className="ds-group-section">{list}</div>;
+              const key = `screens:${flow.name}`;
+              const isCollapsed = collapsed.has(key) && !searching;
+              return (
+                <section key={key} className="ds-group-section">
+                  <button
+                    type="button"
+                    className="ds-group-section__head"
+                    aria-expanded={!isCollapsed}
+                    aria-label={s.toggleGroup(flow.name)}
+                    onClick={() => toggleGroup(key)}
+                  >
+                    <Icon name="chevron" size={12} />
+                    <span>{flow.name}</span>
+                    <span className="ds-count">{flow.screens.length}</span>
+                  </button>
+                  {!isCollapsed && list}
+                </section>
+              );
+            })
           )
         ) : !hasComponents ? (
           <p className="ds-empty">{s.emptyComponents}</p>

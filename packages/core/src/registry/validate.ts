@@ -12,9 +12,11 @@
 
 import {
   NETWORK_STATES,
+  type ControlGroup,
   type ProductDefinition,
   type Scenario,
 } from "../types/index.js";
+import { resolveRoute } from "../router/index.js";
 
 export type ValidationIssue = {
   level: "error" | "warning";
@@ -24,6 +26,8 @@ export type ValidationIssue = {
 };
 
 const ID_PATTERN = /^[a-z0-9]+([.\-][a-z0-9]+)*$/;
+/** Id de controle: vai para a URL como `c.<id>`, então sem espaço nem `=`/`&`. */
+const CONTROL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -133,6 +137,22 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
     if (route.name !== undefined && !isNonEmptyString(route.name)) {
       push("warning", where, "`name` vazio: a tela aparece com o título do primeiro cenário.");
     }
+    if (route.group !== undefined && !isNonEmptyString(route.group)) {
+      push("warning", where, "`group` vazio: a tela aparece fora de qualquer fluxo.");
+    }
+    if (route.expected !== undefined && !Array.isArray(route.expected)) {
+      push("error", where, "`expected`, quando informado, deve ser uma lista de frases.");
+    }
+    if (route.components !== undefined && !Array.isArray(route.components)) {
+      push("error", where, "`components`, quando informado, deve ser uma lista de ids de componente.");
+    }
+    if (route.controls !== undefined) {
+      if (!Array.isArray(route.controls)) {
+        push("error", where, "`controls`, quando informado, deve ser uma lista de grupos de controles.");
+      } else {
+        validateControlGroups(route.controls, where, push);
+      }
+    }
   }
 
   const componentIds = new Set<string>();
@@ -187,6 +207,30 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
     }
   }
 
+  // Referências das rotas ao catálogo: só aviso, como em `Scenario.components`.
+  for (const route of product.routes ?? []) {
+    if (!isNonEmptyString(route?.path)) continue;
+    const where = `route:${route.path}`;
+    for (const component of Array.isArray(route.components) ? route.components : []) {
+      if (!componentIds.has(component)) {
+        push(
+          "warning",
+          where,
+          `Componente não registrado: \`${component}\`. Ele não aparece em "Componentes usados".`,
+        );
+      }
+    }
+    for (const group of Array.isArray(route.controls) ? route.controls : []) {
+      if (group?.component !== undefined && !componentIds.has(group.component)) {
+        push(
+          "warning",
+          `${where}/group:${group.id}`,
+          `Componente não registrado: \`${group.component}\`. O grupo aparece sem link para o catálogo.`,
+        );
+      }
+    }
+  }
+
   for (const [index, scenario] of (product.scenarios ?? []).entries()) {
     issues.push(...validateScenario(scenario, index));
 
@@ -219,6 +263,38 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
         );
       }
     }
+    if (scenario?.controls !== undefined) {
+      if (!scenario.controls || typeof scenario.controls !== "object" || Array.isArray(scenario.controls)) {
+        push("error", where, "`controls`, quando informado, é um objeto de id do controle → valor.");
+      } else if (scenario.route) {
+        const match = resolveRoute(product.routes ?? [], scenario.route.split("?")[0] ?? scenario.route);
+        const groups = Array.isArray(match?.definition.controls) ? match!.definition.controls : [];
+        const controls = new Map(
+          groups.flatMap((group) => (Array.isArray(group?.controls) ? group.controls : [])).map((control) => [
+            control?.id,
+            control,
+          ]),
+        );
+        for (const [id, value] of Object.entries(scenario.controls)) {
+          const control = controls.get(id);
+          if (!control) {
+            push(
+              "error",
+              where,
+              `Controle \`${id}\` não existe na tela \`${match?.definition.path ?? scenario.route}\`.`,
+            );
+          } else if (!(control.options ?? []).some((option) => option?.value === value)) {
+            push(
+              "error",
+              where,
+              `Valor \`${value}\` não é opção do controle \`${id}\`. Opções: ${(control.options ?? [])
+                .map((option) => `\`${option?.value}\``)
+                .join(", ")}.`,
+            );
+          }
+        }
+      }
+    }
     if (scenario?.route && !matchesAnyRoute(scenario.route, product)) {
       push(
         "error",
@@ -242,6 +318,79 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
   }
 
   return issues;
+}
+
+/**
+ * Forma dos grupos de controles de uma rota. Ids de grupo e de controle são
+ * únicos na tela — o id do controle vira `c.<id>` na URL, e dois controles com o
+ * mesmo id disputariam o mesmo parâmetro.
+ */
+function validateControlGroups(
+  groups: ControlGroup[],
+  routeWhere: string,
+  push: (level: ValidationIssue["level"], where: string, message: string) => void,
+): void {
+  const groupIds = new Set<string>();
+  const controlIds = new Set<string>();
+  for (const [index, group] of groups.entries()) {
+    const where = `${routeWhere}/group:${group?.id ?? index}`;
+    if (!isNonEmptyString(group?.id)) {
+      push("error", where, "`id` do grupo de controles é obrigatório.");
+    } else if (groupIds.has(group.id)) {
+      push("error", where, `\`id\` de grupo duplicado na tela: \`${group.id}\`.`);
+    } else {
+      groupIds.add(group.id);
+    }
+    if (!isNonEmptyString(group?.title)) push("error", where, "`title` do grupo é obrigatório.");
+    if (!Array.isArray(group?.controls)) {
+      push("error", where, "`controls` do grupo deve ser uma lista.");
+      continue;
+    }
+    for (const [controlIndex, control] of group.controls.entries()) {
+      const controlWhere = `${where}/control:${control?.id ?? controlIndex}`;
+      if (!isNonEmptyString(control?.id)) {
+        push("error", controlWhere, "`id` do controle é obrigatório.");
+      } else if (!CONTROL_ID_PATTERN.test(control.id)) {
+        push(
+          "error",
+          controlWhere,
+          `Id de controle inválido: \`${control.id}\`. Use letras, números, \`-\`, \`_\` ou \`.\`, sem espaço: ele vira \`c.<id>\` na URL.`,
+        );
+      } else if (controlIds.has(control.id)) {
+        push("error", controlWhere, `\`id\` de controle duplicado na tela: \`${control.id}\`.`);
+      } else {
+        controlIds.add(control.id);
+      }
+      if (!isNonEmptyString(control?.label)) push("error", controlWhere, "`label` do controle é obrigatório.");
+      const options = Array.isArray(control?.options) ? control.options : [];
+      if (options.length === 0) {
+        push("error", controlWhere, "`options` precisa de ao menos uma opção.");
+        continue;
+      }
+      const values = new Set<string>();
+      for (const option of options) {
+        if (!isNonEmptyString(option?.value)) {
+          push("error", controlWhere, "Toda opção precisa de `value`.");
+        } else if (values.has(option.value)) {
+          push("error", controlWhere, `Opção duplicada: \`${option.value}\`.`);
+        } else {
+          values.add(option.value);
+        }
+        if (!isNonEmptyString(option?.label)) {
+          push("error", controlWhere, `A opção \`${option?.value ?? "?"}\` precisa de \`label\`.`);
+        }
+      }
+      if (control.default !== undefined && !values.has(control.default)) {
+        push(
+          "error",
+          controlWhere,
+          `\`default\` não é uma das opções: \`${control.default}\`. Opções: ${[...values]
+            .map((value) => `\`${value}\``)
+            .join(", ")}.`,
+        );
+      }
+    }
+  }
 }
 
 function matchesAnyRoute(route: string, product: ProductDefinition): boolean {

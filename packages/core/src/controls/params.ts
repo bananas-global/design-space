@@ -28,7 +28,33 @@ export const PARAM = {
   panelTab: "tab",
   zoom: "zoom",
   rotated: "rotate",
-} as const satisfies Record<Exclude<keyof ControlsState, "handoff">, string>;
+} as const satisfies Record<Exclude<keyof ControlsState, "handoff" | "screenControls">, string>;
+
+/**
+ * Prefixo dos controles da tela na URL: `c.<id>=<value>`. O prefixo separa os
+ * controles declarados pelo produto dos parâmetros do motor, então um controle
+ * chamado `persona` não colide com a persona.
+ */
+export const CONTROL_PARAM_PREFIX = "c.";
+
+/** Os `c.<id>` de uma query string, como id → value. */
+export function readControlParams(search: string | URLSearchParams): Record<string, string> {
+  const params = typeof search === "string" ? new URLSearchParams(search) : search;
+  const values: Record<string, string> = {};
+  for (const [key, value] of params) {
+    if (!key.startsWith(CONTROL_PARAM_PREFIX)) continue;
+    const id = key.slice(CONTROL_PARAM_PREFIX.length);
+    if (id) values[id] = value;
+  }
+  return values;
+}
+
+/** Remove todos os `c.<id>` de uma query. */
+export function deleteControlParams(params: URLSearchParams): void {
+  for (const key of [...params.keys()]) {
+    if (key.startsWith(CONTROL_PARAM_PREFIX)) params.delete(key);
+  }
+}
 
 /**
  * Serializa um valor de controle para a query string.
@@ -55,7 +81,13 @@ export function applyOverrides(
       applyHandoffScope(params, value as ControlsState["handoff"]);
       continue;
     }
-    const param = PARAM[key as Exclude<keyof ControlsState, "handoff">];
+    if (key === "screenControls") {
+      for (const [id, control] of Object.entries(value as Record<string, string>)) {
+        params.set(`${CONTROL_PARAM_PREFIX}${id}`, control);
+      }
+      continue;
+    }
+    const param = PARAM[key as Exclude<keyof ControlsState, "handoff" | "screenControls">];
     if (!param) continue;
     params.set(param, serializeValue(value));
   }

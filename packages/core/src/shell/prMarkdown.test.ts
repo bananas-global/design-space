@@ -4,7 +4,7 @@ import { getDeployContext } from "../deploy/index.js";
 import { createRegistry } from "../registry/index.js";
 import type { ProductDefinition, RouteDefinition } from "../types/index.js";
 import { DEFAULT_LABELS } from "./labels.js";
-import { buildPrMarkdown } from "./prMarkdown.js";
+import { buildFlowPrMarkdown, buildPrMarkdown } from "./prMarkdown.js";
 
 const screen = (() => null) as unknown as RouteDefinition["screen"];
 const preview = () => null;
@@ -131,5 +131,98 @@ Sem comportamento esperado declarado.
     expect(markdown).toContain(
       "- [Padrão](https://acme.review.test/help?handoff=1&allowRoute=%2Fhelp)",
     );
+  });
+});
+
+describe("Copiar para o PR, por fluxo", () => {
+  const flowProduct: ProductDefinition = {
+    ...product,
+    routes: [
+      {
+        path: "/orders",
+        screen,
+        name: "Lista de pedidos",
+        group: "Pedidos",
+        expected: ["A lista mostra os pedidos."],
+        components: ["actions.button"],
+        controls: [
+          {
+            id: "table",
+            title: "Tabela · table",
+            controls: [
+              {
+                id: "rows",
+                label: "Linhas",
+                options: [
+                  { value: "many", label: "Muitas" },
+                  { value: "none", label: "Nenhuma" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { path: "/orders/:id", screen, name: "Detalhe do pedido", group: "Pedidos" },
+      { path: "/help", screen, name: "Ajuda" },
+    ],
+  };
+  const flowRegistry = createRegistry(flowProduct);
+  const list = flowRegistry.screen("/orders")!;
+
+  it("lista cada tela do fluxo com link, controles, atalhos, esperado e componentes", () => {
+    const flow = flowRegistry.flowOf(list)!;
+    const markdown = buildFlowPrMarkdown({
+      flow: { name: flow.name!, screens: flow.screens },
+      registry: flowRegistry,
+      open: { screen: list, location: { path: "/orders", search: "?c.rows=none&zoom=75&tab=info" } },
+      deploy: getDeployContext({ branchUrl: "acme.review.test" }),
+      labels: DEFAULT_LABELS,
+    });
+
+    expect(markdown).toBe(`## Pedidos
+
+### Lista de pedidos
+
+\`/orders\` · [Abrir a tela](https://acme.review.test/orders?c.rows=none)
+
+**Controles**
+
+- Tabela · table (\`table\`)
+  - Linhas (\`c.rows\`): Muitas (\`many\`, padrão) · Nenhuma (\`none\`)
+
+**Comportamento esperado**
+
+- A lista mostra os pedidos.
+
+**Componentes**
+
+| Componente | Origem |
+| --- | --- |
+| Botão (\`actions.button\`) | \`core_components.ex → button/1\` |
+
+### Detalhe do pedido
+
+\`/orders/:id\` · [Abrir a tela](https://acme.review.test/orders/1042?scenario=orders.blocked&persona=analyst&fixture=orders)
+
+**Atalhos**
+
+- [Pedido bloqueado](https://acme.review.test/orders/1042?scenario=orders.blocked&persona=analyst&fixture=orders)
+- [Pedido liberado](https://acme.review.test/orders/1043?scenario=orders.allowed&fixture=orders&network=slow)
+
+**Comportamento esperado**
+
+*Pedido bloqueado*
+
+- O motivo aparece junto da ação.
+- A ação fica desabilitada.
+
+**Componentes**
+
+| Componente | Origem |
+| --- | --- |
+| Botão (\`actions.button\`) | \`core_components.ex → button/1\` |
+| Aviso \\| faixa (\`feedback.notice\`) | — |
+`);
+    expect(markdown).not.toContain("Ajuda");
   });
 });

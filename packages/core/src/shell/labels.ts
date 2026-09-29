@@ -91,6 +91,12 @@ export type Labels = {
     fixturesOption: string;
     none: string;
     fixtureFallback: (requested: string, fallback: string) => string;
+    /** Título do bloco de persona, rede, tema, idioma e fonte de dados. */
+    context: string;
+    /** Título do bloco dos cenários da tela, depois dos controles. */
+    shortcuts: string;
+    toggleGroup: (group: string) => string;
+    openComponent: (component: string) => string;
   };
   info: {
     screen: string;
@@ -113,6 +119,8 @@ export type Labels = {
     rules: string;
     components: string;
     ticket: string;
+    flow: string;
+    controls: string;
     copyForPr: string;
     copiedForPr: string;
     copyPrompt: string;
@@ -123,6 +131,8 @@ export type Labels = {
     error: string;
     warning: string;
     close: string;
+    invalidControl: (id: string, value: string, fallback: string) => string;
+    unknownControl: (id: string, value: string) => string;
   };
   /** Texto do markdown gerado por "Copiar para o PR". */
   pr: {
@@ -135,6 +145,10 @@ export type Labels = {
     immutableLink: string;
     noExpected: string;
     empty: string;
+    open: string;
+    controls: string;
+    shortcuts: string;
+    defaultOption: string;
   };
   shell: {
     restoreChrome: string;
@@ -231,6 +245,10 @@ export const DEFAULT_LABELS: Labels = {
     none: "—",
     fixtureFallback: (requested, fallback) =>
       `A variação \`${requested}\` não existe neste componente. Exibindo \`${fallback}\`.`,
+    context: "Contexto",
+    shortcuts: "Atalhos",
+    toggleGroup: (group) => `Mostrar ou ocultar ${group}`,
+    openComponent: (component) => `Abrir ${component} no catálogo`,
   },
 
   info: {
@@ -254,6 +272,8 @@ export const DEFAULT_LABELS: Labels = {
     rules: "Regras",
     components: "Componentes usados",
     ticket: "Ticket",
+    flow: "Fluxo",
+    controls: "Controles",
     copyForPr: "Copiar para o PR",
     copiedForPr: "Copiado",
     copyPrompt: "Copie o texto para o PR:",
@@ -265,6 +285,10 @@ export const DEFAULT_LABELS: Labels = {
     error: "Erro",
     warning: "Aviso",
     close: "Fechar diagnóstico",
+    invalidControl: (id, value, fallback) =>
+      `O controle \`${id}\` não tem a opção \`${value}\`. Exibindo \`${fallback}\`.`,
+    unknownControl: (id, value) =>
+      `A tela não tem o controle \`${id}\` (pedido \`${value}\` na URL). O parâmetro foi ignorado.`,
   },
 
   pr: {
@@ -277,6 +301,10 @@ export const DEFAULT_LABELS: Labels = {
     immutableLink: "link deste deployment",
     noExpected: "Sem comportamento esperado declarado.",
     empty: "—",
+    open: "Abrir a tela",
+    controls: "Controles",
+    shortcuts: "Atalhos",
+    defaultOption: "padrão",
   },
 
   shell: {
@@ -375,6 +403,10 @@ export const EN_US_LABELS: Labels = {
     none: "—",
     fixtureFallback: (requested, fallback) =>
       `Variation \`${requested}\` does not exist for this component. Showing \`${fallback}\`.`,
+    context: "Context",
+    shortcuts: "Shortcuts",
+    toggleGroup: (group) => `Show or hide ${group}`,
+    openComponent: (component) => `Open ${component} in the catalog`,
   },
 
   info: {
@@ -398,6 +430,8 @@ export const EN_US_LABELS: Labels = {
     rules: "Rules",
     components: "Components used",
     ticket: "Ticket",
+    flow: "Flow",
+    controls: "Controls",
     copyForPr: "Copy for PR",
     copiedForPr: "Copied",
     copyPrompt: "Copy the text for the PR:",
@@ -409,6 +443,10 @@ export const EN_US_LABELS: Labels = {
     error: "Error",
     warning: "Warning",
     close: "Close diagnostics",
+    invalidControl: (id, value, fallback) =>
+      `Control \`${id}\` has no option \`${value}\`. Showing \`${fallback}\`.`,
+    unknownControl: (id, value) =>
+      `This screen has no control \`${id}\` (\`${value}\` requested in the URL). The parameter was ignored.`,
   },
 
   pr: {
@@ -421,6 +459,10 @@ export const EN_US_LABELS: Labels = {
     immutableLink: "this deployment",
     noExpected: "No expected behavior declared.",
     empty: "—",
+    open: "Open the screen",
+    controls: "Controls",
+    shortcuts: "Shortcuts",
+    defaultOption: "default",
   },
 
   shell: {

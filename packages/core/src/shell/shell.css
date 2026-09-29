@@ -286,6 +286,7 @@
 .ds-btn[aria-pressed="true"]:hover:not(:disabled),
 .ds-item[aria-current="true"],
 .ds-item[aria-current="true"]:hover,
+.ds-tab[aria-checked="true"],
 .ds-tab[aria-selected="true"] {
   background: var(--ds-tint);
   color: var(--ds-fg);
@@ -700,9 +701,38 @@
   gap: 4px;
 }
 
-.ds-field__label {
+.ds-field__label,
+.ds-field__hint {
   color: var(--ds-muted);
   font-size: var(--ds-fs-sm);
+}
+
+/* Blocos do painel Variações (contexto, grupos de controles, atalhos): o
+   cabeçalho recolhível dos grupos da lateral, com os campos logo abaixo. */
+.ds-fields--flush {
+  margin-top: 0;
+  padding: 2px 8px 10px;
+  border-top: 0;
+}
+
+.ds-group-section__note {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  padding: 0 8px 8px;
+  color: var(--ds-muted);
+  font-size: var(--ds-fs-sm);
+}
+
+/* Controle segmentado: as abas em cápsula, na largura do campo. */
+.ds-tabs--segmented {
+  margin: 0;
+}
+
+.ds-tabs--segmented .ds-tab {
+  padding: 0 6px;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 /* Informações: seções com o mesmo título dos grupos da lateral, e cada dado

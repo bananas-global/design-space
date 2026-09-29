@@ -45,6 +45,22 @@ describe("catálogo e fixtures de componente", () => {
     ]);
   });
 
+  it("agrupa as duas telas no fluxo Solicitações", () => {
+    expect(registry.flows().map((flow) => [flow.name, flow.screens.map((screen) => screen.name)])).toEqual([
+      ["Solicitações", ["Fila de solicitações", "Detalhe da solicitação"]],
+    ]);
+  });
+
+  it("a fila combina controles por componente, e a fila vazia é um atalho", () => {
+    const queue = registry.screen("/requests")!;
+    expect(registry.resolveControls(queue).values).toEqual({ rows: "all", status: "all", notice: "none" });
+    expect(
+      registry.resolveControls(queue, { scenario: registry.scenario("requests.queue-empty") }).values.rows,
+    ).toBe("none");
+    const controls = parseControls("?c.status=approved&c.notice=overdue", registry, "/requests");
+    expect(serializeControls(controls, registry, "/requests")).toBe("?c.status=approved&c.notice=overdue");
+  });
+
   it("todo cenário declara os componentes que usa, e todo componente tem origem", () => {
     for (const scenario of productDefinition.scenarios) {
       expect(scenario.components?.length, scenario.id).toBeGreaterThan(0);

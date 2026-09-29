@@ -220,9 +220,99 @@ test.describe("chrome", () => {
     await page.getByRole("button", { name: "Copy for PR" }).click();
 
     const markdown = await page.evaluate(() => navigator.clipboard.readText());
-    expect(markdown).toContain("## Fila de solicitações");
+    // Tela com fluxo: o markdown traz o fluxo inteiro, uma seção por tela.
+    expect(markdown).toContain("## Solicitações");
+    expect(markdown).toContain("### Fila de solicitações");
+    expect(markdown).toContain("### Detalhe da solicitação");
+    expect(markdown).toContain("  - Linhas (`c.rows`): Todas (`all`, default) · Uma (`one`) · Nenhuma (`none`)");
     expect(markdown).toMatch(/\[Fila vazia\]\(http:\/\/localhost:\d+\/requests\?scenario=requests\.queue-empty/);
     expect(markdown).toContain("| Status (`feedback.status`) | `src/components/primitives.tsx → StatusBadge` |");
     expect(markdown).toContain("A tela explica por que está vazia");
+  });
+});
+
+test.describe("fluxos e controles", () => {
+  test("a aba Telas agrupa as telas do fluxo", async ({ page }) => {
+    await page.goto(urlFor("requests.queue"));
+    const flow = page.locator(".ds-sidebar .ds-group-section").filter({ hasText: "Solicitações" });
+    await expect(flow.locator(".ds-group-section__head")).toHaveText(/Solicitações\s*2/);
+    await expect(flow.getByRole("button", { name: "Fila de solicitações" })).toBeVisible();
+    await expect(flow.getByRole("button", { name: "Detalhe da solicitação" })).toBeVisible();
+  });
+
+  test("o painel abre com o contexto, depois os controles e os atalhos", async ({ page }) => {
+    await page.goto(urlFor("requests.queue"));
+    await expect(page.locator(".ds-panel [data-ds-filter-title]")).toHaveText([
+      "Context",
+      "Tabela de solicitações",
+      "Aviso da fila · Status",
+      "Shortcuts",
+    ]);
+  });
+
+  test("controles se combinam na URL e chegam ao quadro sem recarregar", async ({ page }) => {
+    await page.goto(urlFor("requests.queue"));
+    const ui = app(page);
+    await expect(ui.getByRole("row")).toHaveCount(6);
+    const frame = await frameOf(page);
+    await frame.evaluate(() => {
+      (window as unknown as { __marker: number }).__marker = 1;
+    });
+
+    const panel = page.locator(".ds-panel");
+    await panel.getByLabel("Situação").selectOption("in-review");
+    await expect(page).toHaveURL(/c\.status=in-review/);
+    await expect(ui.getByRole("row")).toHaveCount(4); // cabeçalho + 3 em análise
+
+    await panel.getByRole("radio", { name: "Uma", exact: true }).click();
+    await expect(page).toHaveURL(/c\.rows=one/);
+    await expect(ui.getByRole("row")).toHaveCount(2);
+    expect(await frame.evaluate(() => (window as unknown as { __marker?: number }).__marker)).toBe(1);
+
+    // O link copiado reabre a mesma combinação.
+    await page.goto(page.url());
+    await expect(app(page).getByRole("row")).toHaveCount(2);
+    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Uma", exact: true })).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("o atalho aplica a combinação e perde o destaque quando ela muda", async ({ page }) => {
+    await page.goto(urlFor("requests.queue"));
+    const panel = page.locator(".ds-panel");
+    const shortcut = panel.getByRole("button", { name: "Fila vazia" });
+    await shortcut.click();
+    await expect(page).toHaveURL(/scenario=requests\.queue-empty/);
+    await expect(shortcut).toHaveAttribute("aria-current", "true");
+    await expect(panel.getByRole("radio", { name: "Nenhuma", exact: true })).toHaveAttribute("aria-checked", "true");
+    await expect(app(page).getByRole("heading", { name: "Nenhuma solicitação na fila" })).toBeVisible();
+
+    await panel.getByRole("radio", { name: "Todas", exact: true }).click();
+    await expect(page).toHaveURL(/scenario=requests\.queue-empty.*c\.rows=all/);
+    await expect(shortcut).not.toHaveAttribute("aria-current", "true");
+    await expect(app(page).getByRole("row")).toHaveCount(6);
+  });
+
+  test("a UI do produto muda um controle pelo `setControl`", async ({ page }) => {
+    await page.goto(urlFor("requests.queue", { screenControls: { notice: "overdue" } }));
+    const ui = app(page);
+    await expect(ui.getByText("perto do prazo de decisão")).toBeVisible();
+    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Prazo vencendo", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+
+    await ui.getByRole("button", { name: "Dispensar" }).click();
+    await expect(ui.getByText("perto do prazo de decisão")).toHaveCount(0);
+    await expect(page).not.toHaveURL(/c\.notice/);
+    await expect(page.locator(".ds-panel").getByRole("radio", { name: "Nenhum", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  test("valor inválido na URL cai no padrão e aparece no diagnóstico", async ({ page }) => {
+    await page.goto(urlFor("requests.queue", { screenControls: { rows: "todas" } }));
+    await expect(app(page).getByRole("row")).toHaveCount(6);
+    await page.locator(".ds-diagnostics__trigger").click();
+    await expect(page.locator(".ds-diagnostics__popover")).toContainText("Control `rows` has no option `todas`");
   });
 });

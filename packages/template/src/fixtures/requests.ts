@@ -22,7 +22,8 @@ function request(overrides: Partial<PurchaseRequest> & Pick<PurchaseRequest, "id
   };
 }
 
-const standardList: PurchaseRequest[] = [
+/** A fila do dia a dia. Exportada para a tela montar os próprios dados quando não há cenário. */
+export const standardList: PurchaseRequest[] = [
   request({ id: "REQ-2041" }),
   request({
     id: "REQ-2042",

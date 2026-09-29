@@ -29,12 +29,14 @@ variação abre por URL própria.
 1. Copie o diretório para um repositório novo, `<produto>-design-space`.
 2. Troque `name` no `package.json` — isso muda a porta de dev automaticamente.
 3. Troque a dependência do motor de `workspace:*` para a versão publicada
-   (`^0.8.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
+   (`^0.9.0`). `workspace:*` só resolve dentro do monorepo do motor: fora dele, o
    `pnpm install` falha.
 4. Substitua os tokens em `src/tokens/tokens.css` pela identidade do cliente.
 5. Reescreva `src/app/catalog.ts` com o vocabulário do cliente e ajuste as rotas
-   em `src/app/product.ts`. Cada rota é uma tela — dê a ela um `name` —, e os
-   cenários da rota são as variações dela.
+   em `src/app/product.ts`. Cada rota é uma tela — dê a ela um `name` e, se for
+   parte de um fluxo, um `group`. As variações da tela são controles por
+   componente (`controls`, ver `queueControls`), e os cenários da rota são
+   atalhos para combinações deles.
 6. Substitua domínio, personas, fixtures, regras e cenários.
 7. Escreva `docs/product.md` e o primeiro registro em `docs/decisions/` — só o que
    for específico deste produto. As decisões do modelo já estão no repositório do

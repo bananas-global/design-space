@@ -11,9 +11,12 @@ por link. Não é um sistema de produção, não é um design system universal e
 promessa de reuso de código — quando o stack real for diferente, a engenharia
 traduz esta especificação.
 
-**Uma tela é uma rota**, e as **variações** da tela são os cenários cuja `route`
-casa com ela. Um cenário combina intenção, persona, permissões, pré-condições,
-dados, ações, regras, resultado esperado e os componentes que a tela usa.
+**Uma tela é uma rota**, e as telas de uma feature se agrupam num fluxo com
+`route.group`. As **variações** da tela são controles por componente
+(`route.controls`), que a tela lê em `context.controls`; os cenários cuja `route`
+casa com ela são atalhos para combinações (`Scenario.controls`). Um cenário
+combina intenção, persona, permissões, pré-condições, dados, ações, regras,
+resultado esperado e os componentes que a tela usa.
 
 ## Comandos
 

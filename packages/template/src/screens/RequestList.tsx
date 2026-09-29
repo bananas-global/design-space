@@ -1,6 +1,7 @@
 import type { ScreenProps } from "@brucesantos/design-space";
-import type { RequestsData } from "../contracts/index.js";
+import type { PurchaseRequest, RequestsData } from "../contracts/index.js";
 import { formatDate, formatMoney } from "../contracts/index.js";
+import { standardList } from "../fixtures/requests.js";
 import {
   AppShell,
   Card,
@@ -17,6 +18,10 @@ import {
  * erro, vazio, sucesso e sem permissão — porque é isso que separa especificação
  * executável de mockup. Um handoff que só mostra o caminho felizmente é onde a
  * engenharia inventa o resto.
+ *
+ * Os controles da tela (`context.controls`, declarados em `queueControls`)
+ * recortam a lista: quantas linhas, de qual situação, e se o aviso de prazo
+ * aparece. Sem cenário, a tela usa a fila sintética do dia a dia.
  */
 export function RequestList({ context }: ScreenProps) {
   const { data, isLoading, error, can, locale } = context;
@@ -33,18 +38,41 @@ export function RequestList({ context }: ScreenProps) {
     );
   }
 
-  const requests = (data as RequestsData | null)?.requests ?? [];
+  const source =
+    data === undefined && !context.scenario ? standardList : ((data as RequestsData | null)?.requests ?? []);
+  const requests = applyControls(source, context.controls);
+  const notice =
+    context.controls.notice === "overdue" ? (
+      <div
+        role="status"
+        className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-warn-50 px-4 py-3 text-sm text-ink-700"
+      >
+        <span>Duas solicitações estão perto do prazo de decisão.</span>
+        <button
+          type="button"
+          className="text-sm font-medium text-brand-600 underline-offset-2 hover:underline"
+          onClick={() => context.setControl("notice", "none")}
+        >
+          Dispensar
+        </button>
+      </div>
+    ) : null;
 
   if (requests.length === 0) {
     return wrap(
-      <EmptyState
-        title="Nenhuma solicitação na fila"
-        description="Quando alguém registrar uma solicitação, ela aparece aqui para análise."
-      />,
+      <>
+        {notice}
+        <EmptyState
+          title="Nenhuma solicitação na fila"
+          description="Quando alguém registrar uma solicitação, ela aparece aqui para análise."
+        />
+      </>,
     );
   }
 
   return wrap(
+    <>
+    {notice}
     <Card className="p-0">
       <table className="w-full border-collapse text-sm">
         <caption className="sr-only">Solicitações aguardando decisão</caption>
@@ -99,8 +127,18 @@ export function RequestList({ context }: ScreenProps) {
           ))}
         </tbody>
       </table>
-    </Card>,
+    </Card>
+    </>,
   );
+}
+
+/** Recorta a fila pelos controles da tela. */
+function applyControls(requests: PurchaseRequest[], controls: Record<string, string>): PurchaseRequest[] {
+  const status = controls.status ?? "all";
+  const filtered = status === "all" ? requests : requests.filter((request) => request.status === status);
+  if (controls.rows === "none") return [];
+  if (controls.rows === "one") return filtered.slice(0, 1);
+  return filtered;
 }
 
 function wrap(children: React.ReactNode) {

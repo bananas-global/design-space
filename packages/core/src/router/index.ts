@@ -66,6 +66,28 @@ export function resolveRoute(routes: RouteDefinition[], path: string): RouteMatc
 }
 
 /**
+ * Caminho concreto de uma rota sem cenário: cada `:param` com exemplo em
+ * `params` recebe o exemplo, e o curinga final recebe `params["*"]` ou some.
+ */
+export function screenHref(path: string, params: Record<string, string> = {}): string {
+  const example = (name: string): string | undefined => {
+    const value = params[name];
+    return typeof value === "string" && value.length > 0 ? value : undefined;
+  };
+  const segments: string[] = [];
+  for (const segment of path.split("/").filter(Boolean)) {
+    if (segment === "*") {
+      const rest = example("*");
+      if (rest) segments.push(...rest.split("/").filter(Boolean).map(encodeURIComponent));
+      continue;
+    }
+    const value = segment.startsWith(":") ? example(segment.slice(1)) : undefined;
+    segments.push(value === undefined ? segment : encodeURIComponent(value));
+  }
+  return `/${segments.join("/")}`;
+}
+
+/**
  * Pontuação de especificidade: segmento literal vale mais que parâmetro, que
  * vale mais que curinga. Rotas mais longas desempatam.
  */

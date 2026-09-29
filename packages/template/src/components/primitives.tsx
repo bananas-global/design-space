@@ -93,11 +93,21 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 
 /* ------------------------------------------------------------ estados base */
 
-export function EmptyState({ title, description }: { title: string; description: string }) {
+export function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  /** Saída do vazio, quando a tela oferece uma. */
+  action?: ReactNode;
+}) {
   return (
     <Card className="text-center">
       <h2 className="m-0 text-base font-semibold text-ink-900">{title}</h2>
       <p className="mx-auto mt-2 max-w-[46ch] text-sm text-ink-500">{description}</p>
+      {action && <div className="mt-4 flex justify-center">{action}</div>}
     </Card>
   );
 }

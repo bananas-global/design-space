@@ -29,7 +29,7 @@ import { useLabels } from "./labels.js";
 
 export function FrameView({ product, registry }: { product: ProductDefinition; registry: Registry }) {
   const labels = useLabels();
-  const { location, controls, viewport, navigate, openScenario, setControls } = useDesignSpaceState(
+  const { location, controls, viewport, navigate, openScenario, setScreenControls } = useDesignSpaceState(
     registry,
     { frame: true },
   );
@@ -151,25 +151,27 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
   });
 
   const permissions = useMemo(() => {
+    // Sem cenário, as permissões são as da persona efetiva (a da URL ou a
+    // padrão do produto).
+    if (!scenario) return registry.persona(controls.persona)?.permissions ?? [];
     // Persona trocada no controle manda sobre a do cenário: é assim que se
     // responde "e se um perfil sem permissão abrir esta tela?" sem um segundo
     // cenário.
-    if (controls.persona && controls.persona !== scenario?.persona) {
+    if (controls.persona && controls.persona !== (scenario.persona ?? registry.defaultPersona)) {
       return registry.persona(controls.persona)?.permissions ?? [];
     }
     return registry.permissionsOf(scenario);
   }, [controls.persona, registry, scenario]);
 
-  // Controles da tela: a UI do produto lê os valores e pode mudar um deles. A
-  // mudança troca o endereço do quadro e avisa o pai, que adota a URL nova.
+  // Controles da tela: a UI do produto lê os valores e pode mudar um ou vários.
+  // A mudança troca o endereço do quadro e avisa o pai, que adota a URL nova.
+  // Cada chamada parte do endereço mais recente, então chamadas seguidas no
+  // mesmo handler se acumulam em vez de a última apagar as outras.
   const screenControls = controls.screenControls;
   const values = useMemo(() => screenControls ?? {}, [screenControls]);
   const setControl = useCallback(
-    (id: string, value: string) => {
-      if (values[id] === value) return;
-      setControls({ screenControls: { ...values, [id]: value } });
-    },
-    [setControls, values],
+    (id: string, value: string) => setScreenControls({ [id]: value }),
+    [setScreenControls],
   );
 
   const context: ScenarioContext = useMemo(
@@ -187,10 +189,11 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
       viewport,
       themeMode: controls.themeMode,
       locale: controls.locale,
-      navigate: (to: string) => navigate(to),
+      navigate,
       openScenario,
       controls: values,
       setControl,
+      setControls: setScreenControls,
     }),
     [
       scenario,
@@ -209,6 +212,7 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
       openScenario,
       values,
       setControl,
+      setScreenControls,
     ],
   );
 

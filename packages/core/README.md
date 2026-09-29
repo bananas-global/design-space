@@ -51,6 +51,20 @@ routes: [
 Sem `name`, a tela usa o título do primeiro cenário da rota e, na falta dele, o
 `path`. Não existe módulo nem jornada (decisão 0012).
 
+**Rota com parâmetro** (desde a 0.9.1): `params` dá um valor de exemplo para cada
+`:param` (e para `*`, se houver). O motor usa o exemplo sempre que abre a tela
+sem cenário — na lateral, na variação padrão, no "Usado em" de Informações e
+no "Copiar para o PR":
+
+```ts
+{ path: "/orders/:id", screen: OrderDetail, name: "Detalhe do pedido", params: { id: "1042" } }
+// abre em /orders/1042, não em /orders/:id
+```
+
+Sem `params`, o caminho continua literal, e a validação avisa quando nenhum
+cenário cobre a rota. Exemplo que a rota não tem, ou que monta um caminho de
+outra rota (`/orders/new`), também é aviso.
+
 ## Fluxos e controles (0.9)
 
 Uma feature raramente é uma tela: é um **fluxo** de algumas telas, e cada tela
@@ -118,9 +132,16 @@ routes: [
   quadro, e mudar um controle atualiza o quadro por mensagem, sem recarregar.
 - **Na tela:** `context.controls` traz o valor de cada controle, com os padrões
   aplicados; `context.setControl(id, value)` muda um deles a partir da UI do
-  produto (fechar um modal volta a sobreposição para "nenhuma") e atualiza a URL.
+  produto (fechar um modal volta a sobreposição para "nenhuma") e atualiza a URL,
+  e `context.setControls({ … })` muda vários numa única atualização. Desde a
+  0.9.1, chamadas seguidas no mesmo handler se acumulam — cada uma parte do
+  endereço mais recente, não do valor da última renderização —, inclusive dentro
+  do quadro.
   Sem cenário, a tela monta os próprios dados sintéticos a partir dos controles —
   é o caso normal agora —, e o estado de rede do contexto continua valendo.
+- **Navegando com controles:** `context.navigate("/orders", { controls: { rows:
+  "one" } })` abre a tela de destino com esses controles (valor igual ao padrão
+  da tela de destino não entra na URL). Ver [Navegação](#navegação).
 - **Cenário como atalho:** `Scenario.controls` fixa uma combinação. Abrir o
   cenário aplica esses valores sobre os padrões; mudar um controle depois não
   troca de cenário, mas o atalho deixa de aparecer destacado quando a combinação
@@ -140,6 +161,7 @@ function OrderList({ context }: ScreenProps) {
       {context.controls.overlay === "cancel" && (
         <CancelModal onClose={() => context.setControl("overlay", "none")} />
       )}
+      <button onClick={() => context.setControls({ rows: "many", overlay: "none" })}>Limpar</button>
     </>
   );
 }
@@ -183,8 +205,19 @@ motor.
 
 - `id` é qualquer id estável, minúsculo, em kebab-case com pontos opcionais.
   Precisa ser único; não precisa de prefixo.
-- `persona` é opcional. Cenário sem persona tem permissões vazias, a menos que
-  declare `permissions`.
+- `persona` é opcional. Cenário sem persona usa a persona padrão do produto
+  (`ProductDefinition.defaultPersona`, desde a 0.9.1) e, sem ela, tem permissões
+  vazias, a menos que declare `permissions`.
+
+### Persona padrão
+
+`defaultPersona: "<id>"` na `ProductDefinition` é a persona efetiva de toda tela
+e todo cenário sem persona própria: `context.persona`, `context.permissions` e
+`context.can` refletem ela, também dentro do quadro. O seletor de persona do
+painel deixa de oferecer "—" e mostra o padrão selecionado, e `persona=` só vai
+para a URL quando difere do padrão efetivo. Persona do cenário e a escolhida no
+painel continuam vencendo. Id inexistente é erro de validação. Sem
+`defaultPersona`, nada muda.
 - `components` lista os ids de `ComponentPreview` usados na tela. Alimenta
   "Componentes usados", o "Usado em" de cada componente e o "Copiar para o PR".
 
@@ -217,6 +250,27 @@ entrada no histórico. Navegação feita pela UI do produto (`context.navigate`,
 `openScenario` ou um link comum) volta para a URL do chrome. Os dois lados só
 aceitam mensagem da mesma origem e da janela esperada.
 
+### Navegação
+
+`context.navigate(to, options?)` — e um link comum dentro do quadro — segue duas
+regras, conforme o destino:
+
+- **Sem query e sem `controls`** (`navigate("/orders/1042")`): a query atual
+  segue inteira; numa tela diferente, os `c.*` da anterior ficam para trás.
+- **Com query própria ou com `controls`** (`navigate("/orders?c.rows=one")`,
+  `navigate("/orders", { controls: { rows: "one" } })`): o destino manda. Desde a
+  0.9.1, o contexto do motor — tudo que não é `scenario`, `fixture`, `component`
+  nem `c.*`: persona, rede, viewport, tema, idioma, fonte de dados, handoff e os
+  parâmetros do chrome — é preservado, a menos que o destino traga o mesmo
+  parâmetro. Os `c.*` da tela anterior são descartados. A persona que vinha do
+  cenário deixado para trás vira `persona=` explícito (quando difere da persona
+  padrão), para quem está olhando não mudar; a rede e a fixture do cenário ficam
+  com ele. `controls` vira `c.*` do destino, sem os valores que já são o padrão
+  da tela de destino (ou o que o cenário de destino fixa).
+
+`options.replace` substitui a entrada do histórico em vez de criar outra. O
+recorte de handoff atual é sempre reaplicado.
+
 ## A URL é o estado
 
 Todo controle é serializado na query string, então a mesma URL sempre produz a
@@ -227,7 +281,7 @@ rede declarados no cenário.
 | --- | --- |
 | `scenario` | Cenário ativo. Define os padrões dos demais. |
 | `component` | Referência ativa no catálogo visual do produto. |
-| `persona` | Troca o papel e as permissões. |
+| `persona` | Troca o papel e as permissões. Omitido quando é o do cenário ou a persona padrão do produto. |
 | `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
 | `c.<id>` | Valor de um controle da tela. Omitido quando é o padrão (ou o que o cenário fixa). |
@@ -349,7 +403,10 @@ tema, cor ou logo por produto.
 
 - `createRegistry(product)` — índice consultável.
 - `screens`, `screen(id)`, `screenForPath(path)`, `screenOf(scenario)` — telas
-  (`ScreenNode`) e suas variações.
+  (`ScreenNode`) e suas variações. `ScreenNode.href` é o caminho da tela sem
+  cenário, com os exemplos de `route.params`.
+- `defaultPersona` — a persona padrão do produto, quando registrada; entra em
+  `permissionsOf(scenario)` para cenário sem persona.
 - `screensFor({ handoff })`, `activeScenarios()`, `search()`,
   `searchScreens()`, `searchComponents()`, `componentsFor(handoff)` — aplicam o
   recorte; a busca não diferencia acento nem caixa (`normalizeSearch`).

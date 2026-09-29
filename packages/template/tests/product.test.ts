@@ -61,6 +61,16 @@ describe("catálogo e fixtures de componente", () => {
     expect(serializeControls(controls, registry, "/requests")).toBe("?c.status=approved&c.notice=overdue");
   });
 
+  it("o detalhe aberto sem cenário vai para o exemplo de `params`, não para `:id`", () => {
+    expect(registry.screen("/requests/:id")?.href).toBe("/requests/REQ-2042");
+  });
+
+  it("tela sem cenário vê como a persona padrão, e a URL não repete o padrão", () => {
+    const controls = parseControls("?c.status=approved", registry, "/requests");
+    expect(controls.persona).toBe("approver");
+    expect(serializeControls(controls, registry, "/requests")).toBe("?c.status=approved");
+  });
+
   it("todo cenário declara os componentes que usa, e todo componente tem origem", () => {
     for (const scenario of productDefinition.scenarios) {
       expect(scenario.components?.length, scenario.id).toBeGreaterThan(0);

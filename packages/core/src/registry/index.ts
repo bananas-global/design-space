@@ -29,7 +29,7 @@ import {
   handoffAllowsPath,
   handoffAllowsScenario,
 } from "../handoff/index.js";
-import { resolveRoute } from "../router/index.js";
+import { resolveRoute, screenHref } from "../router/index.js";
 
 /**
  * Uma tela: uma rota declarada e as variações dela.
@@ -45,8 +45,9 @@ export type ScreenNode = {
   description: string | undefined;
   route: RouteDefinition;
   /**
-   * Caminho concreto para abrir a tela quando não há variação: o `path` com
-   * `*` removido. Parâmetros `:id` ficam literais.
+   * Caminho concreto para abrir a tela sem cenário: o `path` com os exemplos de
+   * `route.params` no lugar dos parâmetros. `*` sem exemplo é removido; `:id`
+   * sem exemplo fica literal.
    */
   href: string;
   /** Cenários da rota, na ordem de `scenarios`. */
@@ -100,6 +101,11 @@ export type Registry = {
   /** Telas na ordem de `routes`, cada uma com suas variações. */
   screens: ScreenNode[];
   issues: ValidationIssue[];
+  /**
+   * `product.defaultPersona`, quando é uma persona registrada. É a persona de
+   * toda tela e cenário sem persona própria.
+   */
+  defaultPersona: string | undefined;
 
   scenario: (id: string | undefined) => Scenario | undefined;
   component: (id: string | undefined) => ComponentPreview | undefined;
@@ -141,7 +147,10 @@ export type Registry = {
 
   /** Regras de um cenário, resolvidas e na ordem declarada. */
   rulesOf: (scenario: Scenario | undefined) => Rule[];
-  /** Permissões efetivas: as do cenário, ou as da persona quando ausentes. */
+  /**
+   * Permissões efetivas: as do cenário, ou as da persona dele quando ausentes —
+   * e a persona dele é a própria ou, na falta, a padrão do produto.
+   */
   permissionsOf: (scenario: Scenario | undefined) => string[];
   /** Variações da tela que renderiza `route`. */
   scenariosForRoute: (route: string, options?: ScenarioQueryOptions) => Scenario[];
@@ -206,7 +215,7 @@ export function createRegistry(product: ProductDefinition): Registry {
       name: route.name?.trim() || variations[0]?.title || route.path,
       description: route.description,
       route,
-      href: screenHref(route.path),
+      href: screenHref(route.path, route.params),
       variations,
       group: route.group?.trim() || undefined,
       controls: Array.isArray(route.controls) ? route.controls : [],
@@ -216,6 +225,7 @@ export function createRegistry(product: ProductDefinition): Registry {
 
   const scenario = (id: string | undefined) => (id ? scenarios.get(id) : undefined);
   const persona = (id: string | undefined) => (id ? personas.get(id) : undefined);
+  const defaultPersona = persona(product.defaultPersona)?.id;
   const componentFixture = (componentId: string | undefined, fixtureId: string | undefined) => {
     if (!componentId || !fixtureId) return undefined;
     return components.get(componentId)?.fixtures?.find((fixture) => fixture.id === fixtureId);
@@ -246,7 +256,7 @@ export function createRegistry(product: ProductDefinition): Registry {
   const permissionsOf = (target: Scenario | undefined): string[] => {
     if (!target) return [];
     if (target.permissions) return target.permissions;
-    return persona(target.persona)?.permissions ?? [];
+    return persona(target.persona ?? defaultPersona)?.permissions ?? [];
   };
 
   const flows = (options: ScenarioQueryOptions = {}) => groupScreens(screensFor(options));
@@ -267,6 +277,7 @@ export function createRegistry(product: ProductDefinition): Registry {
     product,
     screens,
     issues: validateProduct(product),
+    defaultPersona,
 
     scenario,
     component: (id) => (id ? components.get(id) : undefined),
@@ -476,11 +487,4 @@ export function scenarioMatchesControls(
 ): boolean {
   if (!scenario) return false;
   return Object.entries(scenario.controls ?? {}).every(([id, value]) => values?.[id] === value);
-}
-
-/** Caminho concreto de uma rota sem cenário: o curinga final some. */
-function screenHref(path: string): string {
-  const segments = path.split("/").filter(Boolean);
-  if (segments[segments.length - 1] === "*") segments.pop();
-  return `/${segments.join("/")}`;
 }

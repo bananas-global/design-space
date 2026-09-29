@@ -8,7 +8,7 @@
  */
 
 import type { ControlsState } from "../types/index.js";
-import { applyHandoffScope } from "../handoff/index.js";
+import { HANDOFF_PARAM, applyHandoffScope } from "../handoff/index.js";
 
 /** Nomes curtos: a URL é colada em Slack, em ticket e em thread de revisão. */
 export const PARAM = {
@@ -36,6 +36,19 @@ export const PARAM = {
  * chamado `persona` não colide com a persona.
  */
 export const CONTROL_PARAM_PREFIX = "c.";
+
+const ENGINE_PARAMS: ReadonlySet<string> = new Set([
+  ...Object.values(PARAM),
+  ...Object.values(HANDOFF_PARAM),
+]);
+
+/**
+ * Parâmetro que o motor lê: os de {@link PARAM}, os do handoff e os `c.*`. O
+ * resto da query é da tela do produto, e o motor só o carrega.
+ */
+export function isEngineParam(key: string): boolean {
+  return key.startsWith(CONTROL_PARAM_PREFIX) || ENGINE_PARAMS.has(key);
+}
 
 /** Os `c.<id>` de uma query string, como id → value. */
 export function readControlParams(search: string | URLSearchParams): Record<string, string> {

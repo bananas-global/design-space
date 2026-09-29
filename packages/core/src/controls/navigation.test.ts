@@ -7,7 +7,7 @@ import { buildPrMarkdown } from "../shell/prMarkdown.js";
 import { DEFAULT_LABELS } from "../shell/labels.js";
 import { getDeployContext } from "../deploy/index.js";
 import type { ProductDefinition, RouteDefinition } from "../types/index.js";
-import { navigationTarget, parseControls, serializeControls } from "./state.js";
+import { keepScreenQuery, navigationTarget, parseControls, serializeControls } from "./state.js";
 
 const screen = (() => null) as unknown as RouteDefinition["screen"];
 
@@ -328,5 +328,52 @@ describe("`defaultPersona`", () => {
       expect.objectContaining({ level: "error", where: "product", message: expect.stringContaining("`ghost`") }),
     );
     expect(validateProduct(product({ defaultPersona: "analyst" })).filter((i) => i.level === "error")).toEqual([]);
+  });
+});
+
+describe("0.9.3: query da tela sobrevive às mudanças de controle", () => {
+  const current = "?aba=resumo&persona=manager&c.rows=one&page=2&handoff=1&allowRoute=%2Forders";
+
+  it("a query da tela volta junto com os controles; o que é do motor vem só do novo estado", () => {
+    const state = parseControls(current, registry, "/orders");
+    const search = keepScreenQuery(
+      serializeControls({ ...state, persona: "analyst", network: "slow" }, registry, "/orders"),
+      current,
+    );
+    expect(query(search)).toEqual({
+      persona: "analyst",
+      network: "slow",
+      "c.rows": "one",
+      handoff: "1",
+      allowRoute: "/orders",
+      aba: "resumo",
+      page: "2",
+    });
+  });
+
+  it("controles da tela mudam sem tirar a query da tela", () => {
+    const state = parseControls(current, registry, "/orders");
+    const search = keepScreenQuery(
+      serializeControls({ ...state, screenControls: { rows: "many", status: "open" } }, registry, "/orders"),
+      current,
+    );
+    const params = new URLSearchParams(search);
+    expect(params.has("c.rows")).toBe(false);
+    expect(params.get("c.status")).toBe("open");
+    expect(params.get("aba")).toBe("resumo");
+    expect(params.get("page")).toBe("2");
+  });
+
+  it("parâmetro repetido da tela segue repetido, e o do quadro não entra", () => {
+    const search = keepScreenQuery("?persona=analyst", "?tag=a&tag=b&ds-frame=1&persona=manager");
+    const params = new URLSearchParams(search);
+    expect(params.getAll("tag")).toEqual(["a", "b"]);
+    expect(params.has("ds-frame")).toBe(false);
+    expect(params.getAll("persona")).toEqual(["analyst"]);
+  });
+
+  it("sem query da tela, a `search` dos controles fica como estava", () => {
+    expect(keepScreenQuery("?persona=analyst", "?persona=manager&c.rows=one")).toBe("?persona=analyst");
+    expect(keepScreenQuery("", "")).toBe("");
   });
 });

@@ -6,6 +6,33 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.9.3 (2026-09-29)
+
+**Patch.** Correção sem contrato novo: nenhum tipo, export ou parâmetro muda.
+
+### Corrigido
+
+- **Mudar um controle não apaga mais a query da tela.** Trocar persona, rede,
+  viewport, zoom, tema ou um controle da tela — pelo painel ou por
+  `context.setControl`/`setControls` de dentro do quadro — reconstruía a URL só
+  com os parâmetros do motor, e o estado que a tela guardava na query (aba,
+  passo, filtro, página) se perdia. Agora todo parâmetro que o motor não lê
+  continua na URL, depois dos do motor. Abrir outra tela, cenário ou componente
+  continua descartando essa query.
+
+### Sem mudança
+
+- A navegação entre telas ainda leva a query da tela anterior. Fica registrado
+  como limitação conhecida na
+  [0014](../../docs/decisions/0014-query-da-tela.md), sem mudança até um segundo
+  produto precisar.
+
+### Migração
+
+Nenhuma. Produto que contornava a perda chamando
+`context.navigate(pathAtual + query, { controls, replace: true })` no lugar de
+`context.setControl` pode voltar a usar `setControl`.
+
 ## 0.9.2 (2026-09-29)
 
 **Patch.** Só o chrome muda; nenhum contrato, tipo ou export novo. Motivo: o

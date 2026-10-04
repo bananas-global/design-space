@@ -342,12 +342,20 @@ export function useDesignSpaceState(
       const written = `${window.location.pathname}${window.location.search}`;
       if (written !== url) replaceState.call(history, history.state, "", `${url}${window.location.hash}`);
       if (search === latest.search) return true;
-      setLocation({ path: latest.path, search });
-      postFrameMessage(
-        window.parent === window ? undefined : window.parent,
-        { ds: 1, type: "navigate", url, replace },
-        window.location.origin,
-      );
+      // A tela pode escrever enquanto renderiza. O endereço mais recente muda
+      // já, para um `setControl` logo depois partir dele; o estado e o aviso ao
+      // pai esperam a renderização terminar.
+      const adopted = { path: latest.path, search };
+      locationRef.current = adopted;
+      queueMicrotask(() => {
+        if (locationRef.current !== adopted) return;
+        setLocationState(adopted);
+        postFrameMessage(
+          window.parent === window ? undefined : window.parent,
+          { ds: 1, type: "navigate", url, replace },
+          window.location.origin,
+        );
+      });
       return true;
     };
 
@@ -370,7 +378,7 @@ export function useDesignSpaceState(
       history.pushState = pushState;
       history.replaceState = replaceState;
     };
-  }, [frame, setLocation]);
+  }, [frame]);
 
   // Quadro: recebe estado do pai e avisa que montou. O pai decide se o endereço
   // de montagem ainda é o certo — pode ter mudado enquanto o quadro carregava.

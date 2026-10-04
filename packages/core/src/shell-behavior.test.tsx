@@ -1143,3 +1143,43 @@ describe("0.10.0: a query que a tela escreve sozinha", () => {
     expect(params.get("list_tab")).toBe("list|history");
   });
 });
+
+describe("0.10.0: a tela que escreve a query durante a renderização", () => {
+  function TabbedScreen({ params }: ScreenProps) {
+    // Uma rota por aba: a rota diz qual aba abrir, e a tela grava na query.
+    const search = new URLSearchParams(window.location.search);
+    if (!search.has("main_tab")) {
+      search.set("main_tab", `unit|${params.tab}`);
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}?${search.toString()}`);
+    }
+    return <a href={`/units/${params.tab === "rooms" ? "docs" : "rooms"}`}>next</a>;
+  }
+
+  it("é adotada sem atualizar estado no meio da renderização, e cada tela grava a própria aba", () =>
+    withParent(async (parent) => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      // Uma rota por aba: cada aba é uma tela.
+      const definition = product({
+        scenarios: [],
+        routes: [
+          { path: "/units/rooms", screen: (props) => <TabbedScreen {...props} params={{ tab: "rooms" }} />, name: "Rooms" },
+          { path: "/units/docs", screen: (props) => <TabbedScreen {...props} params={{ tab: "docs" }} />, name: "Docs" },
+        ],
+      });
+      const container = await mount(`/units/rooms?${FRAME_PARAM}=1`, definition);
+      expect(new URLSearchParams(window.location.search).get("main_tab")).toBe("unit|rooms");
+
+      await click(container.querySelector("a")!);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(window.location.pathname).toBe("/units/docs");
+      expect(new URLSearchParams(window.location.search).get("main_tab")).toBe("unit|docs");
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ type: "navigate", url: `/units/docs?main_tab=unit%7Cdocs&${FRAME_PARAM}=1` }),
+        window.location.origin,
+      );
+      expect(error).not.toHaveBeenCalled();
+      error.mockRestore();
+    }));
+});

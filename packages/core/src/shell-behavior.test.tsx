@@ -1059,3 +1059,127 @@ describe("0.9.3: a query da tela sobrevive ao painel", () => {
       );
     }));
 });
+
+describe("0.10.0: a query que a tela escreve sozinha", () => {
+  /** O que uma aba faz ao abrir: reescreve a própria query com a History API. */
+  const writeTab = (value: string) =>
+    act(() => {
+      const params = new URLSearchParams(window.location.search);
+      params.set("list_tab", value);
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}`);
+    });
+
+  it("o quadro avisa o pai, que adota a query da tela", () =>
+    withParent(async (parent) => {
+      await mount(`/orders?scenario=orders.cancel&${FRAME_PARAM}=1`, flowDefinition());
+      await writeTab("list|history");
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        {
+          ds: 1,
+          type: "navigate",
+          url: `/orders?scenario=orders.cancel&list_tab=list%7Chistory&${FRAME_PARAM}=1`,
+          replace: true,
+        },
+        window.location.origin,
+      );
+    }));
+
+  it("`setControl` depois disso mantém a aba no endereço e na mensagem ao pai", () =>
+    withParent(async (parent) => {
+      const container = await mount(`/orders?scenario=orders.cancel&${FRAME_PARAM}=1`, flowDefinition());
+      await writeTab("list|history");
+      await click(button(container, "close"));
+      expect(new URLSearchParams(window.location.search).get("list_tab")).toBe("list|history");
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        {
+          ds: 1,
+          type: "navigate",
+          url: `/orders?scenario=orders.cancel&c.overlay=none&list_tab=list%7Chistory&${FRAME_PARAM}=1`,
+          replace: true,
+        },
+        window.location.origin,
+      );
+    }));
+
+  it("a tela não reescreve os parâmetros do motor nem tira o modo quadro", () =>
+    withParent(async (parent) => {
+      await mount(`/orders?scenario=orders.cancel&persona=requester&${FRAME_PARAM}=1`, flowDefinition());
+      await act(() => window.history.replaceState(null, "", "/orders?aba=resumo&persona=reviewer"));
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get("persona")).toBe("requester");
+      expect(params.get("scenario")).toBe("orders.cancel");
+      expect(params.get("aba")).toBe("resumo");
+      expect(params.get(FRAME_PARAM)).toBe("1");
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          type: "navigate",
+          url: `/orders?scenario=orders.cancel&persona=requester&aba=resumo&${FRAME_PARAM}=1`,
+        }),
+        window.location.origin,
+      );
+    }));
+
+  it("no chrome, a aba adotada do quadro sobrevive a uma troca no painel", async () => {
+    const container = await mount("/orders?scenario=orders.cancel", flowDefinition());
+    const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!;
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          source: frame.contentWindow,
+          data: {
+            ds: 1,
+            type: "navigate",
+            url: `/orders?scenario=orders.cancel&list_tab=list%7Chistory&${FRAME_PARAM}=1`,
+            replace: true,
+          },
+        }),
+      );
+    });
+    expect(new URLSearchParams(window.location.search).get("list_tab")).toBe("list|history");
+    await choose(select(container, DEFAULT_LABELS.panel.persona), "requester");
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("persona")).toBe("requester");
+    expect(params.get("list_tab")).toBe("list|history");
+  });
+});
+
+describe("0.10.0: a tela que escreve a query durante a renderização", () => {
+  function TabbedScreen({ params }: ScreenProps) {
+    // Uma rota por aba: a rota diz qual aba abrir, e a tela grava na query.
+    const search = new URLSearchParams(window.location.search);
+    if (!search.has("main_tab")) {
+      search.set("main_tab", `unit|${params.tab}`);
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}?${search.toString()}`);
+    }
+    return <a href={`/units/${params.tab === "rooms" ? "docs" : "rooms"}`}>next</a>;
+  }
+
+  it("é adotada sem atualizar estado no meio da renderização, e cada tela grava a própria aba", () =>
+    withParent(async (parent) => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      // Uma rota por aba: cada aba é uma tela.
+      const definition = product({
+        scenarios: [],
+        routes: [
+          { path: "/units/rooms", screen: (props) => <TabbedScreen {...props} params={{ tab: "rooms" }} />, name: "Rooms" },
+          { path: "/units/docs", screen: (props) => <TabbedScreen {...props} params={{ tab: "docs" }} />, name: "Docs" },
+        ],
+      });
+      const container = await mount(`/units/rooms?${FRAME_PARAM}=1`, definition);
+      expect(new URLSearchParams(window.location.search).get("main_tab")).toBe("unit|rooms");
+
+      await click(container.querySelector("a")!);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(window.location.pathname).toBe("/units/docs");
+      expect(new URLSearchParams(window.location.search).get("main_tab")).toBe("unit|docs");
+      expect(parent.postMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ type: "navigate", url: `/units/docs?main_tab=unit%7Cdocs&${FRAME_PARAM}=1` }),
+        window.location.origin,
+      );
+      expect(error).not.toHaveBeenCalled();
+      error.mockRestore();
+    }));
+});

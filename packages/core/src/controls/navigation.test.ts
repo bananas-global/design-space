@@ -377,3 +377,60 @@ describe("0.9.3: query da tela sobrevive às mudanças de controle", () => {
     expect(keepScreenQuery("", "")).toBe("");
   });
 });
+
+describe("0.10.0: a query da tela é da tela", () => {
+  const list = at("/orders", "?aba=resumo&page=2&c.rows=one&persona=analyst&viewport=mobile");
+
+  it("na mesma tela, sem query, a query da tela segue", () => {
+    expect(navigationTarget("/orders", list, registry).search).toBe(list.search);
+  });
+
+  it("na mesma tela, com query própria ou `controls`, a query da tela segue, e o destino manda na mesma chave", () => {
+    const target = navigationTarget("/orders?aba=historico", list, registry);
+    expect(query(target.search)).toEqual({
+      page: "2",
+      persona: "analyst",
+      viewport: "mobile",
+      aba: "historico",
+    });
+    const withControls = navigationTarget("/orders", list, registry, { controls: { status: "open" } });
+    expect(query(withControls.search)).toMatchObject({ aba: "resumo", page: "2", "c.status": "open" });
+  });
+
+  it("em outra tela, sem query, a query da tela anterior fica para trás junto com os `c.*`", () => {
+    const target = navigationTarget("/orders/9", list, registry);
+    expect(query(target.search)).toEqual({ persona: "analyst", viewport: "mobile" });
+  });
+
+  it("em outra tela, com query própria, só a query do destino entra", () => {
+    const target = navigationTarget("/orders/9?aba=itens", list, registry);
+    expect(query(target.search)).toEqual({ persona: "analyst", viewport: "mobile", aba: "itens" });
+  });
+
+  it("o recorte de handoff e o contexto do motor seguem para outra tela", () => {
+    const target = navigationTarget(
+      "/orders/9",
+      at("/orders", "?aba=resumo&handoff=1&allowRoute=%2Forders%2F%3Aid&source=api"),
+      registry,
+    );
+    expect(query(target.search)).toEqual({ handoff: "1", allowRoute: "/orders/:id", source: "api" });
+  });
+
+  it("dois caminhos sem rota são telas diferentes", () => {
+    expect(navigationTarget("/b", at("/a", "?aba=x&persona=analyst"), registry).search).toBe("?persona=analyst");
+    expect(navigationTarget("/a", at("/a", "?aba=x"), registry).search).toBe("?aba=x");
+  });
+});
+
+describe("persona e fixture explícitas sobrevivem a uma mudança de controle", () => {
+  it("só saem da URL quando são o que o cenário (ou o padrão) já dá", () => {
+    const current = "?scenario=orders.empty&persona=analyst&fixture=other&aba=resumo";
+    const state = parseControls(current, registry, "/orders");
+    const search = keepScreenQuery(serializeControls({ ...state, network: "slow" }, registry, "/orders"), current);
+    expect(query(search)).toMatchObject({ persona: "analyst", fixture: "other", aba: "resumo", network: "slow" });
+
+    const redundant = "?scenario=orders.empty&persona=manager&fixture=orders";
+    const normalized = serializeControls(parseControls(redundant, registry, "/orders"), registry, "/orders");
+    expect(normalized).toBe("?scenario=orders.empty");
+  });
+});

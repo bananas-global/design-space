@@ -301,11 +301,84 @@ export function useDesignSpaceState(
     setLocationState(next);
   }, []);
 
+  /**
+   * Escrita do próprio motor no endereço do quadro. Passa pela History API, mas
+   * não é a tela escrevendo a própria query — ver o efeito abaixo.
+   */
+  const engineWriting = useRef(false);
+  const writeFrameUrl = useCallback((url: string) => {
+    engineWriting.current = true;
+    try {
+      window.history.replaceState(null, "", url);
+    } finally {
+      engineWriting.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     const onPopState = () => setLocation(currentLocation());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [setLocation]);
+
+  // Quadro: a tela pode guardar estado na própria query escrevendo direto na
+  // History API (uma aba que se lembra de onde estava, por exemplo). O motor
+  // adota essa query e avisa o pai, senão a próxima mudança de controle — que
+  // parte do endereço que o motor conhece — a apagaria, e o link copiado no
+  // chrome não a levaria. Só a query da tela é adotada: os parâmetros do motor
+  // continuam os dele, e o quadro nunca cria entrada no histórico, que é do pai.
+  // Mudança de caminho feita assim continua fora do motor; para ela existe
+  // `context.navigate`.
+  useEffect(() => {
+    if (!frame) return;
+    const history = window.history;
+    const { pushState, replaceState } = history;
+
+    const adopt = (replace: boolean) => {
+      const latest = locationRef.current;
+      if (window.location.pathname !== latest.path) return false;
+      const search = keepScreenQuery(latest.search, fromFrameUrl(window.location.href).search);
+      const url = toFrameUrl(latest.path, search);
+      const written = `${window.location.pathname}${window.location.search}`;
+      if (written !== url) replaceState.call(history, history.state, "", `${url}${window.location.hash}`);
+      if (search === latest.search) return true;
+      // A tela pode escrever enquanto renderiza. O endereço mais recente muda
+      // já, para um `setControl` logo depois partir dele; o estado e o aviso ao
+      // pai esperam a renderização terminar.
+      const adopted = { path: latest.path, search };
+      locationRef.current = adopted;
+      queueMicrotask(() => {
+        if (locationRef.current !== adopted) return;
+        setLocationState(adopted);
+        postFrameMessage(
+          window.parent === window ? undefined : window.parent,
+          { ds: 1, type: "navigate", url, replace },
+          window.location.origin,
+        );
+      });
+      return true;
+    };
+
+    history.replaceState = function (data, unused, url) {
+      replaceState.call(history, data, unused, url);
+      if (!engineWriting.current) adopt(true);
+    };
+    history.pushState = function (data, unused, url) {
+      const before = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      replaceState.call(history, data, unused, url);
+      if (adopt(false)) return;
+      // Outro caminho: devolve o endereço e segue o pedido como era.
+      replaceState.call(history, history.state, "", before);
+      pushState.call(history, data, unused, url);
+    };
+    // O que a tela escreveu enquanto montava, antes deste efeito.
+    adopt(true);
+
+    return () => {
+      history.pushState = pushState;
+      history.replaceState = replaceState;
+    };
+  }, [frame]);
 
   // Quadro: recebe estado do pai e avisa que montou. O pai decide se o endereço
   // de montagem ainda é o certo — pode ter mudado enquanto o quadro carregava.
@@ -316,7 +389,7 @@ export function useDesignSpaceState(
       const message = acceptFrameMessage(event, { origin, source: window.parent });
       if (message?.type !== "location") return;
       const { path, search } = fromFrameUrl(message.url);
-      window.history.replaceState(null, "", toFrameUrl(path, search));
+      writeFrameUrl(toFrameUrl(path, search));
       setLocation({ path, search });
     };
     window.addEventListener("message", onMessage);
@@ -327,7 +400,7 @@ export function useDesignSpaceState(
       origin,
     );
     return () => window.removeEventListener("message", onMessage);
-  }, [frame, setLocation]);
+  }, [frame, setLocation, writeFrameUrl]);
 
   const controls = useMemo(
     () => parseControls(location.search, registry, location.path),
@@ -339,7 +412,7 @@ export function useDesignSpaceState(
       if (frame) {
         const url = toFrameUrl(path, search);
         const clean = fromFrameUrl(url);
-        window.history.replaceState(null, "", url);
+        writeFrameUrl(url);
         setLocation(clean);
         postFrameMessage(
           window.parent === window ? undefined : window.parent,
@@ -353,7 +426,7 @@ export function useDesignSpaceState(
       else window.history.pushState(null, "", url);
       setLocation({ path, search });
     },
-    [frame, setLocation],
+    [frame, setLocation, writeFrameUrl],
   );
 
   /** Controles do endereço mais recente, mesmo antes de renderizar. */
@@ -495,13 +568,13 @@ export function useDesignSpaceState(
  * Para onde vai uma navegação: caminho e query do destino. Pura e testável.
  *
  * - **Sem query e sem `controls`** (`navigate("/x")`): a query atual segue
- *   inteira, como sempre foi; numa tela diferente, os `c.*` da anterior ficam
+ *   inteira; numa tela diferente, os `c.*` e a query da tela anterior ficam
  *   para trás.
  * - **Com query própria ou com `controls`**: o destino manda. O contexto do
  *   motor — tudo que não é `scenario`, `fixture`, `component` nem `c.*`:
  *   persona, rede, viewport, tema, idioma, fonte de dados, handoff e os
  *   parâmetros do chrome — segue, a menos que o destino traga o mesmo
- *   parâmetro. A persona que vinha do cenário deixado para trás vira parâmetro
+ *   parâmetro. A query da tela segue do mesmo jeito, mas só na mesma tela. A persona que vinha do cenário deixado para trás vira parâmetro
  *   explícito, para quem está olhando não mudar só porque o cenário saiu.
  *   `controls` vira `c.*` do destino, sem os valores que já são o padrão da
  *   tela de destino.
@@ -521,19 +594,23 @@ export function navigationTarget(
   const rawSearch = mark === -1 ? undefined : withoutHash.slice(mark + 1);
   const currentParams = new URLSearchParams(current.search);
   const state = parseControls(current.search, registry, current.path);
+  // Controles e query da tela são da tela: numa tela diferente, os da anterior
+  // não valem.
+  const otherScreen = !isSameScreen(registry, path, current.path);
 
   let params: URLSearchParams;
   if (rawSearch === undefined && options.controls === undefined) {
     params = new URLSearchParams(current.search);
-    // Controles são da tela: numa tela diferente, os da anterior não valem.
-    if (registry.screenForPath(path)?.id !== registry.screenForPath(current.path)?.id) {
+    if (otherScreen) {
       deleteControlParams(params);
+      deleteScreenQuery(params);
     }
   } else {
     const target = new URLSearchParams(rawSearch ?? "");
     params = new URLSearchParams();
     for (const [key, value] of currentParams) {
       if (!isContextParam(key) || target.has(key)) continue;
+      if (otherScreen && !isEngineParam(key)) continue;
       params.append(key, value);
     }
     // O cenário fica para trás; quem está olhando, não. A persona que ele dava
@@ -570,19 +647,37 @@ export function navigationTarget(
 }
 
 /**
- * Devolve a `search` dos controles com a query da tela que estava em `current`:
- * todo parâmetro que o motor não lê. Mudar persona, rede, tema ou um controle
- * não troca de tela, então o estado que a tela do produto guarda na URL — aba,
- * passo, filtro, página — continua valendo. Pura e testável.
+ * Devolve os parâmetros do motor de `search` com a query da tela que está em
+ * `current`: todo parâmetro que o motor não lê. Mudar persona, rede, tema ou um
+ * controle não troca de tela, então o estado que a tela do produto guarda na
+ * URL — aba, passo, filtro, página — continua valendo. Pura e testável.
  */
 export function keepScreenQuery(search: string, current: string): string {
   const params = new URLSearchParams(search);
+  deleteScreenQuery(params);
   for (const [key, value] of new URLSearchParams(current)) {
     if (key === FRAME_PARAM || isEngineParam(key)) continue;
     params.append(key, value);
   }
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+/** Remove a query da tela — todo parâmetro que o motor não lê. */
+function deleteScreenQuery(params: URLSearchParams): void {
+  for (const key of [...params.keys()]) {
+    if (!isEngineParam(key)) params.delete(key);
+  }
+}
+
+/**
+ * Os dois caminhos abrem a mesma tela: a mesma rota ou, sem rota, o mesmo
+ * caminho.
+ */
+function isSameScreen(registry: Registry, a: string, b: string): boolean {
+  const left = registry.screenForPath(a)?.id;
+  const right = registry.screenForPath(b)?.id;
+  return left === undefined && right === undefined ? a === b : left === right;
 }
 
 /**

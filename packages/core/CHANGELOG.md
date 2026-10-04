@@ -6,6 +6,56 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.10.0 (2026-10-04)
+
+**Minor.** Nenhum tipo, export ou parâmetro novo, mas muda um comportamento
+padrão: a query da tela deixa de atravessar para outra tela. Ver
+[0015](../../docs/decisions/0015-query-da-tela-e-da-tela.md).
+
+### Corrigido
+
+- **A query que a tela escreve pela History API não some mais ao mudar um
+  controle.** A 0.9.3 preservava a query da tela que o motor conhecia, mas a
+  tela que guarda estado escrevendo direto em `history.replaceState` (uma aba que
+  se lembra de onde estava, como `?main_tab=geral|historico`) ficava invisível
+  para o motor e para o chrome: a próxima troca de persona, rede ou controle —
+  pelo painel ou por `context.setControl` — reconstruía a URL sem ela, e a tela
+  voltava para a primeira aba. Agora o quadro adota a query que a tela escreve
+  (`replaceState` ou `pushState` no mesmo caminho), avisa o chrome, e a mudança
+  de controle seguinte a preserva. "Copiar link" e recarregar a página também
+  passam a levar a aba aberta.
+
+### Alterado
+
+- **A query da tela fica para trás numa navegação para outra tela.** Antes,
+  `context.navigate("/outra")` levava a query inteira da tela anterior, e com
+  query própria a chave antiga só saía se o destino trouxesse a mesma. Agora,
+  como os `c.*`, a query da tela só segue enquanto a tela é a mesma (a mesma
+  rota ou, sem rota, o mesmo caminho); em outra tela entra só a que o destino
+  traz. O contexto do motor — persona, rede, viewport, tema, idioma, fonte,
+  handoff, chrome — segue como antes.
+- **O quadro restaura os próprios parâmetros.** Escrita da tela pela History API
+  que mude um parâmetro do motor ou tire o `ds-frame=1` é corrigida na hora;
+  só a query da tela é adotada. Escrita que troca o caminho continua fora do
+  motor.
+
+### Sem mudança
+
+- `persona` e `fixture` explícitas sobrevivem a qualquer mudança de controle.
+  Elas só saem da URL quando repetem o que o cenário (ou a persona padrão) já
+  dá — a URL é normalizada, e a situação na tela é a mesma.
+
+### Migração
+
+- Produto que guardava parâmetro **global** na query, para atravessar telas,
+  precisa levá-lo explicitamente: `navigate("/outra?param=…")`. Nenhum produto
+  conhecido faz isso.
+- Produto que repunha a aba na URL depois de uma mudança de controle (guardando
+  a última aba lida e reescrevendo-a) pode apagar o contorno.
+- Produto que mandava vazio o parâmetro da tela anterior (`aba=`) para ele não
+  vazar para a próxima tela pode parar.
+- A faixa `^0.9.x` não alcança a 0.10.0: atualize a dependência para `^0.10.0`.
+
 ## 0.9.3 (2026-09-29)
 
 **Patch.** Correção sem contrato novo: nenhum tipo, export ou parâmetro muda.

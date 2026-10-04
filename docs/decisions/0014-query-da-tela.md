@@ -1,7 +1,7 @@
 # 0014 — Query da tela: o painel a preserva, a navegação ainda não a escopa
 
 **Data:** 2026-09-29
-**Status:** aceita em parte (item 1); proposta (item 2)
+**Status:** aceita em parte (item 1); item 2 substituído pela [0015](0015-query-da-tela-e-da-tela.md)
 **Decidido por:** Bruno Santos
 **Complementa:** [0012](0012-chrome-unico-telas-como-rotas-e-iframe.md)
 

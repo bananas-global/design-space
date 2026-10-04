@@ -261,13 +261,16 @@ aceitam mensagem da mesma origem e da janela esperada.
 regras, conforme o destino:
 
 - **Sem query e sem `controls`** (`navigate("/orders/1042")`): a query atual
-  segue inteira; numa tela diferente, os `c.*` da anterior ficam para trás.
+  segue inteira; numa tela diferente, os `c.*` e a [query da
+  tela](#query-da-tela) anterior ficam para trás.
 - **Com query própria ou com `controls`** (`navigate("/orders?c.rows=one")`,
   `navigate("/orders", { controls: { rows: "one" } })`): o destino manda. Desde a
   0.9.1, o contexto do motor — tudo que não é `scenario`, `fixture`, `component`
   nem `c.*`: persona, rede, viewport, tema, idioma, fonte de dados, handoff e os
   parâmetros do chrome — é preservado, a menos que o destino traga o mesmo
-  parâmetro. Os `c.*` da tela anterior são descartados. A persona que vinha do
+  parâmetro. A query da tela segue da mesma forma, mas só na mesma tela; numa
+  tela diferente, só entra a que o destino traz. Os `c.*` da tela anterior são
+  descartados. A persona que vinha do
   cenário deixado para trás vira `persona=` explícito (quando difere da persona
   padrão), para quem está olhando não mudar; a rede e a fixture do cenário ficam
   com ele. `controls` vira `c.*` do destino, sem os valores que já são o padrão
@@ -276,12 +279,9 @@ regras, conforme o destino:
 `options.replace` substitui a entrada do histórico em vez de criar outra. O
 recorte de handoff atual é sempre reaplicado.
 
-**Limitação conhecida.** O motor ainda não sabe que parâmetro é da tela do
-produto: numa navegação sem query, a query da tela anterior segue para a
-próxima; com query própria, ela só sai se o destino trouxer a mesma chave. Até
-existir um conceito de query da tela, quem guarda estado na URL tira o que não
-vale mais no destino. Ver
-[0014](../../docs/decisions/0014-query-da-tela.md).
+"Mesma tela" é a mesma rota (`/orders/1` e `/orders/2` são a mesma tela) ou,
+sem rota, o mesmo caminho. Ver
+[0015](../../docs/decisions/0015-query-da-tela-e-da-tela.md).
 
 ## A URL é o estado
 
@@ -294,7 +294,7 @@ rede declarados no cenário.
 | `scenario` | Cenário ativo. Define os padrões dos demais. |
 | `component` | Referência ativa no catálogo visual do produto. |
 | `persona` | Troca o papel e as permissões. Omitido quando é o do cenário ou a persona padrão do produto. |
-| `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. |
+| `fixture` | Troca a fixture global do cenário ou a fixture local do componente ativo. Omitido quando é a do cenário. |
 | `network` | `success`, `loading`, `empty`, `error`, `slow`. |
 | `c.<id>` | Valor de um controle da tela. Omitido quando é o padrão (ou o que o cenário fixa). |
 | `viewport` | `fit`, `mobile`, `tablet`, `desktop`; `custom` para links antigos. |
@@ -313,12 +313,29 @@ rede declarados no cenário.
 
 ### Query da tela
 
-Qualquer outro parâmetro é da tela do produto: aba, passo de um fluxo, filtro,
-página. O motor não o lê, só o carrega. Desde a 0.9.3, mudar persona, rede,
-viewport, zoom, tema, o painel ou um controle da tela — pelo painel ou por
-`context.setControl`/`setControls` de dentro do quadro — preserva essa query.
-Abrir outra tela, cenário ou componente pela navegação do chrome a descarta, e
-"Copiar link" e "Copiar para o PR" levam a query da tela aberta.
+Qualquer parâmetro fora da tabela acima é da tela do produto: aba, passo de um
+fluxo, filtro, página. O motor não o lê, só o carrega, e a regra é a mesma dos
+`c.*`: **vale enquanto a tela é a mesma.**
+
+| O que acontece | Query da tela |
+| --- | --- |
+| Mudar persona, rede, viewport, zoom, tema, o painel ou um controle — pelo painel ou por `context.setControl`/`setControls` | Fica (desde a 0.9.3). |
+| `context.navigate` ou link comum para a mesma tela | Fica; o que o destino traz manda na mesma chave. |
+| `context.navigate` ou link comum para outra tela | Sai; só entra a que o destino traz (desde a 0.10.0). |
+| Abrir tela, cenário ou componente pela lateral ou pelos atalhos do chrome | Sai. |
+| "Copiar link" e "Copiar para o PR" | Vai junto. |
+
+A tela pode escrever a própria query de duas formas: por `context.navigate`
+(`navigate("/orders?aba=historico", { replace: true })`) ou direto pela History
+API, como uma aba que se lembra de onde estava
+(`history.replaceState(null, "", "?aba=historico")`). Desde a 0.10.0, o quadro
+adota o que a tela escreve pela History API: guarda a query nova, avisa o
+chrome — a URL do chrome e o link copiado passam a levá-la — e o próximo
+controle a preserva. Só a query da tela é adotada: se a escrita mexer num
+parâmetro do motor ou tirar o `ds-frame=1`, o quadro restaura o dele. O quadro
+nunca cria entrada no histórico, então `pushState` vira uma entrada no histórico
+do chrome. Escrita que troca o caminho continua fora do motor; para isso existe
+`context.navigate`.
 
 A tela lê essa query em `window.location.search`. É garantido que a URL do
 quadro já está em dia quando a tela renderiza: o motor troca o endereço do

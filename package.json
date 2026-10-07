@@ -12,9 +12,14 @@
     "test": "pnpm -r --filter \"./packages/*\" test",
     "check": "pnpm run build && pnpm run typecheck && pnpm run test"
   },
-  "packageManager": "pnpm@10.12.4",
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  }
 }

@@ -75,7 +75,7 @@ hosting/              # arquivos por provedor, instalados por escolha explícita
 
 ```bash
 pnpm check      # typecheck + testes + build
-pnpm test:e2e   # jornada real contra o preview ou o dev server
+pnpm test:e2e   # jornada real contra o preview publicado ou o build local
 ```
 
 O que quebra o build de propósito:
@@ -83,6 +83,11 @@ O que quebra o build de propósito:
 - **Typecheck.** Contrato de componente e de cenário.
 - **Contrato de cenário.** Fixture, persona, regra ou rota inexistente.
 - **Regras de negócio.** Cada regra em `src/rules/` tem teste próprio.
+
+Sem `PREVIEW_URL`, `pnpm test:e2e` roda `pnpm build` e serve o resultado com
+`vite preview` na porta seguinte à do `pnpm dev`, que pode continuar aberto. Um
+`pnpm preview` aberto ao mesmo tempo ocupa essa porta e faz o Playwright parar:
+ele nunca reaproveita servidor, para não testar um build velho.
 
 ## Hospedagem
 

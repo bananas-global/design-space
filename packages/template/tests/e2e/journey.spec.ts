@@ -198,7 +198,7 @@ test.describe("chrome", () => {
   });
 
   test("abrir em nova janela leva o quadro sozinho, onde o produto navegou", async ({ page, context }) => {
-    await page.goto(`${urlFor("requests.queue")}&appearance=dark&zoom=75`);
+    await page.goto(`${urlFor("requests.queue")}&viewport=tablet&appearance=dark&zoom=75`);
     const ui = app(page);
     await ui.getByRole("link", { name: "Licenças de software de design" }).click();
     await expect(page).toHaveURL(/\/requests\/REQ-2042\?/);
@@ -214,6 +214,7 @@ test.describe("chrome", () => {
     expect(url.searchParams.get("ds-frame")).toBe("1");
     expect(url.searchParams.has("appearance")).toBe(false);
     expect(url.searchParams.has("zoom")).toBe(false);
+    expect(url.searchParams.has("viewport")).toBe(false);
     // Sem janela pai, o documento é só a UI do produto: nada de chrome, nada de
     // iframe, e é isso que uma ferramenta de captura enxerga.
     await expect(popup.getByRole("heading", { name: "Licenças de software de design" })).toBeVisible();

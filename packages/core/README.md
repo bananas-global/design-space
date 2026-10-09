@@ -266,9 +266,11 @@ mas a UI continua dentro do `<iframe>`, e a ferramenta enxerga um bloco só.
 O endereço é o que o quadro está mostrando, inclusive depois de o produto
 navegar dentro dele. Cenário, persona, fixture, rede, controles e query da tela,
 tema, idioma e handoff vão junto; os parâmetros só do chrome (`appearance`,
-`chrome`, `panel`, `tab`, `zoom`, `rotate`) ficam de fora. O viewport também vai,
-mas a largura passa a ser a da janela nova. Sem janela pai, o quadro funciona
-sozinho; só os atalhos do chrome deixam de existir.
+`chrome`, `panel`, `tab`, `zoom`, `rotate`) ficam de fora. O viewport (`viewport`,
+`w`) também fica: a largura é a da janela nova, e o quadro abre em "Ajustar",
+então `context.viewport` e `@media` concordam. Para capturar a tela de celular,
+estreite a janela. Sem janela pai, o quadro funciona sozinho; só os atalhos do
+chrome deixam de existir.
 
 ### Navegação
 

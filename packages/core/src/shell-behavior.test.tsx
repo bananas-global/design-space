@@ -325,7 +325,7 @@ describe("chrome", () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     try {
       const container = await mount(
-        "/requests?scenario=queue&persona=requester&network=slow&appearance=dark&zoom=75&tab=info",
+        "/requests?scenario=queue&persona=requester&network=slow&viewport=mobile&appearance=dark&zoom=75&tab=info",
       );
       const openFrame = button(container, DEFAULT_LABELS.topbar.openFrame);
       expect(openFrame.title).toBe(DEFAULT_LABELS.topbar.openFrame);

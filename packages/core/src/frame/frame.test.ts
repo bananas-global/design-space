@@ -60,10 +60,23 @@ describe("endereço do quadro", () => {
       const url = standaloneFrameUrl(undefined, origin, {
         path: "/requests",
         search:
-          "?scenario=queue&persona=requester&fixture=detail&network=slow&theme=dark&locale=en&c.rows=one&appearance=dark&zoom=75&rotate=1&chrome=0&panel=0&tab=info",
+          "?scenario=queue&persona=requester&fixture=detail&network=slow&theme=dark&locale=en&c.rows=one&viewport=mobile&appearance=dark&zoom=75&rotate=1&chrome=0&panel=0&tab=info",
       });
       expect(url).toBe(
         `/requests?scenario=queue&persona=requester&fixture=detail&network=slow&theme=dark&locale=en&c.rows=one&${FRAME_PARAM}=1`,
+      );
+    });
+
+    it("deixa o viewport de fora: a largura é a da janela nova", () => {
+      expect(
+        standaloneFrameUrl(
+          `${origin}/requests?scenario=queue&viewport=custom&w=500&${FRAME_PARAM}=1`,
+          origin,
+          parent,
+        ),
+      ).toBe(`/requests?scenario=queue&${FRAME_PARAM}=1`);
+      expect(standaloneFrameUrl(undefined, origin, { path: "/requests", search: "?viewport=mobile" })).toBe(
+        `/requests?${FRAME_PARAM}=1`,
       );
     });
 

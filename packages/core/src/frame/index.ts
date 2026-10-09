@@ -73,22 +73,31 @@ export function toFrameUrl(path: string, search: string): string {
  * em `about:blank`, em outra origem ou inacessível —, parte do estado do pai.
  * Nos dois casos sai pelo `toFrameUrl`: sem os parâmetros do chrome e com
  * `ds-frame=1`, mesmo que uma navegação completa do quadro o tenha perdido.
+ *
+ * O viewport também fica de fora. Na janela própria a largura é a da janela, e
+ * sem o parâmetro o quadro cai em "Ajustar": `context.viewport` e `@media`
+ * contam a mesma história. Com `viewport=mobile` numa janela larga, a tela que
+ * decide pelo contexto mostraria celular esticado.
  */
 export function standaloneFrameUrl(
   frameHref: string | undefined,
   origin: string,
   fallback: { path: string; search: string },
 ): string {
+  let { path, search } = fallback;
   if (frameHref) {
     try {
       // `about:blank` tem origem "null", então também cai no pai.
       const shown = new URL(frameHref);
-      if (shown.origin === origin) return toFrameUrl(shown.pathname, shown.search);
+      if (shown.origin === origin) ({ pathname: path, search } = shown);
     } catch {
       // Endereço inválido: fica com o do pai.
     }
   }
-  return toFrameUrl(fallback.path, fallback.search);
+  const params = new URLSearchParams(search);
+  params.delete(PARAM.viewport);
+  params.delete(PARAM.customWidth);
+  return toFrameUrl(path, `?${params.toString()}`);
 }
 
 /** Caminho e query de um endereço do quadro, sem o parâmetro de modo. */

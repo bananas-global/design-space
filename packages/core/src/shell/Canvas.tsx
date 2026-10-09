@@ -39,6 +39,8 @@ export type CanvasProps = {
   resizing: boolean;
   onFrameNavigate: (url: string, replace: boolean) => void;
   onShortcut: (key: FrameShortcut) => void;
+  /** O `<iframe>`, com o dono no chrome: "Abrir em nova janela" lê o endereço dele. */
+  frameRef: RefObject<HTMLIFrameElement | null>;
 };
 
 /** Respiro entre o quadro e a borda quando o viewport tem tamanho fixo. */
@@ -53,9 +55,9 @@ export function Canvas({
   onFrameNavigate,
   onShortcut,
   onEffectiveZoom,
+  frameRef,
 }: CanvasProps) {
   const areaRef = useRef<HTMLDivElement>(null);
-  const frameRef = useRef<HTMLIFrameElement>(null);
   const area = useAreaSize(areaRef);
 
   const desired = toFrameUrl(location.path, location.search);
@@ -80,7 +82,7 @@ export function Canvas({
         if (frameRef.current) frameRef.current.src = url;
       }
     },
-    [origin],
+    [frameRef, origin],
   );
 
   useEffect(() => {
@@ -92,7 +94,7 @@ export function Canvas({
     } else {
       postFrameMessage(frameRef.current?.contentWindow, { ds: 1, type: "location", url: desired }, origin);
     }
-  }, [desired, load, origin]);
+  }, [desired, frameRef, load, origin]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -135,7 +137,7 @@ export function Canvas({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onFrameNavigate, onShortcut, origin]);
+  }, [frameRef, onFrameNavigate, onShortcut, origin]);
 
   const fixed = Boolean(viewport.width);
   const gutter = fixed ? GUTTER : 0;

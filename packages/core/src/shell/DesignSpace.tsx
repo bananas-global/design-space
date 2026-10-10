@@ -19,7 +19,13 @@ import { useDesignSpaceState } from "../controls/state.js";
 import { getDeployContext } from "../deploy/index.js";
 import { CONTROL_PARAM_PREFIX, PARAM, readControlParams } from "../controls/params.js";
 import type { ValidationIssue } from "../registry/validate.js";
-import { fromFrameUrl, isFrameMode, mergeChromeParams, type FrameShortcut } from "../frame/index.js";
+import {
+  fromFrameUrl,
+  isFrameMode,
+  mergeChromeParams,
+  standaloneFrameUrl,
+  type FrameShortcut,
+} from "../frame/index.js";
 import { Topbar } from "./Topbar.js";
 import { Sidebar } from "./Sidebar.js";
 import { Panel } from "./Panel.js";
@@ -67,6 +73,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
     useDesignSpaceState(registry);
   const locationRef = useRef(location);
   locationRef.current = location;
+  const frameRef = useRef<HTMLIFrameElement>(null);
 
   const system = useSystemTheme();
   const [remembered, setRemembered] = useState(() => storedTheme());
@@ -185,6 +192,21 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
     [go],
   );
 
+  // O quadro sozinho, numa janela própria: ferramenta de captura (como a que
+  // leva HTML para o Figma) lê só o documento de cima e não entra no iframe.
+  // Vale o endereço que o quadro mostra: quando o produto navega dentro dele, é
+  // o quadro que tem a verdade, e o pai só a adota por mensagem.
+  const openFrame = () => {
+    let shown: string | undefined;
+    try {
+      shown = frameRef.current?.contentWindow?.location.href;
+    } catch {
+      // Quadro em outra origem: fica com o estado do pai.
+    }
+    const url = standaloneFrameUrl(shown, window.location.origin, locationRef.current);
+    window.open(url, "_blank", "noopener");
+  };
+
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     writeStored(STORAGE_KEYS.appearance, next);
@@ -221,6 +243,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           onRotate={() => change({ rotated: !controls.rotated })}
           onZoom={(next) => change({ zoom: next })}
           onCleanReview={toggleChrome}
+          onOpenFrame={openFrame}
           onToggleTheme={toggleTheme}
         />
       )}
@@ -257,6 +280,7 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
               resizing={resizing}
               onFrameNavigate={onFrameNavigate}
               onShortcut={onShortcut}
+              frameRef={frameRef}
             />
           )}
         </main>

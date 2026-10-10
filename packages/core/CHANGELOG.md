@@ -6,6 +6,35 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## Não publicado
+
+**Minor.** Botão novo no chrome e um rótulo novo em `Labels`; nenhum export,
+parâmetro ou comportamento existente muda.
+
+### Adicionado
+
+- **"Abrir em nova janela" na barra superior**, ao lado da revisão limpa. Abre
+  numa aba nova o quadro sozinho (`ds-frame=1`), sem chrome e sem `<iframe>`, no
+  endereço que o quadro está mostrando — inclusive depois de a UI do produto
+  navegar dentro dele. Os parâmetros só do chrome e o viewport ficam de fora
+  (a largura é a da janela nova, em "Ajustar"); cenário, persona, fixture,
+  rede, controles, query da tela, tema, idioma e handoff vão junto. É o caminho para ferramenta de captura que lê só o documento de cima,
+  como as extensões que levam HTML para o Figma: com `chrome=0` a UI continua
+  dentro do `<iframe>`, e a captura vê um bloco só.
+- Rótulo `topbar.openFrame` ("Abrir em nova janela" / "Open in new window"),
+  sobrescrevível por `theme.labels` como os demais.
+
+### Sem mudança
+
+- `chrome=0` continua escondendo o chrome com a UI dentro do
+  `<iframe data-ds-frame>`.
+
+### Migração
+
+- Produto que declara `Labels` inteiro (em vez de override parcial) precisa
+  incluir `topbar.openFrame`. Quem usa `theme.labels` parcial ou
+  `EN_US_LABELS` não faz nada.
+
 ## 0.10.0 (2026-10-04)
 
 **Minor.** Nenhum tipo, export ou parâmetro novo, mas muda um comportamento

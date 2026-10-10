@@ -7,6 +7,7 @@ import {
   fromFrameUrl,
   isFrameMode,
   mergeChromeParams,
+  standaloneFrameUrl,
   toFrameUrl,
 } from "./index.js";
 
@@ -35,6 +36,62 @@ describe("endereço do quadro", () => {
     expect(frameKey(toFrameUrl("/", "?component=a"))).not.toBe(
       frameKey(toFrameUrl("/", "?component=b")),
     );
+  });
+
+  describe("quadro sozinho, numa janela própria", () => {
+    const origin = "https://review.example.test";
+    const parent = {
+      path: "/requests",
+      search: "?scenario=queue&persona=requester&appearance=dark&zoom=75&chrome=0&tab=info",
+    };
+
+    it("parte do endereço que o quadro está mostrando, não do pai", () => {
+      const url = standaloneFrameUrl(
+        `${origin}/requests/REQ-1?scenario=detail&network=error&c.rows=none&aba=historico&${FRAME_PARAM}=1`,
+        origin,
+        parent,
+      );
+      expect(url).toBe(
+        `/requests/REQ-1?scenario=detail&network=error&c.rows=none&aba=historico&${FRAME_PARAM}=1`,
+      );
+    });
+
+    it("tira os parâmetros do chrome e mantém os do produto", () => {
+      const url = standaloneFrameUrl(undefined, origin, {
+        path: "/requests",
+        search:
+          "?scenario=queue&persona=requester&fixture=detail&network=slow&theme=dark&locale=en&c.rows=one&viewport=mobile&appearance=dark&zoom=75&rotate=1&chrome=0&panel=0&tab=info",
+      });
+      expect(url).toBe(
+        `/requests?scenario=queue&persona=requester&fixture=detail&network=slow&theme=dark&locale=en&c.rows=one&${FRAME_PARAM}=1`,
+      );
+    });
+
+    it("deixa o viewport de fora: a largura é a da janela nova", () => {
+      expect(
+        standaloneFrameUrl(
+          `${origin}/requests?scenario=queue&viewport=custom&w=500&${FRAME_PARAM}=1`,
+          origin,
+          parent,
+        ),
+      ).toBe(`/requests?scenario=queue&${FRAME_PARAM}=1`);
+      expect(standaloneFrameUrl(undefined, origin, { path: "/requests", search: "?viewport=mobile" })).toBe(
+        `/requests?${FRAME_PARAM}=1`,
+      );
+    });
+
+    it("repõe o modo quadro quando a navegação do quadro o perdeu", () => {
+      expect(standaloneFrameUrl(`${origin}/requests/REQ-1?scenario=detail`, origin, parent)).toBe(
+        `/requests/REQ-1?scenario=detail&${FRAME_PARAM}=1`,
+      );
+    });
+
+    it("cai no estado do pai com o quadro em branco, em outra origem ou ilegível", () => {
+      const expected = `/requests?scenario=queue&persona=requester&${FRAME_PARAM}=1`;
+      for (const href of [undefined, "about:blank", "https://evil.example.test/requests/REQ-1", "não é url"]) {
+        expect(standaloneFrameUrl(href, origin, parent), String(href)).toBe(expected);
+      }
+    });
   });
 
   it("uma navegação do quadro mantém os controles do chrome do pai", () => {

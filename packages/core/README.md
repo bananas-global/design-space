@@ -230,7 +230,7 @@ painel continuam vencendo. Id inexistente é erro de validação. Sem
 
 | Região | Conteúdo |
 | --- | --- |
-| Barra superior | Nome do produto; viewport (Celular 375, Tablet 768, Desktop 1280, Ajustar), girar, zoom 25–150%, copiar link, revisão limpa, tema, painel e — quando a validação tem algo a dizer — o indicador de diagnóstico. |
+| Barra superior | Nome do produto; viewport (Celular 375, Tablet 768, Desktop 1280, Ajustar), girar, zoom 25–150%, revisão limpa, abrir em nova janela, copiar link, tema, painel e — quando a validação tem algo a dizer — o indicador de diagnóstico. |
 | Esquerda | **Telas** e **Componentes**, com contagem e busca sem acento nem caixa (nome, descrição, fluxo ou grupo, id e `source`). Telas agrupadas por fluxo (`route.group`), componentes por `group`. Redimensionável. |
 | Centro | O quadro do produto no tamanho do viewport, com zoom só de visualização. |
 | Direita | **Variações** (contexto no topo, controles da tela por componente e os cenários como atalhos; ou as fixtures do componente) e **Informações** (rota, fluxo, controles, intenção, pré-condições, ações, comportamento esperado, regras, componentes usados e **Copiar para o PR**). Redimensionável. |
@@ -254,6 +254,23 @@ recarregar; trocar de tela ou de componente troca o endereço do quadro sem cria
 entrada no histórico. Navegação feita pela UI do produto (`context.navigate`,
 `openScenario` ou um link comum) volta para a URL do chrome. Os dois lados só
 aceitam mensagem da mesma origem e da janela esperada.
+
+### Abrir em nova janela
+
+O botão ao lado da revisão limpa abre o quadro sozinho, numa aba nova: o mesmo
+endereço com `ds-frame=1`, sem chrome e sem `<iframe>`. É o caminho para
+ferramenta de captura que lê só o documento de cima — como as extensões que
+levam HTML para o Figma. `chrome=0` não serve para isso: ele esconde o chrome,
+mas a UI continua dentro do `<iframe>`, e a ferramenta enxerga um bloco só.
+
+O endereço é o que o quadro está mostrando, inclusive depois de o produto
+navegar dentro dele. Cenário, persona, fixture, rede, controles e query da tela,
+tema, idioma e handoff vão junto; os parâmetros só do chrome (`appearance`,
+`chrome`, `panel`, `tab`, `zoom`, `rotate`) ficam de fora. O viewport (`viewport`,
+`w`) também fica: a largura é a da janela nova, e o quadro abre em "Ajustar",
+então `context.viewport` e `@media` concordam. Para capturar a tela de celular,
+estreite a janela. Sem janela pai, o quadro funciona sozinho; só os atalhos do
+chrome deixam de existir.
 
 ### Navegação
 

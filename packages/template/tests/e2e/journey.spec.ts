@@ -197,6 +197,31 @@ test.describe("chrome", () => {
     await expect(page.locator(".ds-topbar")).toBeVisible();
   });
 
+  test("abrir em nova janela leva o quadro sozinho, onde o produto navegou", async ({ page, context }) => {
+    await page.goto(`${urlFor("requests.queue")}&viewport=tablet&appearance=dark&zoom=75`);
+    const ui = app(page);
+    await ui.getByRole("link", { name: "Licenças de software de design" }).click();
+    await expect(page).toHaveURL(/\/requests\/REQ-2042\?/);
+
+    const [popup] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByRole("button", { name: "Open in new window" }).click(),
+    ]);
+    await popup.waitForLoadState();
+
+    const url = new URL(popup.url());
+    expect(url.pathname).toBe("/requests/REQ-2042");
+    expect(url.searchParams.get("ds-frame")).toBe("1");
+    expect(url.searchParams.has("appearance")).toBe(false);
+    expect(url.searchParams.has("zoom")).toBe(false);
+    expect(url.searchParams.has("viewport")).toBe(false);
+    // Sem janela pai, o documento é só a UI do produto: nada de chrome, nada de
+    // iframe, e é isso que uma ferramenta de captura enxerga.
+    await expect(popup.getByRole("heading", { name: "Licenças de software de design" })).toBeVisible();
+    await expect(popup.locator(".ds-topbar")).toHaveCount(0);
+    await expect(popup.locator("iframe")).toHaveCount(0);
+  });
+
   test("busca sem acento acha o componente e as informações mostram a origem", async ({ page }) => {
     await page.goto(urlFor("requests.queue"));
     await page.keyboard.press("ControlOrMeta+K");

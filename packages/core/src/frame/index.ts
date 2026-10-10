@@ -64,6 +64,42 @@ export function toFrameUrl(path: string, search: string): string {
   return `${path || "/"}?${params.toString()}`;
 }
 
+/**
+ * Endereço para abrir o quadro sozinho, numa janela própria. É o caminho para
+ * ferramenta de captura que lê só o documento de cima e não entra no `<iframe>`.
+ *
+ * Parte do endereço que o quadro está mostrando de fato (`frameHref`), porque a
+ * UI do produto pode ter navegado dentro dele; sem esse endereço — quadro ainda
+ * em `about:blank`, em outra origem ou inacessível —, parte do estado do pai.
+ * Nos dois casos sai pelo `toFrameUrl`: sem os parâmetros do chrome e com
+ * `ds-frame=1`, mesmo que uma navegação completa do quadro o tenha perdido.
+ *
+ * O viewport também fica de fora. Na janela própria a largura é a da janela, e
+ * sem o parâmetro o quadro cai em "Ajustar": `context.viewport` e `@media`
+ * contam a mesma história. Com `viewport=mobile` numa janela larga, a tela que
+ * decide pelo contexto mostraria celular esticado.
+ */
+export function standaloneFrameUrl(
+  frameHref: string | undefined,
+  origin: string,
+  fallback: { path: string; search: string },
+): string {
+  let { path, search } = fallback;
+  if (frameHref) {
+    try {
+      // `about:blank` tem origem "null", então também cai no pai.
+      const shown = new URL(frameHref);
+      if (shown.origin === origin) ({ pathname: path, search } = shown);
+    } catch {
+      // Endereço inválido: fica com o do pai.
+    }
+  }
+  const params = new URLSearchParams(search);
+  params.delete(PARAM.viewport);
+  params.delete(PARAM.customWidth);
+  return toFrameUrl(path, `?${params.toString()}`);
+}
+
 /** Caminho e query de um endereço do quadro, sem o parâmetro de modo. */
 export function fromFrameUrl(url: string): { path: string; search: string } {
   const parsed = new URL(url, "http://design-space.invalid");

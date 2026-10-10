@@ -1,7 +1,8 @@
 /**
  * Barra superior em três partes: o produto e a versão do motor à esquerda; no
- * centro, a visualização — viewport, girar, zoom e revisão limpa; à direita,
- * copiar link, tema do chrome e diagnóstico.
+ * centro, a visualização — viewport, girar, zoom, revisão limpa e abrir o
+ * quadro numa janela própria; à direita, copiar link, tema do chrome e
+ * diagnóstico.
  *
  * Nada aqui muda a UI do produto além da largura da janela que ela enxerga.
  */
@@ -46,6 +47,8 @@ export type TopbarProps = {
   onRotate: () => void;
   onZoom: (zoom: number) => void;
   onCleanReview: () => void;
+  /** Abre o quadro sozinho numa janela própria, para ferramenta de captura. */
+  onOpenFrame: () => void;
   onToggleTheme: () => void;
 };
 
@@ -62,6 +65,7 @@ export function Topbar({
   onRotate,
   onZoom,
   onCleanReview,
+  onOpenFrame,
   onToggleTheme,
 }: TopbarProps) {
   const labels = useLabels();
@@ -167,6 +171,15 @@ export function Topbar({
           onClick={onCleanReview}
         >
           <Icon name="fullscreen" />
+        </button>
+        <button
+          type="button"
+          className="ds-btn ds-btn--icon"
+          aria-label={t.openFrame}
+          title={t.openFrame}
+          onClick={onOpenFrame}
+        >
+          <Icon name="external" />
         </button>
       </div>
 

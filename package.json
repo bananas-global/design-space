@@ -12,9 +12,6 @@
     "test": "pnpm -r --filter \"./packages/*\" test",
     "check": "pnpm run build && pnpm run typecheck && pnpm run test"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
-  },
   "license": "UNLICENSED",
   "devEngines": {
     "packageManager": {

@@ -24,7 +24,7 @@ resultado esperado e os componentes que a tela usa.
 pnpm dev          # dev server na porta determinística deste projeto
 pnpm typecheck    # tsc --noEmit
 pnpm test         # contrato de cenário e regras
-pnpm test:e2e     # jornadas Playwright (sobe o dev server sozinho)
+pnpm test:e2e     # jornadas Playwright (compila e sobe `vite preview` sozinho)
 pnpm build        # typecheck + build de produção
 pnpm check        # typecheck + test + build — rode antes de concluir qualquer alteração
 ```

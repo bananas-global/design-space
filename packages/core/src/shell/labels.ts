@@ -45,6 +45,8 @@ export type Labels = {
     copyPrompt: string;
     cleanReview: string;
     highlight: string;
+    /** Abre o quadro sozinho, sem o chrome, numa janela própria. */
+    openFrame: string;
     lightMode: string;
     darkMode: string;
     engineVersion: (version: string) => string;
@@ -199,6 +201,7 @@ export const DEFAULT_LABELS: Labels = {
     copyPrompt: "Copie o link:",
     cleanReview: "Revisão limpa (Shift+C)",
     highlight: "Destacar componentes",
+    openFrame: "Abrir em nova janela",
     lightMode: "Tema claro",
     darkMode: "Tema escuro",
     engineVersion: (version) => `Design Space ${version}`,
@@ -363,6 +366,7 @@ export const EN_US_LABELS: Labels = {
     copyPrompt: "Copy the link:",
     cleanReview: "Clean review (Shift+C)",
     highlight: "Highlight components",
+    openFrame: "Open in new window",
     lightMode: "Light theme",
     darkMode: "Dark theme",
     engineVersion: (version) => `Design Space ${version}`,

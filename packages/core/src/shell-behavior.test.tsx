@@ -321,6 +321,57 @@ describe("chrome", () => {
     expect(container.querySelector(".ds-topbar")).not.toBeNull();
   });
 
+  it("\"Abrir em nova janela\" abre o quadro sozinho, sem os parâmetros do chrome", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    try {
+      const container = await mount(
+        "/requests?scenario=queue&persona=requester&network=slow&viewport=mobile&appearance=dark&zoom=75&tab=info",
+      );
+      const openFrame = button(container, DEFAULT_LABELS.topbar.openFrame);
+      expect(openFrame.title).toBe(DEFAULT_LABELS.topbar.openFrame);
+
+      await click(openFrame);
+      expect(open).toHaveBeenCalledWith(
+        `/requests?scenario=queue&persona=requester&network=slow&${FRAME_PARAM}=1`,
+        "_blank",
+        "noopener",
+      );
+
+      // Depois de o produto navegar dentro do quadro, abre onde o quadro está —
+      // mesmo antes de a mensagem chegar ao pai.
+      const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!.contentWindow!;
+      const shown = `/requests/REQ-1?scenario=detail&aba=historico&${FRAME_PARAM}=1`;
+      frame.history.replaceState(null, "", shown);
+      await click(button(container, DEFAULT_LABELS.topbar.openFrame));
+      expect(open).toHaveBeenLastCalledWith(shown, "_blank", "noopener");
+      expect(window.location.pathname).toBe("/requests");
+
+      // Sem o endereço do quadro (em branco, como antes de carregar), vale o
+      // estado do pai, que já adotou a navegação.
+      await act(async () => {
+        window.dispatchEvent(
+          new MessageEvent("message", {
+            origin: window.location.origin,
+            source: frame,
+            data: { ds: 1, type: "navigate", url: shown, replace: false },
+          }),
+        );
+      });
+      const blank = vi
+        .spyOn(HTMLIFrameElement.prototype, "contentWindow", "get")
+        .mockReturnValue({ location: { href: "about:blank" } } as Window);
+      await click(button(container, DEFAULT_LABELS.topbar.openFrame));
+      blank.mockRestore();
+      expect(open).toHaveBeenLastCalledWith(
+        `/requests/REQ-1?scenario=detail&aba=historico&${FRAME_PARAM}=1`,
+        "_blank",
+        "noopener",
+      );
+    } finally {
+      open.mockRestore();
+    }
+  });
+
   it("o painel fica sempre aberto com o chrome, e a barra mostra a versão do motor", async () => {
     const container = await mount("/requests?scenario=queue");
     await act(async () => {

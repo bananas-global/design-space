@@ -92,11 +92,11 @@ padrão é compartilhado pela convenção no template; o componente, não.
 - **Não** reintroduza `a11y`, `status` ou coleção de portados no contrato de
   cenário sem uma decisão nova que revogue a
   [0011](docs/decisions/0011-revoga-a11y-e-ciclo-de-vida.md).
-- **Não** faça push direto na `main`. Todo repositório da Bananas exige pull
-  request — existe um ruleset ativo, e quem é admin passa por cima dele sem
-  querer, com um aviso fácil de perder na saída do `git push`. Trabalhe em branch
-  e abra PR. Tag de release é exceção: a regra é de branch, e `core-v*` é outra
-  referência.
+- **Neste repositório, mudança vai direto para a `main`**, sem pull request:
+  commit e `git push origin main`, depois de `pnpm check`. O ruleset da
+  organização que exige PR continua ativo; o push de admin passa por cima dele
+  com o aviso `Bypassed rule violations`, e aqui isso é esperado. Release
+  continua por tag `core-v<versão>` na `main`, que dispara a publicação no npm.
 - Rode `pnpm check` antes de concluir qualquer alteração.
 
 ## Onde as decisões vivem

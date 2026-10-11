@@ -38,8 +38,9 @@ jobs:
       - name: Testes do motor e do template
         run: pnpm test
 
-  # A jornada do template roda contra o dev server, não contra um preview: este
-  # repositório publica um pacote, não um site. Serve para garantir que o motor
+  # A jornada do template roda contra o build local servido por `vite preview`,
+  # não contra um preview publicado: este repositório publica um pacote, não um
+  # site. Serve para garantir que o motor
   # funciona de ponta a ponta dentro de um produto antes de sair uma versão.
   journey:
     runs-on: ubuntu-latest

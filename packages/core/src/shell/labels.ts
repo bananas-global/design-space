@@ -44,6 +44,7 @@ export type Labels = {
     copied: string;
     copyPrompt: string;
     cleanReview: string;
+    highlight: string;
     lightMode: string;
     darkMode: string;
     engineVersion: (version: string) => string;
@@ -51,6 +52,10 @@ export type Labels = {
     branchTitle: (branch: string) => string;
     commitTitle: (commit: string) => string;
     envTitle: (env: string) => string;
+  };
+  highlight: {
+    /** Rótulo do contorno quando o id marcado não está no catálogo. */
+    notInCatalog: (id: string) => string;
   };
   sidebar: {
     region: string;
@@ -193,6 +198,7 @@ export const DEFAULT_LABELS: Labels = {
     copied: "Link copiado",
     copyPrompt: "Copie o link:",
     cleanReview: "Revisão limpa (Shift+C)",
+    highlight: "Destacar componentes",
     lightMode: "Tema claro",
     darkMode: "Tema escuro",
     engineVersion: (version) => `Design Space ${version}`,
@@ -203,6 +209,10 @@ export const DEFAULT_LABELS: Labels = {
     branchTitle: (branch) => `Branch: ${branch}`,
     commitTitle: (commit) => `Commit: ${commit}`,
     envTitle: (env) => `Ambiente: ${env}`,
+  },
+
+  highlight: {
+    notInCatalog: (id) => `${id} · fora do catálogo`,
   },
 
   sidebar: {
@@ -352,6 +362,7 @@ export const EN_US_LABELS: Labels = {
     copied: "Link copied",
     copyPrompt: "Copy the link:",
     cleanReview: "Clean review (Shift+C)",
+    highlight: "Highlight components",
     lightMode: "Light theme",
     darkMode: "Dark theme",
     engineVersion: (version) => `Design Space ${version}`,
@@ -362,6 +373,10 @@ export const EN_US_LABELS: Labels = {
     branchTitle: (branch) => `Branch: ${branch}`,
     commitTitle: (commit) => `Commit: ${commit}`,
     envTitle: (env) => `Environment: ${env}`,
+  },
+
+  highlight: {
+    notInCatalog: (id) => `${id} · not in catalog`,
   },
 
   sidebar: {

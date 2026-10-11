@@ -1012,3 +1012,55 @@
   margin: 0;
   color: #737373;
 }
+
+/* --------------------------------------- destaque de componentes (quadro) */
+
+/* Também vive no documento do quadro, por cima da UI do produto: valores
+   próprios, preto e branco. O traço escuro com halo claro aparece sobre
+   qualquer fundo do produto. A camada não recebe ponteiro: a UI continua
+   clicável com o destaque ligado. */
+.ds-highlight {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ds-highlight__box {
+  position: fixed;
+  box-sizing: border-box;
+  border: 1px solid #0a0a0a;
+  outline: 1px solid #ffffff;
+  background: rgba(10, 10, 10, 0.06);
+}
+
+/* Marcado com um id que o catálogo não conhece: tracejado, para a avaliação
+   separar componente catalogado de marcação solta. */
+.ds-highlight__box[data-known="false"] {
+  border-style: dashed;
+  background: none;
+}
+
+.ds-highlight__label {
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 4px;
+  background: #0a0a0a;
+  color: #ffffff;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ds-highlight__box[data-label="inside"] .ds-highlight__label {
+  top: 0;
+  bottom: auto;
+  left: 0;
+}

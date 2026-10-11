@@ -3,7 +3,9 @@
  *
  * Renderiza **só** a UI do produto — o wrapper do produto mais a tela da rota
  * ou o preview do componente. Nenhum elemento do chrome, nenhuma classe `ds-`
- * fora do estado vazio, e nenhuma regra do chrome alcança este documento.
+ * fora do estado vazio e da camada do destaque de componentes (que fica fora da
+ * árvore do produto, no `body`), e nenhuma regra do chrome alcança este
+ * documento.
  *
  * Os dados, a persona e a rede saem da URL do próprio quadro, que o pai mantém
  * em sincronia por mensagem.
@@ -25,6 +27,7 @@ import {
 } from "../handoff/index.js";
 import { postFrameMessage, type FrameShortcut } from "../frame/index.js";
 import { StageEmpty } from "./Stage.js";
+import { Highlight } from "./Highlight.js";
 import { useLabels } from "./labels.js";
 
 export function FrameView({ product, registry }: { product: ProductDefinition; registry: Registry }) {
@@ -250,6 +253,7 @@ export function FrameView({ product, registry }: { product: ProductDefinition; r
     // existisse: ele só serve de raiz para observar os links.
     <div ref={rootRef} style={{ display: "contents" }}>
       {Wrapper && !handoffBlocked ? <Wrapper context={context}>{screen}</Wrapper> : screen}
+      {controls.highlight && !handoffBlocked && <Highlight registry={registry} />}
     </div>
   );
 }

@@ -1,9 +1,11 @@
 /**
  * Barra superior em três partes: o produto e a versão do motor à esquerda; no
- * centro, a visualização — viewport, girar, zoom e revisão limpa; à direita,
+ * centro, a visualização — viewport, girar, zoom, destaque de componentes e
+ * revisão limpa; à direita,
  * copiar link, tema do chrome e diagnóstico.
  *
- * Nada aqui muda a UI do produto além da largura da janela que ela enxerga.
+ * Nada aqui muda a UI do produto além da largura da janela que ela enxerga. O
+ * destaque de componentes desenha por cima dela, sem tocar nos elementos.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -38,6 +40,7 @@ export type TopbarProps = {
   viewport: ViewportSetting;
   zoom: number;
   rotated: boolean;
+  highlight: boolean;
   theme: ChromeTheme;
   issues: ValidationIssue[];
   /** URL absoluta do estado atual. */
@@ -45,6 +48,7 @@ export type TopbarProps = {
   onViewport: (id: string) => void;
   onRotate: () => void;
   onZoom: (zoom: number) => void;
+  onHighlight: () => void;
   onCleanReview: () => void;
   onToggleTheme: () => void;
 };
@@ -55,12 +59,14 @@ export function Topbar({
   viewport,
   zoom,
   rotated,
+  highlight,
   theme,
   issues,
   linkUrl,
   onViewport,
   onRotate,
   onZoom,
+  onHighlight,
   onCleanReview,
   onToggleTheme,
 }: TopbarProps) {
@@ -158,6 +164,17 @@ export function Topbar({
             <Icon name="plus" />
           </button>
         </div>
+
+        <button
+          type="button"
+          className="ds-btn ds-btn--icon"
+          aria-pressed={highlight}
+          aria-label={t.highlight}
+          title={t.highlight}
+          onClick={onHighlight}
+        >
+          <Icon name="components" />
+        </button>
 
         <button
           type="button"

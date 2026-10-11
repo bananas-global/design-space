@@ -28,6 +28,7 @@ export const PARAM = {
   panelTab: "tab",
   zoom: "zoom",
   rotated: "rotate",
+  highlight: "highlight",
 } as const satisfies Record<Exclude<keyof ControlsState, "handoff" | "screenControls">, string>;
 
 /**

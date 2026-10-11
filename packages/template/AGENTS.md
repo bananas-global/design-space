@@ -70,6 +70,12 @@ um Design Space que roda só local é caso suportado, não pendência.
 6. Liste em `components` os ids do catálogo que a tela usa, e dê `source` a cada
    componente novo em `src/components/catalog.tsx`. É o que o "Copiar para o
    PR" leva para a engenharia.
+7. Marque a raiz de cada componente do catálogo com
+   `data-ds-component="<id do catálogo>"`, como `Button` e `StatusBadge` em
+   `src/components/primitives.tsx`. É o que o botão "Destacar componentes" da
+   barra contorna. O que fica sem contorno é, para a avaliação de design, o que
+   ainda não virou componente; contorno tracejado é marcação com id fora do
+   catálogo.
 
 **Por que `catalog.ts` é separado de `product.ts`:** o Playwright carrega os testes
 com esbuild puro, sem os plugins do Vite. Um `import` de SVG, de CSS ou um

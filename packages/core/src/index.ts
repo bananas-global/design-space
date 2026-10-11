@@ -60,7 +60,7 @@ export {
 } from "./controls/state.js";
 
 /* ------------------------------------- quadro */
-export { FRAME_ATTRIBUTE, FRAME_PARAM } from "./frame/index.js";
+export { COMPONENT_ATTRIBUTE, FRAME_ATTRIBUTE, FRAME_PARAM } from "./frame/index.js";
 export { CONTROL_PARAM_PREFIX, PARAM, applyOverrides, serializeValue } from "./controls/params.js";
 
 /* ----------------------------------- handoff */

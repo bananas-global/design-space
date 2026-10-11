@@ -6,6 +6,38 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.11.0 (2026-10-09)
+
+**Minor.** Funcionalidade compatível: um parâmetro de URL, um campo opcional em
+`ControlsState`, um export e um grupo de rótulos. Nenhum produto precisa mudar
+para atualizar. Ver
+[0016](../../docs/decisions/0016-destaque-de-componentes.md).
+
+### Adicionado
+
+- **Destacar componentes.** Botão no centro da barra, ao lado da revisão limpa,
+  que contorna na UI do produto cada elemento marcado com
+  `data-ds-component="<id do catálogo>"`, com o nome do componente no catálogo.
+  Serve à avaliação de design: o que fica sem contorno ainda não é componente.
+  Id que o catálogo não conhece aparece tracejado, com o rótulo
+  `highlight.notInCatalog`. Os contornos são uma camada por cima da UI, no
+  `body` do quadro, sem receber ponteiro e sem tocar nos elementos do produto.
+- **`?highlight=1`.** O destaque vai para a URL, então um link pode abrir com
+  ele ligado. Ligar e desligar chega ao quadro por mensagem, sem recarregar.
+- **`COMPONENT_ATTRIBUTE`** (`"data-ds-component"`), exportado ao lado de
+  `FRAME_ATTRIBUTE`, para marcar componente e para seletor de teste.
+- **Rótulos.** `topbar.highlight` e `highlight.notInCatalog`, sobrescrevíveis por
+  `theme.labels`.
+
+### Para aproveitar
+
+Sem marcação, o destaque não contorna nada. Para usar, marque a raiz de cada
+componente do catálogo:
+
+```tsx
+<span data-ds-component="actions.buttons" className="…">…</span>
+```
+
 ## 0.10.0 (2026-10-04)
 
 **Minor.** Nenhum tipo, export ou parâmetro novo, mas muda um comportamento

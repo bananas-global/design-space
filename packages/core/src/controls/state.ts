@@ -151,6 +151,7 @@ export function parseControls(search: string, registry: Registry, path?: string)
       : "variations",
     zoom: clampZoom(params.get(PARAM.zoom)),
     rotated: params.get(PARAM.rotated) === "1",
+    highlight: params.get(PARAM.highlight) === "1",
     screenControls,
   };
 }
@@ -229,6 +230,7 @@ export function serializeControls(
   const zoom = clampZoom(state.zoom === undefined ? null : String(state.zoom));
   if (zoom !== ZOOM_DEFAULT) params.set(PARAM.zoom, String(zoom));
   if (state.rotated) params.set(PARAM.rotated, "1");
+  if (state.highlight) params.set(PARAM.highlight, "1");
   applyHandoffScope(params, state.handoff);
 
   const query = params.toString();

@@ -19,6 +19,12 @@ describe("endereço do quadro", () => {
     expect(url).toBe(`/requests/REQ-1?scenario=requests.review&viewport=mobile&${FRAME_PARAM}=1`);
   });
 
+  it("leva o destaque de componentes, que é desenhado dentro do quadro", () => {
+    expect(toFrameUrl("/requests", "?scenario=queue&highlight=1&zoom=50")).toBe(
+      `/requests?scenario=queue&highlight=1&${FRAME_PARAM}=1`,
+    );
+  });
+
   it("é idempotente, então pai e quadro chegam à mesma string", () => {
     const once = toFrameUrl("/a", "?scenario=x&network=error");
     const { path, search } = fromFrameUrl(once);

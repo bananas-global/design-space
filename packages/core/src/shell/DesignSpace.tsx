@@ -214,11 +214,13 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           viewport={viewport}
           zoom={effectiveZoom}
           rotated={Boolean(controls.rotated)}
+          highlight={Boolean(controls.highlight)}
           theme={theme}
           issues={issues}
           linkUrl={linkUrl}
           onViewport={(id) => change({ viewport: id })}
           onRotate={() => change({ rotated: !controls.rotated })}
+          onHighlight={() => change({ highlight: !controls.highlight })}
           onZoom={(next) => change({ zoom: next })}
           onCleanReview={toggleChrome}
           onToggleTheme={toggleTheme}

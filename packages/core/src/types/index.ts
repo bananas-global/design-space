@@ -552,6 +552,11 @@ export type ControlsState = {
   /** Viewport girado: largura e altura trocadas quando o preset tem altura. */
   rotated?: boolean;
   /**
+   * Destaque de componentes: o quadro contorna cada elemento marcado com
+   * `data-ds-component`, para avaliar o que na tela é componente e o que não é.
+   */
+  highlight?: boolean;
+  /**
    * Valores dos controles da tela aberta (id → value), já com os padrões e o
    * cenário aplicados. Na URL, só o que difere vai como `c.<id>=<value>`.
    */

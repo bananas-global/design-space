@@ -332,6 +332,29 @@ describe("chrome", () => {
     expect(version?.href).toContain("npmjs.com/package/@brucesantos/design-space");
   });
 
+  it("o destaque de componentes fica no centro da barra e vai para a URL e para o quadro", async () => {
+    const container = await mount("/requests?scenario=queue");
+    const toggle = button(container, DEFAULT_LABELS.topbar.highlight);
+    expect(toggle.closest(".ds-topbar__view")).not.toBeNull();
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    const frame = container.querySelector<HTMLIFrameElement>("iframe[data-ds-frame]")!;
+    const src = frame.getAttribute("src");
+    const post = vi.spyOn(frame.contentWindow!, "postMessage");
+
+    await click(toggle);
+    expect(new URLSearchParams(window.location.search).get("highlight")).toBe("1");
+    expect(button(container, DEFAULT_LABELS.topbar.highlight).getAttribute("aria-pressed")).toBe("true");
+    // Ligar e desligar não recarrega a UI do produto: vai por mensagem.
+    expect(frame.getAttribute("src")).toBe(src);
+    expect(post).toHaveBeenCalledWith(
+      { ds: 1, type: "location", url: `/requests?scenario=queue&highlight=1&${FRAME_PARAM}=1` },
+      window.location.origin,
+    );
+
+    await click(button(container, DEFAULT_LABELS.topbar.highlight));
+    expect(new URLSearchParams(window.location.search).has("highlight")).toBe(false);
+  });
+
   it("girar só vale para celular e tablet", async () => {
     const desktop = await mount("/requests?scenario=queue&viewport=desktop");
     expect(button(desktop, DEFAULT_LABELS.topbar.rotate).disabled).toBe(true);
@@ -466,6 +489,50 @@ describe("modo quadro", () => {
     expect(container.querySelector("[data-testid='persona']")?.textContent).toBe("reviewer");
     expect(container.querySelector("[class^='ds-'], [class*=' ds-']")).toBeNull();
     expect(container.querySelector("iframe")).toBeNull();
+  });
+
+  it("com o destaque ligado, contorna os elementos marcados, pelo nome do catálogo", async () => {
+    function MarkedScreen() {
+      return (
+        <main>
+          <button type="button" data-ds-component="actions.button">Continue</button>
+          <span data-ds-component="legacy.badge">Draft</span>
+          <p>Loose markup</p>
+        </main>
+      );
+    }
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const marked = this.hasAttribute("data-ds-component");
+        return DOMRect.fromRect(marked ? { x: 10, y: 20, width: 120, height: 32 } : { width: 0, height: 0 });
+      });
+    try {
+      const definition = product({ routes: [{ path: "/requests", screen: MarkedScreen }] });
+      const off = await mount(`/requests?scenario=queue&${FRAME_PARAM}=1`, definition);
+      expect(document.querySelector(".ds-highlight")).toBeNull();
+      expect(off.querySelector("[class^='ds-'], [class*=' ds-']")).toBeNull();
+      act(() => root?.unmount());
+      document.body.innerHTML = "";
+
+      const container = await mount(`/requests?scenario=queue&highlight=1&${FRAME_PARAM}=1`, definition);
+      await act(async () => {
+        await new Promise((resolve) => window.requestAnimationFrame(() => resolve(null)));
+      });
+      // A camada fica fora da árvore do produto.
+      expect(container.querySelector(".ds-highlight")).toBeNull();
+      const boxes = [...document.querySelectorAll<HTMLElement>(".ds-highlight__box")];
+      expect(boxes.map((box) => box.textContent)).toEqual([
+        "Button",
+        DEFAULT_LABELS.highlight.notInCatalog("legacy.badge"),
+      ]);
+      expect(boxes.map((box) => box.dataset.known)).toEqual(["true", "false"]);
+      expect(boxes[0]!.style.top).toBe("20px");
+      expect(boxes[0]!.style.width).toBe("120px");
+      expect(document.querySelector(".ds-highlight")?.getAttribute("aria-hidden")).toBe("true");
+    } finally {
+      rect.mockRestore();
+    }
   });
 
   it("renderiza o preview do componente com a fixture pedida", async () => {

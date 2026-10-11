@@ -23,6 +23,13 @@ export const FRAME_PARAM = "ds-frame";
 export const FRAME_ATTRIBUTE = "data-ds-frame";
 
 /**
+ * Atributo com que o produto marca a raiz de um componente na UI:
+ * `data-ds-component="<id do catálogo>"`. É o que o destaque de componentes
+ * contorna; o motor não adivinha o que é componente.
+ */
+export const COMPONENT_ATTRIBUTE = "data-ds-component";
+
+/**
  * Parâmetros que só o chrome lê. Ficam fora do endereço do quadro: trocar zoom
  * ou tema do chrome não é assunto da UI do produto.
  */

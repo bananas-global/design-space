@@ -17,6 +17,7 @@ export type IconName =
   | "arrow-up-right"
   | "check"
   | "fullscreen"
+  | "components"
   | "sun"
   | "moon"
   | "panel"
@@ -62,6 +63,13 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   fullscreen: <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />,
+  components: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1" />
+      <rect x="13" y="13" width="7" height="7" rx="1" />
+      <path d="M13 4h7v7M4 13v7h7" strokeDasharray="2 2" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />

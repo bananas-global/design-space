@@ -1,3 +1,6 @@
+// Primeiro import, antes de qualquer React: instala o gancho do DevTools que o
+// "Destacar componentes" usa para achar os componentes do catálogo na tela.
+import "@brucesantos/design-space/devtools-hook";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { DesignSpace } from "@brucesantos/design-space";

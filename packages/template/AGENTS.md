@@ -70,12 +70,15 @@ um Design Space que roda só local é caso suportado, não pendência.
 6. Liste em `components` os ids do catálogo que a tela usa, e dê `source` a cada
    componente novo em `src/components/catalog.tsx`. É o que o "Copiar para o
    PR" leva para a engenharia.
-7. Marque a raiz de cada componente do catálogo com
-   `data-ds-component="<id do catálogo>"`, como `Button` e `StatusBadge` em
-   `src/components/primitives.tsx`. É o que o botão "Destacar componentes" da
-   barra contorna. O que fica sem contorno é, para a avaliação de design, o que
-   ainda não virou componente; contorno tracejado é marcação com id fora do
-   catálogo.
+7. Preencha `implementation` em cada entrada do catálogo com o componente real
+   — a mesma função que as telas importam —, como `Button` e `StatusBadge` em
+   `src/components/catalog.tsx`. É por ela que o botão "Destacar componentes"
+   da barra acha cada instância na tela, sem marcação no JSX. O que fica sem
+   contorno é, para a avaliação de design, o que ainda não virou componente.
+   Para isso funcionar, `import "@brucesantos/design-space/devtools-hook"` tem
+   de continuar sendo a primeira linha de `src/main.tsx`, antes do React. O
+   atributo `data-ds-component="<id do catálogo>"` continua valendo para o que
+   a árvore não resolve; contorno tracejado é id fora do catálogo.
 
 **Por que `catalog.ts` é separado de `product.ts`:** o Playwright carrega os testes
 com esbuild puro, sem os plugins do Vite. Um `import` de SVG, de CSS ou um

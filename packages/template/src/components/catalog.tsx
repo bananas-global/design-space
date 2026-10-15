@@ -74,6 +74,9 @@ const buttons: ComponentPreview<ButtonPreviewData> = {
     // Origem no sistema real, em texto livre. Aqui o "sistema real" é o próprio
     // template; num produto, aponte para o componente do repositório de produção.
     source: "src/components/primitives.tsx → Button",
+    // A função real, a mesma que as telas importam. É por ela que o "Destacar
+    // componentes" acha cada botão na tela, sem marcação no JSX.
+    implementation: Button,
     preview: ButtonPreview,
     defaultFixture: "default",
     fixtures: [
@@ -160,6 +163,7 @@ export const components: ComponentPreview<any>[] = [
     group: "Feedback",
     description: "Estados comunicados por texto e cor",
     source: "src/components/primitives.tsx → StatusBadge",
+    implementation: StatusBadge,
     preview: StatusPreview,
   },
 ];

@@ -39,7 +39,7 @@ export function Button({
   } as const;
 
   return (
-    <span data-ds-component="actions.buttons" className="inline-flex flex-col items-start gap-1">
+    <span className="inline-flex flex-col items-start gap-1">
       <button
         type="button"
         className={`${base} ${styles[variant]}`}
@@ -73,10 +73,7 @@ export function StatusBadge({ status }: { status: RequestStatus }) {
   // presente. Status comunicado só por cor falha 1.4.1 e falha qualquer pessoa
   // olhando uma captura de tela em preto e branco.
   return (
-    <span
-      data-ds-component="feedback.status"
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}
-    >
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>
       {label}
     </span>
   );

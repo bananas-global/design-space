@@ -1,7 +1,7 @@
 # 0016 — Destaque de componentes marcado pelo produto
 
 **Data:** 2026-10-09
-**Status:** aceita
+**Status:** aceita, emendada pela [0017](0017-destaque-automatico-pela-arvore-do-react.md) — a marcação manual virou complemento do destaque automático pela árvore do React
 **Decidido por:** Bruno Santos
 
 ## Contexto

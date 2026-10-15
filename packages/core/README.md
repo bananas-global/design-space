@@ -19,6 +19,12 @@ pnpm add @brucesantos/design-space
 O produto entrega uma `ProductDefinition` e monta um único componente.
 
 ```tsx
+// main.tsx — primeira linha, antes de qualquer import de React (ver
+// "Destacar componentes").
+import "@brucesantos/design-space/devtools-hook";
+```
+
+```tsx
 import { DesignSpace } from "@brucesantos/design-space";
 import "@brucesantos/design-space/styles.css";
 import { productDefinition } from "./product";
@@ -272,6 +278,32 @@ então `context.viewport` e `@media` concordam. Para capturar a tela de celular,
 estreite a janela. Sem janela pai, o quadro funciona sozinho; só os atalhos do
 chrome deixam de existir.
 
+### Destacar componentes
+
+O botão no centro da barra (`?highlight=1`) contorna, dentro do quadro, cada
+componente do catálogo que aparece na tela, com o nome dele. Serve à avaliação
+de design: o que fica sem contorno ainda não é componente.
+
+O motor acha os componentes sozinho, pela árvore do React, casando cada
+instância com o `implementation` das entradas do catálogo — pela referência da
+função, não pelo nome, então vale no build minificado. Para isso, o ponto de
+entrada importa `@brucesantos/design-space/devtools-hook` **antes** de qualquer
+import de React: o React só procura o gancho do DevTools quando o `react-dom`
+carrega. Com o React DevTools aberto, o gancho dele é respeitado.
+
+- Contorna o primeiro nó de DOM que o componente renderiza, ou a união dos nós
+  de topo quando ele devolve fragment. Aninhados aparecem os dois.
+- Componentes que caem nos mesmos nós — um wrapper que só repassa — viram um
+  contorno só, com os nomes juntos.
+- `data-ds-component="<id do catálogo>"` (`COMPONENT_ATTRIBUTE`) continua
+  valendo como marcação manual, para o que a árvore não resolve. No mesmo nó
+  que a árvore já achou, não duplica: o id se junta ao contorno existente. Id
+  fora do catálogo aparece tracejado.
+- Sem o import, ou se uma versão do React mudar a forma da árvore, o destaque
+  fica só com a marcação manual e avisa uma vez no console.
+
+Ver [0017](../../docs/decisions/0017-destaque-automatico-pela-arvore-do-react.md).
+
 ### Navegação
 
 `context.navigate(to, options?)` — e um link comum dentro do quadro — segue duas
@@ -321,6 +353,7 @@ rede declarados no cenário.
 | `theme`, `locale`, `source` | Variações declaradas pelo produto. |
 | `appearance` | Tema do chrome, `light` ou `dark`. Omitido: última escolha ou o sistema. |
 | `chrome=0` | Revisão limpa: oculta o chrome do ambiente. |
+| `highlight=1` | Destaca os componentes do catálogo na tela. |
 | `panel=0` | Oculta o painel direito. |
 | `tab=info` | Abre o painel direito em Informações. |
 | `handoff=1` | Ativa um recorte explícito de revisão/handoff. |
@@ -491,6 +524,9 @@ um componente são as `fixtures` dele; `source` diz de onde ele vem no sistema
 real.
 
 ```tsx
+// O mesmo componente que as telas importam.
+import { PrimaryButton } from "./components/PrimaryButton";
+
 type ButtonData = {
   label: string;
   disabled?: boolean;
@@ -519,6 +555,9 @@ const product: ProductDefinition = {
       group: "Ações",
       description: "Ação principal da página",
       source: "components/button.ex → button/1",
+      // O componente real que as telas usam; é por ele que o destaque acha
+      // cada instância na tela. Aceita memo, forwardRef, lazy ou uma lista.
+      implementation: PrimaryButton,
       preview: PrimaryButtonPreview,
       defaultFixture: "default",
       fixtures: [

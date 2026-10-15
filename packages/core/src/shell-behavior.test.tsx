@@ -586,6 +586,42 @@ describe("modo quadro", () => {
     }
   });
 
+  it("sem o gancho do DevTools antes do React, o destaque fica na marcação manual e avisa uma vez", async () => {
+    function Badge() {
+      return <span>Draft</span>;
+    }
+    function MarkedScreen() {
+      return (
+        <main>
+          <button type="button" data-ds-component="actions.button">Continue</button>
+          <Badge />
+        </main>
+      );
+    }
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(() => DOMRect.fromRect({ x: 10, y: 20, width: 120, height: 32 }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const base = product();
+      const definition = product({
+        routes: [{ path: "/requests", screen: MarkedScreen }],
+        components: [...(base.components ?? []), { id: "feedback.badge", name: "Badge", preview: () => null, implementation: Badge }],
+      });
+      await mount(`/requests?scenario=queue&highlight=1&${FRAME_PARAM}=1`, definition);
+      await act(async () => {
+        await new Promise((resolve) => window.requestAnimationFrame(() => resolve(null)));
+      });
+      const boxes = [...document.querySelectorAll<HTMLElement>(".ds-highlight__box")];
+      expect(boxes.map((box) => box.textContent)).toEqual(["Button"]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]![0])).toContain("@brucesantos/design-space/devtools-hook");
+    } finally {
+      rect.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
   it("renderiza o preview do componente com a fixture pedida", async () => {
     const container = await mount(`/?component=actions.button&fixture=long&${FRAME_PARAM}=1`);
     expect(container.textContent).toBe("Continue to the next step");

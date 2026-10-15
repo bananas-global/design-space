@@ -9,7 +9,7 @@
  * daquele produto e não a este arquivo.
  */
 
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType, ExoticComponent, ReactNode } from "react";
 
 // Import de tipo, apagado no build: o dicionário de rótulos mora junto com os
 // valores padrão, em `shell/labels.ts`, e só a forma dele é contrato.
@@ -258,6 +258,9 @@ export type ComponentPreviewProps<T = unknown> = {
   locale: string;
 };
 
+/** Referência a um componente React do produto: função, classe, `memo`, `forwardRef` ou `lazy`. */
+export type ComponentReference = ComponentType<any> | ExoticComponent<any>;
+
 export type ComponentPreview<T = unknown> = {
   /** Identificador estável usado no deep link: `button.primary`. */
   id: string;
@@ -273,6 +276,14 @@ export type ComponentPreview<T = unknown> = {
   source?: string;
   /** Composição visual fornecida e mantida pelo produto. */
   preview: ComponentType<ComponentPreviewProps<T>>;
+  /**
+   * O componente React real que esta entrada cataloga — o mesmo que as telas
+   * importam —, ou a lista deles quando a entrada cobre mais de um. É o que o
+   * "Destacar componentes" procura na árvore do React: o casamento é pela
+   * referência da função, não pelo nome, então vale no build minificado. Aceita
+   * `memo`, `forwardRef` e `lazy`. Ver a decisão 0017.
+   */
+  implementation?: ComponentReference | readonly ComponentReference[];
   /** Dados sintéticos exclusivos deste componente; não usam o catálogo de cenários. */
   fixtures?: ComponentPreviewFixture<T>[];
   /** Id da fixture selecionada quando o deep link não informa outra. */

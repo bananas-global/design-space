@@ -6,6 +6,47 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.13.0 (2026-10-15)
+
+**Minor.** Um campo opcional em `ComponentPreview` e um entrypoint novo; nenhum
+export, parâmetro ou comportamento existente muda. Ver
+[0017](../../docs/decisions/0017-destaque-automatico-pela-arvore-do-react.md),
+que emenda a [0016](../../docs/decisions/0016-destaque-de-componentes.md).
+
+### Adicionado
+
+- **Destaque automático.** "Destacar componentes" acha sozinho, pela árvore do
+  React, as instâncias dos componentes do catálogo, sem marcação no JSX. O
+  casamento é pela referência da função (desembrulhando `memo` e `forwardRef`;
+  `lazy` casa pelo original), então vale no build minificado. Contorna o
+  primeiro nó de DOM do componente, ou a união dos nós de topo num fragment;
+  aninhados aparecem os dois; componentes que caem nos mesmos nós viram um
+  contorno com os nomes juntos (`Primário · Botão`).
+- **`ComponentPreview.implementation`**: o componente React real que a entrada
+  cataloga, ou uma lista deles. A validação acusa erro quando o valor não é
+  componente (um nome em texto, por exemplo).
+- **`@brucesantos/design-space/devtools-hook`**: entrypoint sem React que
+  instala o gancho do React DevTools, ou encadeia no da extensão quando ela está
+  aberta. Precisa ser o primeiro import do ponto de entrada.
+
+### Sem mudança
+
+- `data-ds-component` continua valendo, como marcação manual para o que a
+  árvore não resolve. No mesmo nó que a árvore achou, junta-se ao contorno
+  existente em vez de duplicá-lo.
+- Sem o import do gancho, ou com uma árvore que o motor não reconhece, o
+  destaque se comporta como na 0.11 — só a marcação manual — e avisa uma vez no
+  console.
+
+### Migração
+
+Nenhuma obrigatória. Para o destaque automático:
+
+1. Na primeira linha do ponto de entrada (`src/main.tsx`), antes de qualquer
+   import de React: `import "@brucesantos/design-space/devtools-hook";`.
+2. Em cada entrada do catálogo, `implementation: <componente real>`.
+3. Opcional: remover os `data-ds-component` que o catálogo agora cobre.
+
 ## 0.12.0 (2026-10-11)
 
 **Minor.** Botão novo no chrome e um rótulo novo em `Labels`; nenhum export,

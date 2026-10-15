@@ -183,6 +183,18 @@ export function validateProduct(product: ProductDefinition): ValidationIssue[] {
     if (component?.source !== undefined && typeof component.source !== "string") {
       push("error", where, "`source`, quando informado, é texto livre.");
     }
+    if (component?.implementation !== undefined) {
+      const references = Array.isArray(component.implementation)
+        ? component.implementation
+        : [component.implementation];
+      if (references.some((reference) => typeof reference !== "function" && (typeof reference !== "object" || reference === null))) {
+        push(
+          "error",
+          where,
+          "`implementation`, quando informado, é o componente React real (ou uma lista deles), não o nome.",
+        );
+      }
+    }
 
     const componentFixtureIds = new Set<string>();
     for (const [fixtureIndex, fixture] of (component?.fixtures ?? []).entries()) {

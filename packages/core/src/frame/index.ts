@@ -23,9 +23,10 @@ export const FRAME_PARAM = "ds-frame";
 export const FRAME_ATTRIBUTE = "data-ds-frame";
 
 /**
- * Atributo com que o produto marca a raiz de um componente na UI:
- * `data-ds-component="<id do catálogo>"`. É o que o destaque de componentes
- * contorna; o motor não adivinha o que é componente.
+ * Marcação manual da raiz de um componente na UI:
+ * `data-ds-component="<id do catálogo>"`. O destaque de componentes acha
+ * sozinho o que o catálogo declara em `implementation`; este atributo fica para
+ * o que a árvore do React não resolve (decisão 0017).
  */
 export const COMPONENT_ATTRIBUTE = "data-ds-component";
 

@@ -15,6 +15,7 @@ export default defineConfig({
         index: resolve(import.meta.dirname, "src/index.ts"),
         testing: resolve(import.meta.dirname, "src/testing/index.ts"),
         "devtools-hook": resolve(import.meta.dirname, "src/devtools-hook.ts"),
+        pr: resolve(import.meta.dirname, "src/pr/index.ts"),
       },
       formats: ["es"],
     },

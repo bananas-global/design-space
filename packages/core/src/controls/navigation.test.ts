@@ -3,9 +3,6 @@ import { describe, expect, it } from "vitest";
 import { createRegistry } from "../registry/index.js";
 import { validateProduct } from "../registry/validate.js";
 import { screenHref } from "../router/index.js";
-import { buildPrMarkdown } from "../shell/prMarkdown.js";
-import { DEFAULT_LABELS } from "../shell/labels.js";
-import { getDeployContext } from "../deploy/index.js";
 import type { ProductDefinition, RouteDefinition } from "../types/index.js";
 import { keepScreenQuery, navigationTarget, parseControls, serializeControls } from "./state.js";
 
@@ -215,19 +212,6 @@ describe("`route.params`: a tela sem cenário abre num caminho concreto", () => 
     const invoice = registry.screen("/billing/:account/:invoice")!;
     expect(invoice.href).toBe("/billing/ACC-7/INV%2012");
     expect(registry.screenForPath(invoice.href)?.id).toBe(invoice.id);
-  });
-
-  it("\"Copiar para o PR\" da tela sem variação linka o caminho de exemplo", () => {
-    const invoice = registry.screen("/billing/:account/:invoice")!;
-    const markdown = buildPrMarkdown({
-      screen: invoice,
-      variations: [],
-      components: [],
-      deploy: getDeployContext({ branchUrl: "preview.example.test" }),
-      labels: DEFAULT_LABELS,
-    });
-    expect(markdown).toContain("(https://preview.example.test/billing/ACC-7/INV%2012)");
-    expect(markdown).not.toMatch(/\]\([^)]*:account/);
   });
 });
 

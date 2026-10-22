@@ -6,6 +6,51 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.14.0 (2026-10-22)
+
+**Minor.** Um entrypoint e um comando novos; sai o botão "Copiar para o PR".
+Nenhum export, campo de cenário ou parâmetro de URL muda. Ver
+[0018](../../docs/decisions/0018-descricao-do-pr-gerada-do-registro.md).
+
+### Adicionado
+
+- **`design-space-pr`**: comando do pacote que escreve na descrição do PR os
+  critérios de aceite gerados do registro. No CI, num `pull_request`, compara o
+  produto do PR com o da base e reescreve só o bloco entre
+  `<!-- design-space:pr:start -->` e `<!-- design-space:pr:end -->`: as telas
+  que o PR cria ou altera, com link de cada cenário (`--origin`), `intent`,
+  pré-condições, ações, comportamento esperado numerado, regras com o enunciado
+  e a tabela componente → origem; os cenários que mudaram vêm marcados, e o
+  `ticket` do cenário entra como link. Nada no PR se preenche à mão: numa
+  descrição em branco, ela é só o bloco. Precisa de `GH_TOKEN` com
+  `pull-requests: write`. `--body <arquivo>` confere o resultado sem falar com o
+  GitHub.
+- **`@brucesantos/design-space/pr`**: as funções puras por trás do comando —
+  `buildPrSection`, `mergePrBody`, `diffProducts` e `PR_MARKERS`.
+- **`theme.labels.pr`** ganhou os textos do bloco.
+
+### Removido
+
+- O botão **Copiar para o PR** do painel Informações. A descrição gerada
+  substitui o caminho manual.
+
+### Obsoleto
+
+- `labels.info.copyForPr`, `copiedForPr` e `copyPrompt`, e `labels.pr.variations`,
+  `commit`, `immutableLink`, `controls`, `shortcuts` e `defaultOption` continuam
+  aceitos em `theme.labels` e não têm mais efeito. Saem na próxima major.
+
+### Para migrar
+
+1. Acrescente ao workflow do PR, depois de instalar as dependências, o passo
+   `pnpm exec design-space-pr --origin "<origem do preview>"` com
+   `GH_TOKEN: ${{ github.token }}` e `permissions: pull-requests: write`. Ver
+   `packages/template/docs/handoff.md`.
+2. Apague o modelo de PR do produto, ou ao menos a seção de comportamento
+   esperado, e qualquer script que comente links de cenário no PR.
+3. Revise os `expected` escritos com dado da fixture ("Unimed, ANS 999901"):
+   quem valida confere o sistema real.
+
 ## 0.13.0 (2026-10-15)
 
 **Minor.** Um campo opcional em `ComponentPreview` e um entrypoint novo; nenhum

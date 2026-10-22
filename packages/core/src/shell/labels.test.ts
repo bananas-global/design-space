@@ -63,7 +63,7 @@ describe("resolveLabels", () => {
     expect(EN_US_LABELS.topbar.lightMode).toBe("Light theme");
     expect(EN_US_LABELS.sidebar.componentsTab).toBe("Components");
     expect(EN_US_LABELS.diagnostics.noIssues).toBe("No issues found.");
-    expect(EN_US_LABELS.info.copyForPr).toBe("Copy for PR");
+    expect(EN_US_LABELS.pr.title).toBe("Acceptance criteria");
     expect(resolveLabels(EN_US_LABELS)).toEqual(EN_US_LABELS);
   });
 });

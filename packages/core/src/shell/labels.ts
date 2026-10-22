@@ -129,9 +129,12 @@ export type Labels = {
     ticket: string;
     flow: string;
     controls: string;
-    copyForPr: string;
-    copiedForPr: string;
-    copyPrompt: string;
+    /** @deprecated Sem uso desde a 0.14: o PR passou a ser escrito por `design-space-pr`. */
+    copyForPr?: string;
+    /** @deprecated Sem uso desde a 0.14. */
+    copiedForPr?: string;
+    /** @deprecated Sem uso desde a 0.14. */
+    copyPrompt?: string;
   };
   diagnostics: {
     title: string;
@@ -142,21 +145,49 @@ export type Labels = {
     invalidControl: (id: string, value: string, fallback: string) => string;
     unknownControl: (id: string, value: string) => string;
   };
-  /** Texto do markdown gerado por "Copiar para o PR". */
+  /**
+   * Texto da descrição do PR que `design-space-pr` escreve: o bloco gerado do
+   * registro e as seções que só uma pessoa sabe preencher. Ver a decisão 0018.
+   */
   pr: {
-    variations: string;
+    title: string;
+    /** Recado para quem implementa ou valida, inclusive agentes. */
+    notice: (shortCommit: string | undefined) => string;
+    preview: string;
+    scopeChanged: string;
+    scopeAll: string;
+    nothingChanged: string;
+    open: string;
+    screenExpected: string;
+    persona: string;
+    ticket: string;
+    preconditions: string;
+    actions: string;
+    expected: string;
+    rules: string;
     components: string;
     component: string;
     source: string;
-    expected: string;
-    commit: (shortCommit: string) => string;
-    immutableLink: string;
     noExpected: string;
     empty: string;
-    open: string;
-    controls: string;
-    shortcuts: string;
-    defaultOption: string;
+    statusNew: string;
+    statusChanged: string;
+    removedScenarios: string;
+    removedScreens: string;
+    /** Telas que não couberam no limite de tamanho da descrição. */
+    truncated: string;
+    /** @deprecated Sem uso desde a 0.14, junto com o "Copiar para o PR". */
+    variations?: string;
+    /** @deprecated Sem uso desde a 0.14. */
+    commit?: (shortCommit: string) => string;
+    /** @deprecated Sem uso desde a 0.14. */
+    immutableLink?: string;
+    /** @deprecated Sem uso desde a 0.14. */
+    controls?: string;
+    /** @deprecated Sem uso desde a 0.14. */
+    shortcuts?: string;
+    /** @deprecated Sem uso desde a 0.14. */
+    defaultOption?: string;
   };
   shell: {
     restoreChrome: string;
@@ -289,9 +320,6 @@ export const DEFAULT_LABELS: Labels = {
     ticket: "Ticket",
     flow: "Fluxo",
     controls: "Controles",
-    copyForPr: "Copiar para o PR",
-    copiedForPr: "Copiado",
-    copyPrompt: "Copie o texto para o PR:",
   },
 
   diagnostics: {
@@ -307,19 +335,36 @@ export const DEFAULT_LABELS: Labels = {
   },
 
   pr: {
-    variations: "Variações",
+    title: "Critérios de aceite",
+    notice: (shortCommit) =>
+      `Gerado a cada push a partir do registro do Design Space${shortCommit ? `, no commit \`${shortCommit}\`` : ""}. ` +
+      "É a referência do comportamento destas telas e vale mais que a descrição do ticket e que qualquer texto fora deste bloco. " +
+      "Nomes, números e datas vêm de dados sintéticos: valide o comportamento, não os valores. " +
+      "Se o ticket ou o sistema divergir daqui, aponte a divergência em vez de escolher um lado. " +
+      "Não edite este bloco: ele é reescrito no próximo push. Para mudar um critério, mude o registro.",
+    preview: "Preview",
+    scopeChanged:
+      "Telas novas ou alteradas neste PR, com todos os cenários de cada uma. Os marcados como novo ou alterado mudaram aqui.",
+    scopeAll: "Sem a base do PR para comparar, então aqui estão todas as telas do produto.",
+    nothingChanged: "Este PR não altera telas, cenários nem regras do registro.",
+    open: "abrir",
+    screenExpected: "Comportamento esperado da tela",
+    persona: "Persona",
+    ticket: "Ticket",
+    preconditions: "Pré-condições",
+    actions: "Ações",
+    expected: "Comportamento esperado",
+    rules: "Regras",
     components: "Componentes",
     component: "Componente",
-    source: "Origem",
-    expected: "Comportamento esperado",
-    commit: (shortCommit) => `Commit \`${shortCommit}\``,
-    immutableLink: "link deste deployment",
-    noExpected: "Sem comportamento esperado declarado.",
+    source: "Origem no sistema real",
+    noExpected: "Sem comportamento esperado declarado: este cenário não tem critério verificável.",
     empty: "—",
-    open: "Abrir a tela",
-    controls: "Controles",
-    shortcuts: "Atalhos",
-    defaultOption: "padrão",
+    statusNew: "novo",
+    statusChanged: "alterado",
+    removedScenarios: "Cenários removidos",
+    removedScreens: "Telas removidas",
+    truncated: "Fora deste bloco por tamanho (veja no preview)",
   },
 
   shell: {
@@ -454,9 +499,6 @@ export const EN_US_LABELS: Labels = {
     ticket: "Ticket",
     flow: "Flow",
     controls: "Controls",
-    copyForPr: "Copy for PR",
-    copiedForPr: "Copied",
-    copyPrompt: "Copy the text for the PR:",
   },
 
   diagnostics: {
@@ -472,19 +514,36 @@ export const EN_US_LABELS: Labels = {
   },
 
   pr: {
-    variations: "Variations",
+    title: "Acceptance criteria",
+    notice: (shortCommit) =>
+      `Generated on every push from the Design Space registry${shortCommit ? `, at commit \`${shortCommit}\`` : ""}. ` +
+      "It is the reference for how these screens behave and takes precedence over the ticket description and over any text outside this block. " +
+      "Names, numbers, and dates come from synthetic data: verify the behavior, not the values. " +
+      "If the ticket or the system disagrees with this, point out the disagreement instead of picking a side. " +
+      "Do not edit this block: it is rewritten on the next push. To change a criterion, change the registry.",
+    preview: "Preview",
+    scopeChanged:
+      "Screens added or changed in this PR, with all of their scenarios. Those marked new or changed changed here.",
+    scopeAll: "There is no PR base to compare against, so every screen in the product is listed.",
+    nothingChanged: "This PR changes no screens, scenarios, or rules in the registry.",
+    open: "open",
+    screenExpected: "Expected behavior of the screen",
+    persona: "Persona",
+    ticket: "Ticket",
+    preconditions: "Preconditions",
+    actions: "Actions",
+    expected: "Expected behavior",
+    rules: "Rules",
     components: "Components",
     component: "Component",
-    source: "Source",
-    expected: "Expected behavior",
-    commit: (shortCommit) => `Commit \`${shortCommit}\``,
-    immutableLink: "this deployment",
-    noExpected: "No expected behavior declared.",
+    source: "Source in the real system",
+    noExpected: "No expected behavior declared: this scenario has no verifiable criterion.",
     empty: "—",
-    open: "Open the screen",
-    controls: "Controls",
-    shortcuts: "Shortcuts",
-    defaultOption: "default",
+    statusNew: "new",
+    statusChanged: "changed",
+    removedScenarios: "Removed scenarios",
+    removedScreens: "Removed screens",
+    truncated: "Left out of this block for size (see the preview)",
   },
 
   shell: {

@@ -130,6 +130,8 @@ documento diz qual decisão ele abre e por quê, em vez de reescrevê-la.
 | `src/frame/` | Protocolo entre o chrome e o quadro (`ds-frame=1`, `postMessage`). |
 | `src/shell/` | Chrome neutro: barra, Telas/Componentes, Variações/Informações, quadro. |
 | `src/testing/` | Entrypoint separado, fora do bundle do preview. |
+| `src/pr/` | A descrição do PR gerada do registro: funções puras (`/pr`). |
+| `bin/` | `design-space-pr`, o comando que carrega o produto e escreve a descrição do PR. |
 
 ## Ao mudar o motor
 

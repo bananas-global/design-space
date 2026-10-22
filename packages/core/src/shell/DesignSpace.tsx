@@ -291,8 +291,6 @@ function Chrome({ product, registry }: { product: ProductDefinition; registry: R
           <Panel
             registry={registry}
             controls={controls}
-            deploy={deploy}
-            location={location}
             screen={screen}
             variation={variation}
             component={component}

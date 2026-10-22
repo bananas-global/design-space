@@ -60,7 +60,7 @@ Sem `name`, a tela usa o título do primeiro cenário da rota e, na falta dele, 
 **Rota com parâmetro** (desde a 0.9.1): `params` dá um valor de exemplo para cada
 `:param` (e para `*`, se houver). O motor usa o exemplo sempre que abre a tela
 sem cenário — na lateral, na variação padrão, no "Usado em" de Informações e
-no "Copiar para o PR":
+no link da descrição do PR:
 
 ```ts
 { path: "/orders/:id", screen: OrderDetail, name: "Detalhe do pedido", params: { id: "1042" } }
@@ -180,10 +180,7 @@ function OrderList({ context }: ScreenProps) {
 
 Informações mostra rota, fluxo, descrição, os controles com o valor atual, o
 comportamento esperado (o do cenário ativo, senão `route.expected`) e os
-componentes (`route.components` mais os do cenário). **Copiar para o PR**, numa
-tela com fluxo, gera o markdown do fluxo inteiro: para cada tela, nome, rota,
-link absoluto (com os controles atuais na tela aberta), controles disponíveis,
-atalhos, comportamento esperado e a tabela componente → origem.
+componentes (`route.components` mais os do cenário).
 
 A validação checa ids de grupo e de controle únicos por tela, `default` entre as
 opções e `Scenario.controls` usando controles e valores da tela do cenário; id de
@@ -230,7 +227,8 @@ para a URL quando difere do padrão efetivo. Persona do cenário e a escolhida n
 painel continuam vencendo. Id inexistente é erro de validação. Sem
 `defaultPersona`, nada muda.
 - `components` lista os ids de `ComponentPreview` usados na tela. Alimenta
-  "Componentes usados", o "Usado em" de cada componente e o "Copiar para o PR".
+  "Componentes usados", o "Usado em" de cada componente e a tabela de
+  componentes da descrição do PR.
 
 ## O chrome
 
@@ -239,17 +237,45 @@ painel continuam vencendo. Id inexistente é erro de validação. Sem
 | Barra superior | Nome do produto; viewport (Celular 375, Tablet 768, Desktop 1280, Ajustar), girar, zoom 25–150%, revisão limpa, abrir em nova janela, copiar link, tema, painel e — quando a validação tem algo a dizer — o indicador de diagnóstico. |
 | Esquerda | **Telas** e **Componentes**, com contagem e busca sem acento nem caixa (nome, descrição, fluxo ou grupo, id e `source`). Telas agrupadas por fluxo (`route.group`), componentes por `group`. Redimensionável. |
 | Centro | O quadro do produto no tamanho do viewport, com zoom só de visualização. |
-| Direita | **Variações** (contexto no topo, controles da tela por componente e os cenários como atalhos; ou as fixtures do componente) e **Informações** (rota, fluxo, controles, intenção, pré-condições, ações, comportamento esperado, regras, componentes usados e **Copiar para o PR**). Redimensionável. |
+| Direita | **Variações** (contexto no topo, controles da tela por componente e os cenários como atalhos; ou as fixtures do componente) e **Informações** (rota, fluxo, controles, intenção, pré-condições, ações, comportamento esperado, regras e componentes usados). Redimensionável. |
 
 Sem Home: a raiz abre a primeira tela na primeira variação ou, sem telas, o
 primeiro componente. O tema segue o sistema, e a troca é lembrada.
 
-### Copiar para o PR
+### A descrição do PR (desde a 0.14)
 
-Gera markdown com o nome da tela, um link absoluto por variação (com o link do
-deployment e o commit quando o produto informa), a tabela componente → origem e
-o comportamento esperado de cada variação. Tela com fluxo gera o fluxo inteiro
-(ver [Fluxos e controles](#fluxos-e-controles-09)).
+O critério de aceite é escrito uma vez, no cenário, e chega ao PR sem cópia: o
+comando `design-space-pr`, que vem no pacote, roda no CI a cada push, compara o
+registro do PR com o da base e reescreve a descrição (decisão 0018). O botão
+"Copiar para o PR" saiu.
+
+```yaml
+# no workflow do PR, com `permissions: pull-requests: write`
+- name: Critérios de aceite na descrição do PR
+  if: github.event_name == 'pull_request'
+  run: pnpm exec design-space-pr --origin "<origem do preview deste PR>"
+  env:
+    GH_TOKEN: ${{ github.token }}
+```
+
+- **Dentro do bloco** entre `<!-- design-space:pr:start -->` e
+  `<!-- design-space:pr:end -->`: as telas que o PR cria ou altera, com todos os
+  cenários de cada uma — link (com `--origin`), `intent`, pré-condições, ações,
+  comportamento esperado numerado, regras com o enunciado e a tabela componente
+  → origem. Os que mudaram vêm marcados como novo ou alterado; removidos
+  aparecem pelo nome. Abre com o recado para quem valida, inclusive agentes: o
+  bloco é a referência e vale mais que o ticket, os dados são sintéticos,
+  divergência se aponta.
+- **Fora do bloco**, nada é tocado, e nada se preenche à mão: numa descrição em
+  branco, ela é só o bloco. O ticket, quando houver, vem do `ticket` do cenário.
+- O produto é carregado pelo Vite do próprio produto, com a configuração dele; o
+  comando procura `src/app/product.ts` ou `.tsx` (ou `--entry`) e o export
+  `productDefinition`, `product` ou `default`.
+- Para conferir sem abrir PR: `design-space-pr --body <arquivo> --base <dir>`
+  imprime a descrição nova.
+
+As funções puras estão em `@brucesantos/design-space/pr`: `buildPrSection`,
+`mergePrBody`, `diffProducts` e `PR_MARKERS`. O texto segue `theme.labels.pr`.
 
 ### O quadro
 
@@ -373,7 +399,7 @@ fluxo, filtro, página. O motor não o lê, só o carrega, e a regra é a mesma 
 | `context.navigate` ou link comum para a mesma tela | Fica; o que o destino traz manda na mesma chave. |
 | `context.navigate` ou link comum para outra tela | Sai; só entra a que o destino traz (desde a 0.10.0). |
 | Abrir tela, cenário ou componente pela lateral ou pelos atalhos do chrome | Sai. |
-| "Copiar link" e "Copiar para o PR" | Vai junto. |
+| "Copiar link" | Vai junto. |
 
 A tela pode escrever a própria query de duas formas: por `context.navigate`
 (`navigate("/orders?aba=historico", { replace: true })`) ou direto pela History
@@ -456,7 +482,7 @@ theme: {
   labels: {
     network: { success: "Success", error: "Error" },
     topbar: { copyLink: "Copy link" },
-    info: { copyForPr: "Copy for PR" },
+    pr: EN_US_LABELS.pr,
   },
 }
 ```

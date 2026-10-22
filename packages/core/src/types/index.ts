@@ -137,8 +137,8 @@ export type Scenario = {
   ticket?: string;
   /**
    * Ids de `ComponentPreview` usados na tela. Alimentam "Componentes usados" no
-   * painel de informações, o "Usado em" de cada componente e a tabela do
-   * "Copiar para o PR".
+   * painel de informações, o "Usado em" de cada componente e a tabela de
+   * componentes da descrição do PR.
    */
   components?: string[];
   /**
@@ -209,7 +209,7 @@ export type RouteDefinition = {
   /** Controles por componente, exibidos no painel Variações. */
   controls?: ControlGroup[];
   /**
-   * Comportamento esperado da tela, para Informações e "Copiar para o PR"
+   * Comportamento esperado da tela, para Informações e a descrição do PR
    * quando não há cenário ativo.
    */
   expected?: string[];
@@ -219,7 +219,7 @@ export type RouteDefinition = {
    * Valores de exemplo dos parâmetros do `path` (`{ id: "REQ-1" }` para
    * `/requests/:id`), e de `*` quando houver. O motor usa sempre que precisa
    * abrir a tela sem cenário — lateral, variação padrão, links de Informações e
-   * "Copiar para o PR". Sem eles, o caminho abre literal (`/requests/:id`).
+   * a descrição do PR. Sem eles, o caminho abre literal (`/requests/:id`).
    */
   params?: Record<string, string>;
 };
@@ -271,7 +271,7 @@ export type ComponentPreview<T = unknown> = {
   description?: string;
   /**
    * Origem no sistema real, em texto livre: `components/button.ex → button/1`.
-   * Aparece em Informações e na tabela do "Copiar para o PR".
+   * Aparece em Informações e na tabela de componentes da descrição do PR.
    */
   source?: string;
   /** Composição visual fornecida e mantida pelo produto. */

@@ -18,8 +18,6 @@ import {
   type Registry,
   type ScreenNode,
 } from "../registry/index.js";
-import type { DeployContext } from "../deploy/index.js";
-import type { DesignSpaceLocation } from "../controls/state.js";
 import {
   NETWORK_STATES,
   type ComponentPreview,
@@ -31,15 +29,11 @@ import {
 } from "../types/index.js";
 import { Icon } from "./icons.js";
 import { useLabels } from "./labels.js";
-import { buildFlowPrMarkdown, buildPrMarkdown } from "./prMarkdown.js";
 import { Resizer } from "./Resizer.js";
 
 export type PanelProps = {
   registry: Registry;
   controls: ControlsState;
-  deploy: DeployContext;
-  /** Endereço aberto: é o link da tela aberta no "Copiar para o PR". */
-  location: DesignSpaceLocation;
   screen: ScreenNode | undefined;
   /** Cenário ativo quando ele é variação da tela aberta. */
   variation: Scenario | undefined;
@@ -389,8 +383,6 @@ export function isSegmentedControl(control: Control): boolean {
 function Info({
   registry,
   controls,
-  deploy,
-  location,
   screen,
   variation,
   component,
@@ -400,7 +392,6 @@ function Info({
 }: PanelProps) {
   const labels = useLabels();
   const i = labels.info;
-  const [copied, setCopied] = useState(false);
 
   if (component) {
     const usages = registry.usagesOf(component.id, { handoff: controls.handoff });
@@ -457,35 +448,6 @@ function Info({
   const rules = registry.rulesOf(variation);
   const values = controls.screenControls ?? {};
   const expected = variation?.expected?.length ? variation.expected : screen.route.expected;
-  const overrides = controls.handoff ? { handoff: controls.handoff } : undefined;
-
-  const copyForPr = async () => {
-    const flow = screen.group ? registry.flowOf(screen, { handoff: controls.handoff }) : undefined;
-    const markdown = flow?.name
-      ? buildFlowPrMarkdown({
-          flow: { name: flow.name, screens: flow.screens },
-          registry,
-          open: { screen, location, variation },
-          deploy,
-          labels,
-          overrides,
-        })
-      : buildPrMarkdown({
-          screen,
-          variations: screen.variations,
-          components: registry.componentsOfScreen(screen),
-          deploy,
-          labels,
-          overrides,
-        });
-    try {
-      await navigator.clipboard.writeText(markdown);
-    } catch {
-      window.prompt(i.copyPrompt, markdown);
-    }
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  };
 
   return (
     <div className="ds-info">
@@ -548,11 +510,6 @@ function Info({
           </ul>
         </Section>
       )}
-
-      <button type="button" className="ds-btn ds-btn--block" onClick={copyForPr}>
-        <Icon name={copied ? "check" : "copy"} size={14} />
-        <span>{copied ? i.copiedForPr : i.copyForPr}</span>
-      </button>
     </div>
   );
 }

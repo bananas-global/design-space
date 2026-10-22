@@ -53,8 +53,8 @@ export const productDefinition: ProductDefinition = {
       group: "Solicitações",
       components: ["actions.buttons", "feedback.status"],
       // Exemplo do `:id` para quando o motor abre a tela sem cenário: lateral,
-      // "Usado em" e "Copiar para o PR" vão para `/requests/REQ-2042`, não
-      // para o caminho literal.
+      // "Usado em" e o link da descrição do PR vão para `/requests/REQ-2042`,
+      // não para o caminho literal.
       params: { id: "REQ-2042" },
     },
   ],

@@ -21,8 +21,9 @@ projeto e não colide com outros Design Spaces abertos ao mesmo tempo.
 
 Abra a raiz: ela abre a primeira tela. À esquerda ficam **Telas** e
 **Componentes**; à direita, as **Variações** da tela aberta e as
-**Informações** para implementar, com o botão **Copiar para o PR**. Cada
-variação abre por URL própria.
+**Informações** para implementar. Cada variação abre por URL própria. A
+descrição de cada PR é escrita pelo `design-space-pr` a partir do registro: ver
+`docs/handoff.md`.
 
 ## Criar um produto a partir deste template
 

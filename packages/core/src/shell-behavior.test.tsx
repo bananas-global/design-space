@@ -262,7 +262,7 @@ describe("chrome", () => {
     expect(panel.textContent).toContain(DEFAULT_LABELS.info.expected);
     expect(panel.textContent).toContain("Three requests are listed.");
     expect(panel.textContent).toContain("components/button.ex → button/1");
-    expect(() => button(container, DEFAULT_LABELS.info.copyForPr)).not.toThrow();
+    expect(panel.textContent).not.toContain("Copiar para o PR");
 
     await click(button(container, "Button"));
     expect(new URLSearchParams(window.location.search).get("component")).toBe("actions.button");

@@ -51,7 +51,7 @@ um Design Space que roda só local é caso suportado, não pendência.
 | `hosting/` | Arquivos por provedor de hospedagem, instalados por `pnpm setup:hosting`. |
 | `docs/product.md` | Visão, telas, vocabulário e personas. |
 | `docs/decisions/` | Decisões **deste produto**. As do modelo vivem no repositório do motor. |
-| `docs/handoff.md` | Modelo de entrega para engenharia. |
+| `docs/handoff.md` | Como a tela chega à engenharia: a descrição do PR gerada do registro. |
 
 ## Como criar um cenário
 
@@ -63,13 +63,20 @@ um Design Space que roda só local é caso suportado, não pendência.
    quando ela decide permissões. O motor valida em runtime e reclama no painel de
    Diagnóstico se um id informado não existir.
 4. Preencha `expected`. Sem critério de aceite, o cenário não vira caso
-   verificável no handoff — é tela bonita.
+   verificável no handoff — é tela bonita. É daqui que sai o critério que a
+   engenharia e os agentes de validação leem no PR, então:
+   - uma linha é um comportamento que dá para conferir na tela;
+   - descreva o comportamento, não o dado da fixture: "o cabeçalho mostra o
+     nome da operadora e o registro ANS", não "Unimed, ANS 999901". Quem valida
+     confere o sistema real, onde esses valores não existem;
+   - `intent`, `preconditions` e `actions` dão o contexto; `rules` liga o
+     cenário às regras pelo id.
 5. Garanta que `route` casa com uma rota declarada em `product.ts`: é ela que
    define de qual tela o cenário é variação. Uma tela nova é uma rota nova, com
    `name`.
 6. Liste em `components` os ids do catálogo que a tela usa, e dê `source` a cada
-   componente novo em `src/components/catalog.tsx`. É o que o "Copiar para o
-   PR" leva para a engenharia.
+   componente novo em `src/components/catalog.tsx`. É o que a descrição do PR
+   leva para a engenharia.
 7. Preencha `implementation` em cada entrada do catálogo com o componente real
    — a mesma função que as telas importam —, como `Button` e `StatusBadge` em
    `src/components/catalog.tsx`. É por ela que o botão "Destacar componentes"
@@ -88,6 +95,21 @@ dois.
 
 Um cenário só existe de verdade quando abre por URL direta e produz sempre a
 mesma situação.
+
+## O PR
+
+A descrição do PR é escrita pelo `design-space-pr`, a cada push, a partir do
+registro: telas tocadas, link de cada cenário, `intent`, pré-condições, ações,
+comportamento esperado, regras e componentes. Ver `docs/handoff.md`.
+
+- **Não** escreva comportamento, critério ou lista de componentes na descrição
+  nem no ticket: isso vive no registro, e cópia diverge na primeira mudança.
+  Para mudar um critério, mude o cenário e faça push.
+- **Não** edite o bloco entre `<!-- design-space:pr:start -->` e
+  `<!-- design-space:pr:end -->`: ele é reescrito no próximo push.
+- **Não** preencha nada à mão na descrição. O ticket, quando houver, vai no
+  campo `ticket` do cenário. Se o PR precisar de uma informação que o registro
+  não tem, pergunte antes de inventar uma seção.
 
 ## Guardrails
 

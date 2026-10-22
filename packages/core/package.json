@@ -1,6 +1,6 @@
 {
   "name": "@brucesantos/design-space",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Motor neutro do Bananas Design Space: telas como rotas com variações, catálogo de componentes, chrome em preto e branco com a UI do produto num iframe, deep links e controles de persona/viewport/rede. Não contém UI de cliente.",
   "type": "module",
   "license": "MIT",
@@ -39,9 +39,17 @@
       "types": "./dist/devtools-hook.d.ts",
       "default": "./dist/devtools-hook.js"
     },
+    "./pr": {
+      "types": "./dist/pr/index.d.ts",
+      "default": "./dist/pr.js"
+    },
     "./styles.css": "./dist/design-space.css"
   },
+  "bin": {
+    "design-space-pr": "./bin/design-space-pr.mjs"
+  },
   "files": [
+    "bin",
     "dist",
     "README.md",
     "CHANGELOG.md"

@@ -63,7 +63,7 @@ export const queueControls: ControlGroup[] = [
  * costuma faltar em protótipo, e é a que a engenharia mais pergunta.
  *
  * `components` lista o que cada tela usa do catálogo: é o que aparece em
- * "Componentes usados" e na tabela do "Copiar para o PR".
+ * "Componentes usados" e na tabela de componentes da descrição do PR.
  */
 export const scenarios: Scenario[] = [
   {

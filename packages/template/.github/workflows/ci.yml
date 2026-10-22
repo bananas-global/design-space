@@ -13,6 +13,11 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  # O `design-space-pr` reescreve a descrição do PR.
+  pull-requests: write
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -38,3 +43,12 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # Critérios de aceite gerados do registro, na descrição do PR. Ver
+      # docs/handoff.md. Quem publica preview por PR passa a origem dele em
+      # `--origin`, e o bloco ganha um link por cenário.
+      - name: Critérios de aceite na descrição do PR
+        if: github.event_name == 'pull_request'
+        run: pnpm exec design-space-pr
+        env:
+          GH_TOKEN: ${{ github.token }}

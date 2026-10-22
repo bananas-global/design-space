@@ -238,22 +238,6 @@ test.describe("chrome", () => {
     await panel.getByRole("button", { name: "Detalhe da solicitação" }).click();
     await expect(page).toHaveURL(/\/requests\/REQ-2042\?scenario=requests\.approve-allowed/);
   });
-
-  test("Copiar para o PR gera o markdown da tela", async ({ page, context }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    await page.goto(urlFor("requests.queue", { panelTab: "info" }));
-    await page.getByRole("button", { name: "Copy for PR" }).click();
-
-    const markdown = await page.evaluate(() => navigator.clipboard.readText());
-    // Tela com fluxo: o markdown traz o fluxo inteiro, uma seção por tela.
-    expect(markdown).toContain("## Solicitações");
-    expect(markdown).toContain("### Fila de solicitações");
-    expect(markdown).toContain("### Detalhe da solicitação");
-    expect(markdown).toContain("  - Linhas (`c.rows`): Todas (`all`, default) · Uma (`one`) · Nenhuma (`none`)");
-    expect(markdown).toMatch(/\[Fila vazia\]\(http:\/\/localhost:\d+\/requests\?scenario=requests\.queue-empty/);
-    expect(markdown).toContain("| Status (`feedback.status`) | `src/components/primitives.tsx → StatusBadge` |");
-    expect(markdown).toContain("A tela explica por que está vazia");
-  });
 });
 
 test.describe("fluxos e controles", () => {

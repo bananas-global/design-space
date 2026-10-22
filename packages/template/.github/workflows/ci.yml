@@ -46,9 +46,13 @@ jobs:
 
       # Critérios de aceite gerados do registro, na descrição do PR. Ver
       # docs/handoff.md. Quem publica preview por PR passa a origem dele em
-      # `--origin`, e o bloco ganha um link por cenário.
+      # `--origin`, e o bloco ganha um link por cenário. O token de PR do
+      # Dependabot e de fork é só de leitura, por isso o passo pula esses PRs.
       - name: Critérios de aceite na descrição do PR
-        if: github.event_name == 'pull_request'
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.actor != 'dependabot[bot]' &&
+          github.event.pull_request.head.repo.full_name == github.repository
         run: pnpm exec design-space-pr
         env:
           GH_TOKEN: ${{ github.token }}

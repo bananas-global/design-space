@@ -72,8 +72,12 @@ permissions:
   pull-requests: write
 
 # …depois de instalar as dependências:
+# O token de PR do Dependabot e de fork é só de leitura.
 - name: Critérios de aceite na descrição do PR
-  if: github.event_name == 'pull_request'
+  if: >-
+    github.event_name == 'pull_request' &&
+    github.actor != 'dependabot[bot]' &&
+    github.event.pull_request.head.repo.full_name == github.repository
   run: pnpm exec design-space-pr --origin "<origem do preview deste PR>"
   env:
     GH_TOKEN: ${{ github.token }}

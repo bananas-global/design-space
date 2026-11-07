@@ -281,6 +281,9 @@ registro do PR com o da base e reescreve a descrição (decisão 0018). O botão
 As funções puras estão em `@brucesantos/design-space/pr`: `buildPrSection`,
 `mergePrBody`, `diffProducts` e `PR_MARKERS`. O texto segue `theme.labels.pr`.
 
+O guia de handoff do template traz orientações para comunicar os ajustes em uma
+revisão. [Como comunicar uma revisão](https://github.com/bananas-global/design-space/blob/main/packages/template/docs/handoff.md#como-comunicar-uma-revis%C3%A3o)
+
 ### O quadro
 
 O chrome renderiza `<iframe data-ds-frame>` apontando para o mesmo endereço com

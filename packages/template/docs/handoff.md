@@ -86,6 +86,19 @@ permissions:
 Sem `--origin`, o bloco sai sem links. O produto que publica um preview por PR
 passa a origem dele.
 
+## Como comunicar uma revisão
+
+Em respostas de revisão e comentários no ticket, prefira uma frase por ajuste.
+Diga o que mudou e, se um print ajudar a conferir, coloque-o junto do ponto
+correspondente.
+
+Quando o PR já reúne os critérios de aceite e os links dos cenários, ele costuma
+ser a melhor porta de entrada para testar. Inclua um link direto para um cenário
+quando ele facilitar uma verificação específica. Antes de enviar, veja se algum
+trecho ou link repete o que o leitor já encontra no PR. Vale manter uma
+informação na resposta quando ela ajuda a entender o ajuste ou tomar uma decisão
+sem abrir outro lugar.
+
 ## URL focada no trabalho autorizado
 
 Monte o endereço entregue à engenharia com um `HandoffScope`. Cenários listados

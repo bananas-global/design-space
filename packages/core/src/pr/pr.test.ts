@@ -158,6 +158,34 @@ ${PR_MARKERS.end}
     expect(markdown).not.toContain("### Fatura");
   });
 
+  it("com a base, o preview abre a primeira tela tocada, no primeiro cenário que mudou", () => {
+    const origin = "https://acme.review.test/";
+    const head: ProductDefinition = {
+      ...product,
+      scenarios: [...product.scenarios, { id: "orders.empty", title: "Sem pedidos", route: "/orders/1", fixture: "orders" }],
+    };
+    const markdown = section({ head, base: product, origin });
+    const opened = /^Preview: (\S+)$/m.exec(markdown)?.[1];
+
+    expect(opened).toContain("https://acme.review.test/orders/1?");
+    expect(opened).toContain("scenario=orders.empty");
+    expect(markdown).toContain(`](${opened})`);
+  });
+
+  it("com a base, o preview de uma tela nova sem cenário abre o caminho de exemplo", () => {
+    const head: ProductDefinition = {
+      ...product,
+      routes: [{ path: "/reports/:id", screen, name: "Relatório", params: { id: "R-1" } }, ...product.routes],
+    };
+    const markdown = section({ head, base: product, origin: "https://acme.review.test" });
+    expect(markdown).toContain("Preview: https://acme.review.test/reports/R-1\n");
+  });
+
+  it("com a base igual, o preview fica na raiz", () => {
+    const markdown = section({ base: product, origin: "https://acme.review.test/" });
+    expect(markdown).toContain("Preview: https://acme.review.test\n");
+  });
+
   it("mudar o enunciado de uma regra altera os cenários que a citam", () => {
     const head: ProductDefinition = {
       ...product,

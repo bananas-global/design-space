@@ -6,6 +6,18 @@ Versionamento semântico. **Patch** para correção sem mudança de contrato,
 Mudança estrutural — pasta obrigatória nova, schema de cenário alterado — exige
 comando explícito e revisável, nunca merge silencioso.
 
+## 0.14.1 (2026-11-18)
+
+**Patch.** Correção na descrição do PR; nenhum contrato muda.
+
+### Corrigido
+
+- **A linha "Preview" do bloco do PR abre a tela do PR.** Antes ela trazia a
+  raiz do preview, que abre a primeira tela do produto. Com a base comparada,
+  ela agora leva à primeira tela que o PR toca, no primeiro cenário novo ou
+  alterado dela (ou no caminho de exemplo, se a tela não tem cenário). Sem
+  base, ou quando o PR não toca tela nenhuma, continua na raiz.
+
 ## 0.14.0 (2026-10-22)
 
 **Minor.** Um entrypoint e um comando novos; sai o botão "Copiar para o PR".

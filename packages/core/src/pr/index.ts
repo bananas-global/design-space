@@ -126,7 +126,7 @@ export function buildPrSection({ head, base, origin, commit, maxLength }: PrSect
   const root = origin?.replace(/\/+$/, "") || undefined;
 
   const lines: string[] = [PR_MARKERS.start, `## ${pr.title}`, "", `> ${pr.notice(commit?.slice(0, 7))}`, ""];
-  if (root) lines.push(`${pr.preview}: ${root}`, "");
+  if (root) lines.push(`${pr.preview}: ${previewUrl(diff, root)}`, "");
 
   if (diff.screens.length === 0 && diff.removedScreens.length === 0) {
     lines.push(pr.nothingChanged, "");
@@ -153,6 +153,20 @@ export function buildPrSection({ head, base, origin, commit, maxLength }: PrSect
 
   lines.push(...tail);
   return `${lines.join("\n")}\n`;
+}
+
+/**
+ * Para onde a linha de preview leva. Com a base comparada, é a primeira tela
+ * que o PR toca, no primeiro cenário novo ou alterado dela: a raiz do preview
+ * abre a primeira tela do produto, que quase nunca é a do PR. Sem base, ou sem
+ * tela tocada, não há tela a preferir e fica a raiz.
+ */
+function previewUrl(diff: PrDiff, origin: string): string {
+  const first = diff.compared ? diff.screens[0] : undefined;
+  if (!first) return origin;
+  const { screen, changes } = first;
+  const variation = screen.variations.find((item) => changes.has(item.id)) ?? screen.variations[0];
+  return variation ? scenarioUrl(variation, { origin }) : new URL(screen.href, origin).toString();
 }
 
 function size(lines: string[]): number {
